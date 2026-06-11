@@ -1,0 +1,9 @@
+/Plans_TO_DO_lists/
+.venv/
+.env
+__pycache__/
+*.pyc
+db.sqlite3
+/staticfiles/
+.pytest_cache/
+.ruff_cache/

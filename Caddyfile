@@ -1,0 +1,4 @@
+# Replace with the real domain before production deployment.
+bilety.example.com {
+    reverse_proxy app:8000
+}
