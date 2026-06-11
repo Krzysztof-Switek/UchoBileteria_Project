@@ -17,7 +17,11 @@ pytestmark = pytest.mark.django_db
 
 
 def staff_user(django_user_model, username="bramkarz"):
-    return django_user_model.objects.create_user(username, password="x")
+    from django.contrib.auth.models import Permission
+
+    user = django_user_model.objects.create_user(username, password="x")
+    user.user_permissions.add(Permission.objects.get(codename="checkin_ticket"))
+    return user
 
 
 def ticket_with_token(event=None, status=TicketStatus.ISSUED):

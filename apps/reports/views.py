@@ -1,10 +1,14 @@
 import csv
 
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import permission_required
 from django.http import HttpResponse
 from django.shortcuts import render
 
 from . import services
+
+# Reports show financial data: staff panel access + order viewing rights.
+can_view_reports = permission_required("orders.view_order", raise_exception=True)
 
 
 def _is_demo(request) -> bool:
@@ -18,6 +22,7 @@ def _is_demo(request) -> bool:
 
 
 @staff_member_required
+@can_view_reports
 def dashboard(request):
     is_demo = _is_demo(request)
     sales = services.event_sales_report(is_demo=is_demo)
@@ -33,6 +38,7 @@ def dashboard(request):
 
 
 @staff_member_required
+@can_view_reports
 def sales_csv(request):
     is_demo = _is_demo(request)
     response = HttpResponse(content_type="text/csv; charset=utf-8")
@@ -62,6 +68,7 @@ def sales_csv(request):
 
 
 @staff_member_required
+@can_view_reports
 def cash_flow_csv(request):
     is_demo = _is_demo(request)
     response = HttpResponse(content_type="text/csv; charset=utf-8")

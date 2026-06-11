@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -10,6 +10,10 @@ from apps.events.models import Event, EventStatus
 
 from . import services
 from .services import ScanResult
+
+# Every entrance-control view requires the dedicated check-in permission
+# (DOOR_STAFF group); 403 instead of a login-redirect loop for users without it.
+can_scan = permission_required("tickets.checkin_ticket", raise_exception=True)
 
 
 def _scannable_events():
@@ -21,24 +25,27 @@ def _scannable_events():
 
 
 @login_required
+@can_scan
 def event_select(request):
     return render(request, "checkin/event_select.html", {"events": _scannable_events()})
 
 
 @login_required
+@can_scan
 def scanner(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
     return render(request, "checkin/scanner.html", {"event": event})
 
 
 @login_required
+@can_scan
 @require_POST
 def scan(request, event_id):
     """Receives the decoded QR text (or a short code) and returns the verdict."""
     event = get_object_or_404(Event, pk=event_id)
     scanned = request.POST.get("code", "").strip()
 
-    # The QR encodes a verify URL — extract the token parameter if present.
+    # The QR encodes a verify URL - extract the token parameter if present.
     token = scanned
     if "t=" in scanned:
         token = scanned.split("t=", 1)[1].split("&", 1)[0]
@@ -63,9 +70,10 @@ def scan(request, event_id):
 
 
 @login_required
+@can_scan
 def verify(request):
     """
-    Landing endpoint for the URL baked into QR codes — lets staff scan
+    Landing endpoint for the URL baked into QR codes - lets staff scan
     tickets with a plain phone camera while logged in.
     """
     token = request.GET.get("t", "")
@@ -90,6 +98,7 @@ def verify(request):
 
 
 @login_required
+@can_scan
 def search(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
     query = request.GET.get("q", "")
@@ -102,6 +111,7 @@ def search(request, event_id):
 
 
 @login_required
+@can_scan
 @require_POST
 def check_in_code(request, event_id):
     """Manual check-in from the search screen."""
@@ -122,6 +132,7 @@ def check_in_code(request, event_id):
 
 
 @login_required
+@can_scan
 def emergency_list(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
     response = HttpResponse(content_type="text/csv; charset=utf-8")
@@ -131,3 +142,4 @@ def emergency_list(request, event_id):
     response.write("﻿")  # BOM so Excel opens UTF-8 correctly
     services.write_emergency_list(event, response, actor=request.user)
     return response
+

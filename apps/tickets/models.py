@@ -63,6 +63,9 @@ class Ticket(models.Model):
             models.Index(fields=["event", "status"]),
             models.Index(fields=["buyer_email"]),
         ]
+        permissions = [
+            ("checkin_ticket", "Może odprawiać bilety przy wejściu"),
+        ]
 
     def __str__(self):
         return f"Bilet {self.short_code} ({self.get_status_display()})"

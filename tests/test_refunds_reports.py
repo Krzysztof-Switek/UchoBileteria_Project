@@ -150,8 +150,11 @@ class TestReports:
         assert client.get("/raporty/").status_code == 302  # still no access
 
     def test_dashboard_and_csv_for_staff(self, client, django_user_model):
+        from django.contrib.auth.models import Permission
+
         event, order = paid_demo_order(client)
-        django_user_model.objects.create_user("szef", password="x", is_staff=True)
+        user = django_user_model.objects.create_user("szef", password="x", is_staff=True)
+        user.user_permissions.add(Permission.objects.get(codename="view_order"))
         client.login(username="szef", password="x")
 
         page = client.get("/raporty/?tryb=demo").content.decode()
