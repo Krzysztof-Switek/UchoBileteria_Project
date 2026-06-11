@@ -1,6 +1,8 @@
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.core.exceptions import ValidationError
 
-from .models import Event, TicketPool
+from . import services
+from .models import Event, PoolManualStatus, TicketPool
 
 
 class TicketPoolInline(admin.TabularInline):
@@ -15,6 +17,7 @@ class EventAdmin(admin.ModelAdmin):
         "title",
         "start_at",
         "status",
+        "sales_state",
         "capacity_total",
         "sold_total",
         "sales_start_at",
@@ -26,6 +29,35 @@ class EventAdmin(admin.ModelAdmin):
     readonly_fields = ["sold_total", "calendar_event_id", "created_at", "updated_at"]
     date_hierarchy = "start_at"
     inlines = [TicketPoolInline]
+    actions = ["publish_events", "cancel_events"]
+
+    @admin.display(description="stan sprzedaży")
+    def sales_state(self, obj):
+        return services.get_sales_state(obj)
+
+    @admin.action(description="Opublikuj wybrane wydarzenia")
+    def publish_events(self, request, queryset):
+        for event in queryset:
+            try:
+                services.publish_event(event, actor=request.user)
+                messages.success(request, f"Opublikowano: {event}")
+            except ValidationError as exc:
+                messages.error(request, f"{event}: {'; '.join(exc.messages)}")
+
+    @admin.action(description="Odwołaj wybrane wydarzenia")
+    def cancel_events(self, request, queryset):
+        for event in queryset:
+            try:
+                services.cancel_event(event, actor=request.user)
+                messages.warning(request, f"Odwołano: {event}")
+            except ValidationError as exc:
+                messages.error(request, f"{event}: {'; '.join(exc.messages)}")
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(TicketPool)
@@ -39,6 +71,32 @@ class TicketPoolAdmin(admin.ModelAdmin):
         "capacity",
         "sold_count",
         "manual_status",
+        "computed_status",
     ]
     list_filter = ["manual_status", "event"]
     readonly_fields = ["sold_count"]
+    actions = ["force_open", "force_close", "set_auto"]
+
+    @admin.display(description="status (wyliczony)")
+    def computed_status(self, obj):
+        for pool, status in services.pools_with_status(obj.event):
+            if pool.pk == obj.pk:
+                return status
+        return "?"
+
+    def _set_manual(self, request, queryset, manual_status):
+        for pool in queryset:
+            services.set_pool_manual_status(pool, manual_status, actor=request.user)
+        messages.success(request, f"Zmieniono {queryset.count()} pul na {manual_status}.")
+
+    @admin.action(description="Wymuś otwarcie puli")
+    def force_open(self, request, queryset):
+        self._set_manual(request, queryset, PoolManualStatus.FORCED_OPEN)
+
+    @admin.action(description="Wymuś zamknięcie puli")
+    def force_close(self, request, queryset):
+        self._set_manual(request, queryset, PoolManualStatus.FORCED_CLOSED)
+
+    @admin.action(description="Przywróć tryb automatyczny")
+    def set_auto(self, request, queryset):
+        self._set_manual(request, queryset, PoolManualStatus.AUTO)
