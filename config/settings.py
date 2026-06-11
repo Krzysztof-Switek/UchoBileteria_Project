@@ -119,6 +119,10 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="bilety@example.com")
 # Base URL used in QR codes and e-mail links.
 SITE_BASE_URL = env("SITE_BASE_URL", default="http://localhost:8000")
 
+# Google Calendar (optional — sync tasks wait in the outbox until configured).
+GOOGLE_CALENDAR_ID = env("GOOGLE_CALENDAR_ID", default="")
+GOOGLE_SERVICE_ACCOUNT_FILE = env("GOOGLE_SERVICE_ACCOUNT_FILE", default="")
+
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)

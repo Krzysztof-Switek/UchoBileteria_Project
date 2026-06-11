@@ -91,6 +91,36 @@ class Event(models.Model):
         return EventStatus.PUBLISHED
 
 
+class CalendarAction(models.TextChoices):
+    UPSERT = "UPSERT", "Utwórz/aktualizuj"
+    CANCEL = "CANCEL", "Usuń/odwołaj"
+
+
+class CalendarOutbox(models.Model):
+    """Queued Google Calendar sync tasks (processed by cron, with retries)."""
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Oczekuje"
+        DONE = "DONE", "Wykonane"
+        FAILED = "FAILED", "Błąd"
+
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="calendar_tasks")
+    action = models.CharField(max_length=10, choices=CalendarAction.choices)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    last_error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "zadanie kalendarza"
+        verbose_name_plural = "zadania kalendarza"
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.action} {self.event} [{self.status}]"
+
+
 class PoolManualStatus(models.TextChoices):
     AUTO = "AUTO", "Automatyczna"
     FORCED_OPEN = "FORCED_OPEN", "Wymuszona otwarta"

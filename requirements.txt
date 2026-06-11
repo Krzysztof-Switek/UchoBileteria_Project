@@ -3,6 +3,9 @@ Django>=6.0,<6.1
 django-environ>=0.13
 qrcode[pil]>=8.2
 whitenoise>=6.12
+# Google Calendar integration (sync runs from cron; safe to leave unconfigured):
+google-api-python-client>=2.150
+google-auth>=2.35
 # Production server + Postgres driver (used in Docker image on the VPS):
 gunicorn>=23.0; sys_platform != "win32"
 psycopg[binary]>=3.2; sys_platform != "win32"

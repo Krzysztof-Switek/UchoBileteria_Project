@@ -105,6 +105,12 @@ def publish_event(event: Event, actor=None) -> Event:
     event.updated_by = actor
     event.save(update_fields=["status", "updated_by", "updated_at"])
     log_action("event.published", event, actor=actor)
+
+    # Non-blocking: the calendar sync runs from cron and may fail safely.
+    from .calendar import enqueue_calendar_sync
+    from .models import CalendarAction
+
+    enqueue_calendar_sync(event, CalendarAction.UPSERT)
     return event
 
 
@@ -116,6 +122,11 @@ def cancel_event(event: Event, actor=None) -> Event:
     event.updated_by = actor
     event.save(update_fields=["status", "updated_by", "updated_at"])
     log_action("event.cancelled", event, actor=actor)
+
+    from .calendar import enqueue_calendar_sync
+    from .models import CalendarAction
+
+    enqueue_calendar_sync(event, CalendarAction.CANCEL)
     return event
 
 

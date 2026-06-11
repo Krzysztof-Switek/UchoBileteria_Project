@@ -74,6 +74,12 @@ class EventAdmin(admin.ModelAdmin):
             obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
+        # Keep Google Calendar in sync when a published event is edited.
+        if change and obj.status == "PUBLISHED":
+            from .calendar import enqueue_calendar_sync
+            from .models import CalendarAction
+
+            enqueue_calendar_sync(obj, CalendarAction.UPSERT)
 
 
 @admin.register(TicketPool)
