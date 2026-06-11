@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}{{ event.title }} — Klub UCHO{% endblock %}
+
+{% block content %}
+<a href="{% url 'events:list' %}" class="text-zinc-400 hover:text-zinc-200 text-sm">&larr; wszystkie wydarzenia</a>
+
+<h1 class="text-3xl font-bold mt-4">{{ event.title }}</h1>
+
+<dl class="mt-4 space-y-1 text-zinc-300">
+    <div><dt class="inline text-zinc-500">Kiedy:</dt> <dd class="inline">{{ event.start_at|date:"l, j E Y, H:i" }}</dd></div>
+    <div><dt class="inline text-zinc-500">Gdzie:</dt> <dd class="inline">{{ event.venue_name }}{% if event.venue_address %}, {{ event.venue_address }}{% endif %}</dd></div>
+</dl>
+
+{% if event.description %}
+<div class="mt-6 text-zinc-300 whitespace-pre-line">{{ event.description }}</div>
+{% endif %}
+
+<div class="mt-8 bg-zinc-900 rounded-xl p-6">
+    {% if is_cancelled %}
+        <p class="text-red-400 font-semibold text-lg">Wydarzenie odwołane.</p>
+        <p class="text-zinc-400 mt-1">Jeśli masz bilet, otrzymasz zwrot — sprawdź e-mail.</p>
+    {% elif sales_state == "ON_SALE" and active_pool %}
+        <div class="flex items-baseline justify-between flex-wrap gap-2">
+            <div>
+                <span class="text-2xl font-bold">{{ active_pool.price_gross }} {{ active_pool.currency }}</span>
+                <span class="text-zinc-500 ml-2">{{ active_pool.name }}</span>
+            </div>
+        </div>
+        {% block buy_button %}
+        <a href="#kup" class="mt-4 inline-block bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-lg px-6 py-3">
+            Kup bilet
+        </a>
+        {% endblock %}
+    {% elif sales_state == "SOLD_OUT" %}
+        <p class="text-amber-400 font-semibold text-lg">Wyprzedane!</p>
+    {% elif sales_state == "NOT_STARTED" %}
+        <p class="text-zinc-300 font-semibold">Sprzedaż biletów rozpocznie się {{ event.sales_start_at|date:"j E Y, H:i" }}.</p>
+    {% elif sales_state == "PAUSED" %}
+        <p class="text-zinc-300 font-semibold">Sprzedaż chwilowo wstrzymana — kolejna pula biletów wkrótce.</p>
+    {% else %}
+        <p class="text-zinc-400 font-semibold text-lg">Sprzedaż biletów zakończona.</p>
+    {% endif %}
+</div>
+{% endblock %}

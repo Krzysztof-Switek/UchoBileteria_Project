@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Koncerty — Klub UCHO{% endblock %}
+
+{% block content %}
+<h1 class="text-3xl font-bold mb-6">Nadchodzące wydarzenia</h1>
+
+{% if events %}
+<ul class="space-y-4">
+    {% for event in events %}
+    <li>
+        <a href="{% url 'events:detail' event.slug %}"
+           class="block bg-zinc-900 hover:bg-zinc-800 rounded-xl p-5 transition">
+            <div class="flex items-baseline justify-between gap-4 flex-wrap">
+                <span class="text-xl font-semibold">{{ event.title }}</span>
+                <span class="text-zinc-400">{{ event.start_at|date:"j E Y, H:i" }}</span>
+            </div>
+            <div class="text-zinc-500 mt-1">{{ event.venue_name }}</div>
+        </a>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="text-zinc-400">Brak nadchodzących wydarzeń. Zajrzyj tu wkrótce!</p>
+{% endif %}
+{% endblock %}
