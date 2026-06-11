@@ -1,0 +1,10 @@
+Zwrot za bilety — {{ event.title }}
+
+Twoje zamówienie {{ order.short_id }} zostało zwrócone.
+Kwota zwrotu: {{ order.amount_gross }} {{ order.currency }}
+{% if order.is_demo %}
+UWAGA: zamówienie testowe (tryb demo) — zwrot wirtualnej waluty.
+{% else %}
+Środki wrócą na konto, z którego dokonano płatności, zwykle w ciągu kilku dni roboczych.
+{% endif %}
+Bilety z tego zamówienia zostały unieważnione i nie umożliwią wejścia.

@@ -5,5 +5,7 @@ __pycache__/
 *.pyc
 *.sqlite3
 /staticfiles/
+/media/
+/.test_media/
 .pytest_cache/
 .ruff_cache/

@@ -1,0 +1,15 @@
+Twoje bilety — {{ event.title }}
+
+Kiedy: {{ event.start_at|date:"l, j E Y, H:i" }}
+Gdzie: {{ event.venue_name }}{% if event.venue_address %}, {{ event.venue_address }}{% endif %}
+{% if order.is_demo %}
+UWAGA: zamówienie testowe (tryb demo) — opłacone wirtualną walutą.
+{% endif %}
+Kody biletów:
+{% for ticket in tickets %} - {{ ticket.short_code }}
+{% endfor %}
+Kody QR znajdziesz w załącznikach tej wiadomości.
+Jeśli QR nie zadziała, podaj obsłudze kod biletu.
+Każdy bilet uprawnia do jednego wejścia.
+
+Zamówienie {{ order.short_id }} · {{ order.buyer_email }}

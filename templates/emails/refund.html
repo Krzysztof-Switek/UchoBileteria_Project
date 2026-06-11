@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="pl">
+<body style="font-family: Arial, sans-serif; color: #111; max-width: 560px; margin: 0 auto;">
+    <h1 style="font-size: 22px;">Zwrot za bilety — {{ event.title }}</h1>
+    <p>Twoje zamówienie <strong>{{ order.short_id }}</strong> zostało zwrócone.</p>
+    <p>Kwota zwrotu: <strong>{{ order.amount_gross }} {{ order.currency }}</strong></p>
+    {% if order.is_demo %}
+    <p style="background:#fef3c7; padding:8px 12px; border-radius:6px;">
+        Zamówienie testowe (tryb demo) — zwrot wirtualnej waluty.
+    </p>
+    {% else %}
+    <p>Środki wrócą na konto, z którego dokonano płatności, zwykle w ciągu kilku dni roboczych.</p>
+    {% endif %}
+    <p>Bilety z tego zamówienia zostały unieważnione i nie umożliwią wejścia.</p>
+</body>
+</html>

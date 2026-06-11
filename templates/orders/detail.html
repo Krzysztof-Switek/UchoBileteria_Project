@@ -26,6 +26,18 @@
 </div>
 {% elif order.status == "PAID" %}
 <p class="mt-6 text-emerald-400 font-semibold">Zamówienie opłacone — bilety zostały wysłane na {{ order.buyer_email }}.</p>
+{% if order.tickets.all %}
+<div class="mt-4 grid gap-4 sm:grid-cols-2">
+    {% for ticket in order.tickets.all %}
+    <div class="bg-zinc-900 rounded-xl p-4 text-center">
+        <div class="font-mono text-lg font-bold tracking-widest">{{ ticket.short_code }}</div>
+        <img src="{{ MEDIA_URL }}qr/{{ ticket.id }}.png" alt="QR {{ ticket.short_code }}"
+             class="mx-auto mt-2 w-44 h-44 bg-white p-2 rounded-lg">
+        <div class="text-xs text-zinc-500 mt-1">{{ ticket.get_status_display }}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 {% elif order.status == "EXPIRED" %}
 <p class="mt-6 text-amber-400">Zamówienie wygasło. Wróć na stronę wydarzenia i spróbuj ponownie.</p>
 {% endif %}

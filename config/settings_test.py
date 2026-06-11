@@ -24,3 +24,4 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 # Rate limiting is opt-in per test (locmem cache state would leak between
 # tests); the dedicated rate-limit test overrides CACHES itself.
 CACHES = {"default": {"BACKEND": "django.core.cache.backends.dummy.DummyCache"}}
+MEDIA_ROOT = BASE_DIR / ".test_media"
