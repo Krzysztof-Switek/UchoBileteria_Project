@@ -118,23 +118,31 @@ def invalidate_tickets_for_refunded_order(order: Order) -> int:
 # --- E-mail queue ----------------------------------------------------------
 
 
-def queue_ticket_email(order: Order, tickets: list[Ticket]) -> EmailOutbox:
-    context = {"order": order, "tickets": tickets, "event": order.event}
-    return EmailOutbox.objects.create(
+def _queue_email(order: Order, subject: str, template: str, context: dict) -> EmailOutbox:
+    """
+    Persist the e-mail, then deliver it the moment the surrounding
+    transaction commits — buyers get their e-mail immediately, while the
+    outbox row guarantees a cron retry if SMTP happens to be down.
+    """
+    item = EmailOutbox.objects.create(
         to_email=order.buyer_email,
-        subject=f"Twoje bilety: {order.event.title}",
-        body_text=render_to_string("emails/tickets.txt", context),
-        body_html=render_to_string("emails/tickets.html", context),
+        subject=subject,
+        body_text=render_to_string(f"emails/{template}.txt", context),
+        body_html=render_to_string(f"emails/{template}.html", context),
         order=order,
     )
+
+    from .sending import send_now
+
+    transaction.on_commit(lambda: send_now(item.pk))
+    return item
+
+
+def queue_ticket_email(order: Order, tickets: list[Ticket]) -> EmailOutbox:
+    context = {"order": order, "tickets": tickets, "event": order.event}
+    return _queue_email(order, f"Twoje bilety: {order.event.title}", "tickets", context)
 
 
 def queue_refund_email(order: Order) -> EmailOutbox:
     context = {"order": order, "event": order.event}
-    return EmailOutbox.objects.create(
-        to_email=order.buyer_email,
-        subject=f"Zwrot za bilety: {order.event.title}",
-        body_text=render_to_string("emails/refund.txt", context),
-        body_html=render_to_string("emails/refund.html", context),
-        order=order,
-    )
+    return _queue_email(order, f"Zwrot za bilety: {order.event.title}", "refund", context)

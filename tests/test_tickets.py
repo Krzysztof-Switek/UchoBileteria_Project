@@ -79,6 +79,34 @@ class TestTicketIssuing:
 
 
 class TestTicketEmail:
+    def test_email_sent_immediately_after_payment(
+        self, client, django_capture_on_commit_callbacks
+    ):
+        """Live behaviour: the buyer's e-mail goes out right after payment."""
+        with django_capture_on_commit_callbacks(execute=True):
+            order = paid_order(client, quantity=2)
+        item = EmailOutbox.objects.get(order=order)
+        assert item.status == EmailStatus.SENT
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].to == [order.buyer_email]
+        assert len(mail.outbox[0].attachments) == 2  # QR codes attached
+
+    def test_smtp_failure_leaves_item_for_cron_retry(
+        self, client, django_capture_on_commit_callbacks, monkeypatch
+    ):
+        def boom(self):
+            raise OSError("SMTP down")
+
+        monkeypatch.setattr("django.core.mail.EmailMultiAlternatives.send", boom)
+        with django_capture_on_commit_callbacks(execute=True):
+            order = paid_order(client, quantity=1)
+        item = EmailOutbox.objects.get(order=order)
+        assert item.status == EmailStatus.PENDING  # cron will retry
+        assert item.attempts == 1
+
+        monkeypatch.undo()
+        assert send_pending_emails() == 1
+
     def test_email_queued_after_payment(self, client):
         order = paid_order(client, quantity=2)
         item = EmailOutbox.objects.get(order=order)

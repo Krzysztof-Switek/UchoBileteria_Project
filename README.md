@@ -29,8 +29,12 @@ python manage.py runserver
 
 Przeklik trybu demo: `/wydarzenia/test-koncert/` → kup bilet → kasa demo →
 zapłać → bilet z QR na stronie zamówienia → `/wejscie/` (skaner) →
-`/raporty/` (przepływy DEMO). E-maile w dev: `python manage.py send_emails`
-(backend konsolowy lub Mailpit przez `EMAIL_URL=smtp://localhost:1025`).
+`/raporty/` (przepływy DEMO).
+
+E-maile wychodzą **natychmiast po opłaceniu** (kolejka + cron `send_emails`
+to tylko ponawianie po awarii SMTP). W dev bez `EMAIL_URL` lądują w konsoli
+serwera; ustaw `EMAIL_URL=smtp://...` w `.env`, aby dostawać prawdziwe
+wiadomości (np. Mailpit na `smtp://localhost:1025` albo realny SMTP).
 
 ## Testy i lint
 
