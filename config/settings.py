@@ -119,6 +119,11 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="bilety@example.com")
 # Base URL used in QR codes and e-mail links.
 SITE_BASE_URL = env("SITE_BASE_URL", default="http://localhost:8000")
 
+# Stripe (live payments; demo mode works without any of these).
+STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", default="")
+STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY", default="")
+STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET", default="")
+
 # Google Calendar (optional — sync tasks wait in the outbox until configured).
 GOOGLE_CALENDAR_ID = env("GOOGLE_CALENDAR_ID", default="")
 GOOGLE_SERVICE_ACCOUNT_FILE = env("GOOGLE_SERVICE_ACCOUNT_FILE", default="")

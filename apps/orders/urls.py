@@ -16,6 +16,7 @@ urlpatterns = [
     path("kasa-demo/<uuid:order_id>/porzuc/", views.demo_abandon, name="demo_abandon"),
     path("kasa-demo/dostarcz-webhook/", views.demo_deliver_webhook,
          name="demo_deliver_webhook"),
-    # Server-to-server webhook endpoint
+    # Server-to-server webhook endpoints
     path("webhooks/demo/", views.demo_webhook, name="demo_webhook"),
+    path("webhooks/stripe/", views.stripe_webhook, name="stripe_webhook"),
 ]

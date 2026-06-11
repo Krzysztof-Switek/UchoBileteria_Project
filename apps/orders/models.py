@@ -57,6 +57,8 @@ class Order(models.Model):
     payment_provider = models.CharField(max_length=10, choices=PaymentProviderKind.choices)
     payment_session_id = models.CharField(max_length=200, blank=True)
     provider_order_id = models.CharField(max_length=200, blank=True)
+    # Provider-hosted checkout page (Stripe session URL / internal demo cash desk).
+    checkout_url = models.CharField(max_length=500, blank=True)
     is_demo = models.BooleanField("zamówienie demo", editable=False)
     expires_at = models.DateTimeField("wygasa", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

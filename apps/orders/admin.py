@@ -90,3 +90,25 @@ class PaymentConfigAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    def save_model(self, request, obj, form, change):
+        from django.conf import settings
+
+        from apps.auditlog.services import log_action
+
+        from .models import PaymentMode
+
+        if obj.mode == PaymentMode.LIVE and not (
+            settings.STRIPE_SECRET_KEY and settings.STRIPE_WEBHOOK_SECRET
+        ):
+            messages.error(
+                request,
+                "Nie można włączyć trybu LIVE: brak skonfigurowanych kluczy Stripe "
+                "(STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET).",
+            )
+            return  # refuse the switch
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
+        log_action("payment_config.mode_changed", obj, actor=request.user,
+                   metadata={"mode": obj.mode})
+        messages.warning(request, f"Tryb płatności: {obj.get_mode_display()}.")

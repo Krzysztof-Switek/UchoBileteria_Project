@@ -31,7 +31,7 @@ def process_webhook(provider: str, payload: dict, payload_hash: str = "") -> Pay
                 event_type=payload.get("type", ""),
                 order=order,
                 amount=payload.get("amount") or None,
-                is_demo=order.is_demo if order else True,
+                is_demo=order.is_demo if order else provider == "DEMO",
                 payload_hash=payload_hash,
             )
     except IntegrityError:
@@ -40,22 +40,20 @@ def process_webhook(provider: str, payload: dict, payload_hash: str = "") -> Pay
             provider=provider, provider_event_id=payload["id"]
         )
 
-    if order is None:
-        _finish(record, PaymentEventStatus.ERROR)
-        return record
-
     event_type = payload.get("type", "")
-    if event_type == "payment.succeeded":
-        ok = mark_order_paid(order)
-        _finish(record, PaymentEventStatus.PROCESSED if ok else PaymentEventStatus.IGNORED)
-    elif event_type == "payment.failed":
-        ok = mark_order_failed(order)
-        _finish(record, PaymentEventStatus.PROCESSED if ok else PaymentEventStatus.IGNORED)
-    elif event_type == "refund.succeeded":
-        ok = mark_order_refunded(order)
-        _finish(record, PaymentEventStatus.PROCESSED if ok else PaymentEventStatus.IGNORED)
-    else:
+    handlers = {
+        "payment.succeeded": mark_order_paid,
+        "payment.failed": mark_order_failed,
+        "refund.succeeded": mark_order_refunded,
+    }
+    if event_type not in handlers:
         _finish(record, PaymentEventStatus.IGNORED)
+    elif order is None:
+        # A money-moving event we cannot match to any order — needs a human.
+        _finish(record, PaymentEventStatus.ERROR)
+    else:
+        ok = handlers[event_type](order)
+        _finish(record, PaymentEventStatus.PROCESSED if ok else PaymentEventStatus.IGNORED)
     return record
 
 

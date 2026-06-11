@@ -130,6 +130,27 @@ def demo_abandon(request, order_id):
 
 @csrf_exempt
 @require_POST
+def stripe_webhook(request):
+    """Stripe webhook endpoint: verify signature, normalize, process."""
+    import stripe
+    from django.conf import settings
+
+    from .providers.stripe_provider import handle_stripe_event
+
+    try:
+        event = stripe.Webhook.construct_event(
+            request.body,
+            request.headers.get("Stripe-Signature", ""),
+            settings.STRIPE_WEBHOOK_SECRET,
+        )
+    except Exception:  # noqa: BLE001 - any verification problem means reject
+        return HttpResponse(status=400)
+    handle_stripe_event(event)
+    return HttpResponse("ok")
+
+
+@csrf_exempt
+@require_POST
 def demo_webhook(request):
     """HTTP webhook endpoint — same pipeline as the in-process delivery."""
     signature = request.headers.get("X-Demo-Signature", "")
