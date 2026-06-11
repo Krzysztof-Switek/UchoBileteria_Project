@@ -24,5 +24,6 @@ def event_detail(request, slug):
         "sales_state": services.get_sales_state(event),
         "active_pool": active_pool,
         "is_cancelled": event.status == EventStatus.CANCELLED,
+        "quantity_choices": range(1, event.max_tickets_per_order + 1),
     }
     return render(request, "events/detail.html", context)

@@ -27,11 +27,25 @@
                 <span class="text-zinc-500 ml-2">{{ active_pool.name }}</span>
             </div>
         </div>
-        {% block buy_button %}
-        <a href="#kup" class="mt-4 inline-block bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-lg px-6 py-3">
-            Kup bilet
-        </a>
-        {% endblock %}
+        <form method="post" action="{% url 'orders:purchase' event.slug %}" class="mt-4 space-y-3">
+            {% csrf_token %}
+            <div>
+                <label for="id_buyer_email" class="block text-sm text-zinc-400 mb-1">Twój e-mail (na ten adres wyślemy bilety)</label>
+                <input type="email" name="buyer_email" id="id_buyer_email" required
+                       class="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-zinc-100">
+            </div>
+            <div>
+                <label for="id_quantity" class="block text-sm text-zinc-400 mb-1">Liczba biletów</label>
+                <select name="quantity" id="id_quantity"
+                        class="rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-zinc-100">
+                    {% for i in quantity_choices %}<option value="{{ i }}">{{ i }}</option>{% endfor %}
+                </select>
+            </div>
+            <button type="submit"
+                    class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-lg px-6 py-3">
+                Kup bilet
+            </button>
+        </form>
     {% elif sales_state == "SOLD_OUT" %}
         <p class="text-amber-400 font-semibold text-lg">Wyprzedane!</p>
     {% elif sales_state == "NOT_STARTED" %}

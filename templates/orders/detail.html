@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Zamówienie {{ order.short_id }} — Klub UCHO{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold">Zamówienie <span class="font-mono">{{ order.short_id }}</span></h1>
+
+<div class="mt-6 bg-zinc-900 rounded-xl p-6 space-y-2 text-zinc-300">
+    <div><span class="text-zinc-500">Wydarzenie:</span> {{ order.event.title }}</div>
+    <div><span class="text-zinc-500">Bilety:</span> {{ order.quantity }} × {{ order.pool.name }}</div>
+    <div><span class="text-zinc-500">Kwota:</span> <span class="font-bold">{{ order.amount_gross }} {{ order.currency }}</span></div>
+    <div><span class="text-zinc-500">E-mail:</span> {{ order.buyer_email }}</div>
+    <div><span class="text-zinc-500">Status:</span> <span class="font-semibold">{{ order.get_status_display }}</span></div>
+</div>
+
+{% if order.status == "CREATED" or order.status == "PAYMENT_PENDING" %}
+<div class="mt-6 bg-zinc-900 rounded-xl p-6">
+    <p class="text-zinc-300">Zamówienie oczekuje na płatność.
+       Rezerwacja jest ważna do <strong>{{ order.expires_at|date:"H:i" }}</strong>.</p>
+    {% block payment_actions %}{% endblock %}
+</div>
+{% elif order.status == "PAID" %}
+<p class="mt-6 text-emerald-400 font-semibold">Zamówienie opłacone — bilety zostały wysłane na {{ order.buyer_email }}.</p>
+{% elif order.status == "EXPIRED" %}
+<p class="mt-6 text-amber-400">Zamówienie wygasło. Wróć na stronę wydarzenia i spróbuj ponownie.</p>
+{% endif %}
+{% endblock %}

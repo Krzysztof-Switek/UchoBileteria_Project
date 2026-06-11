@@ -73,6 +73,11 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": env.db_url("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
 }
+if DATABASES["default"]["ENGINE"].endswith("sqlite3"):
+    # IMMEDIATE transactions make concurrent writers queue on the busy timeout
+    # instead of failing on lock upgrades — required for safe parallel purchases.
+    DATABASES["default"].setdefault("OPTIONS", {})
+    DATABASES["default"]["OPTIONS"].update({"transaction_mode": "IMMEDIATE", "timeout": 20})
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
