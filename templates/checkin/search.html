@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Szukaj biletu — {{ event.title }}{% endblock %}
+
+{% block content %}
+<h1 class="text-xl font-bold">{{ event.title }} — wyszukiwanie biletów</h1>
+
+<form method="get" class="mt-4 flex gap-2">
+    <input type="text" name="q" value="{{ query }}" placeholder="kod biletu lub e-mail"
+           class="flex-1 rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2" autofocus>
+    <button class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-lg px-4 py-2">Szukaj</button>
+</form>
+
+{% if query %}
+<ul class="mt-6 space-y-2">
+    {% for ticket in tickets %}
+    <li class="bg-zinc-900 rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap">
+        <div>
+            <span class="font-mono font-bold tracking-widest">{{ ticket.short_code }}</span>
+            <span class="text-zinc-500 ml-2">{{ ticket.buyer_email }}</span>
+            <span class="ml-2 text-sm px-2 py-0.5 rounded
+                {% if ticket.status == 'ISSUED' %}bg-emerald-900 text-emerald-300
+                {% elif ticket.status == 'CHECKED_IN' %}bg-amber-900 text-amber-300
+                {% else %}bg-red-900 text-red-300{% endif %}">{{ ticket.get_status_display }}</span>
+        </div>
+        {% if ticket.status == 'ISSUED' %}
+        <form method="post" action="{% url 'checkin:check_in_code' event.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="code" value="{{ ticket.short_code }}">
+            <button class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-lg px-4 py-2">
+                Wpuść
+            </button>
+        </form>
+        {% endif %}
+    </li>
+    {% empty %}
+    <li class="text-zinc-500">Nie znaleziono biletów dla „{{ query }}".</li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+<a href="{% url 'checkin:scanner' event.id %}" class="inline-block mt-6 text-zinc-400 hover:text-zinc-200">&larr; wróć do skanera</a>
+{% endblock %}

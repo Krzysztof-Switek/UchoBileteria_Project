@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Skaner — {{ event.title }}{% endblock %}
+
+{% block content %}
+<h1 class="text-xl font-bold">{{ event.title }} — skaner biletów</h1>
+<p class="text-zinc-500 text-sm mt-1">Nakieruj kamerę na kod QR biletu.</p>
+
+<div id="reader" class="mt-4 rounded-xl overflow-hidden bg-zinc-900"></div>
+
+<div id="result" class="mt-4 hidden rounded-xl p-6 text-center text-2xl font-bold"></div>
+
+<form method="get" action="{% url 'checkin:search' event.id %}" class="mt-6 flex gap-2">
+    <input type="text" name="q" placeholder="kod biletu lub e-mail"
+           class="flex-1 rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2">
+    <button class="bg-zinc-700 hover:bg-zinc-600 rounded-lg px-4 py-2">Szukaj ręcznie</button>
+</form>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+const resultBox = document.getElementById("result");
+let busy = false;
+
+function showResult(data) {
+    resultBox.classList.remove("hidden", "bg-emerald-600", "bg-red-700", "bg-amber-600");
+    resultBox.classList.add(data.ok ? "bg-emerald-600" : "bg-red-700");
+    resultBox.innerHTML = data.message +
+        (data.ticket_code ? `<div class="text-base font-normal mt-2">${data.ticket_code} · ${data.buyer_email}</div>` : "");
+    if (navigator.vibrate) navigator.vibrate(data.ok ? 100 : [80, 60, 80]);
+    setTimeout(() => { busy = false; }, 1500);
+}
+
+function onScan(decodedText) {
+    if (busy) return;
+    busy = true;
+    const body = new URLSearchParams({code: decodedText});
+    fetch("{% url 'checkin:scan' event.id %}", {
+        method: "POST",
+        headers: {"X-CSRFToken": "{{ csrf_token }}",
+                  "Content-Type": "application/x-www-form-urlencoded"},
+        body: body,
+    }).then(r => r.json()).then(showResult)
+      .catch(() => showResult({ok: false, message: "Błąd połączenia — użyj listy awaryjnej."}));
+}
+
+new Html5Qrcode("reader").start(
+    {facingMode: "environment"},
+    {fps: 10, qrbox: {width: 250, height: 250}},
+    onScan,
+);
+</script>
+{% endblock %}

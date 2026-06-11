@@ -53,12 +53,13 @@ def make_order(event: Event, pool: TicketPool, **kwargs) -> Order:
     return Order.objects.create(event=event, pool=pool, **defaults)
 
 
-def make_ticket(order: Order, **kwargs) -> Ticket:
-    token = uuid.uuid4().hex
+def make_ticket(order: Order, raw_token: str | None = None, **kwargs) -> Ticket:
+    raw_token = raw_token or uuid.uuid4().hex
     defaults = {
         "buyer_email": order.buyer_email,
-        "short_code": f"T{uuid.uuid4().hex[:6].upper()}",
-        "qr_token_hash": hashlib.sha256(token.encode()).hexdigest(),
+        # Same shape as production codes: XXXX-NN with a dash.
+        "short_code": f"T{uuid.uuid4().hex[:3].upper()}-{uuid.uuid4().int % 90 + 10}",
+        "qr_token_hash": hashlib.sha256(raw_token.encode()).hexdigest(),
         "is_demo": order.is_demo,
     }
     defaults.update(kwargs)

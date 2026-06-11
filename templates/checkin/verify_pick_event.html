@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Weryfikacja biletu — wybierz wydarzenie{% endblock %}
+
+{% block content %}
+<h1 class="text-xl font-bold">Na które wydarzenie wpuszczasz?</h1>
+<ul class="mt-4 space-y-2">
+    {% for event in events %}
+    <li>
+        <a href="{% url 'checkin:verify' %}?t={{ token|urlencode }}&event={{ event.id }}"
+           class="block bg-zinc-900 hover:bg-zinc-800 rounded-xl p-4">
+            {{ event.title }} <span class="text-zinc-500">— {{ event.start_at|date:"j E, H:i" }}</span>
+        </a>
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}

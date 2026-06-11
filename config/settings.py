@@ -35,8 +35,12 @@ INSTALLED_APPS = [
     "apps.events",
     "apps.orders",
     "apps.tickets",
+    "apps.checkin",
     "apps.auditlog",
 ]
+
+LOGIN_URL = "/logowanie/"
+LOGIN_REDIRECT_URL = "/wejscie/"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
