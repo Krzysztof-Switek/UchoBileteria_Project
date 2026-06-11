@@ -17,7 +17,12 @@
 <div class="mt-6 bg-zinc-900 rounded-xl p-6">
     <p class="text-zinc-300">Zamówienie oczekuje na płatność.
        Rezerwacja jest ważna do <strong>{{ order.expires_at|date:"H:i" }}</strong>.</p>
-    {% block payment_actions %}{% endblock %}
+    {% if checkout_url %}
+    <a href="{{ checkout_url }}"
+       class="mt-4 inline-block bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-lg px-6 py-3">
+        Przejdź do płatności
+    </a>
+    {% endif %}
 </div>
 {% elif order.status == "PAID" %}
 <p class="mt-6 text-emerald-400 font-semibold">Zamówienie opłacone — bilety zostały wysłane na {{ order.buyer_email }}.</p>

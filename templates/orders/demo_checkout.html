@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Kasa demo — Klub UCHO{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <div class="bg-amber-950/60 border border-amber-700 rounded-xl p-4 text-amber-200 text-sm">
+        To jest <strong>kasa demo</strong>. Płacisz wirtualną walutą — żadne prawdziwe
+        pieniądze nie zostaną pobrane. Możesz też zasymulować odrzuconą płatność
+        albo opóźniony webhook.
+    </div>
+
+    <div class="mt-6 bg-zinc-900 rounded-xl p-6">
+        <h1 class="text-xl font-bold">Płatność za zamówienie {{ order.short_id }}</h1>
+        <dl class="mt-4 space-y-1 text-zinc-300">
+            <div><dt class="inline text-zinc-500">Wydarzenie:</dt> <dd class="inline">{{ order.event.title }}</dd></div>
+            <div><dt class="inline text-zinc-500">Bilety:</dt> <dd class="inline">{{ order.quantity }} × {{ order.pool.name }}</dd></div>
+            <div class="text-2xl font-bold mt-2">{{ order.amount_gross }} {{ order.currency }}</div>
+        </dl>
+        <p class="text-zinc-500 text-sm mt-2">Saldo portfela demo: 1 000 000,00 DEMO</p>
+
+        <div class="mt-6 space-y-3">
+            <form method="post" action="{% url 'orders:demo_pay' order.id %}">
+                {% csrf_token %}
+                <button class="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-lg px-6 py-3">
+                    Zapłać {{ order.amount_gross }} DEMO
+                </button>
+            </form>
+            <form method="post" action="{% url 'orders:demo_decline' order.id %}">
+                {% csrf_token %}
+                <button class="w-full bg-red-900 hover:bg-red-800 text-red-100 rounded-lg px-6 py-2 text-sm">
+                    Symuluj odrzuconą płatność
+                </button>
+            </form>
+            <form method="post" action="{% url 'orders:demo_pay_delayed' order.id %}">
+                {% csrf_token %}
+                <button class="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg px-6 py-2 text-sm">
+                    Zapłać z opóźnionym webhookiem
+                </button>
+            </form>
+            <form method="post" action="{% url 'orders:demo_abandon' order.id %}">
+                {% csrf_token %}
+                <button class="w-full text-zinc-500 hover:text-zinc-300 text-sm py-1">
+                    Porzuć zakup
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

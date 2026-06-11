@@ -188,7 +188,8 @@ class TestPurchaseView:
         )
         assert response.status_code == 302
         order = Order.objects.get()
-        assert response.url == f"/zamowienie/{order.id}/"
+        # Purchase leads straight to the provider checkout (demo mode -> demo cash desk).
+        assert response.url == f"/kasa-demo/{order.id}/"
         assert order.quantity == 2
 
     def test_invalid_email_redirects_back_with_error(self, client):
