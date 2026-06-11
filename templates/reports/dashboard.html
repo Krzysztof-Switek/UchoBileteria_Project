@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Raporty — Klub UCHO{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between flex-wrap gap-3">
+    <h1 class="text-2xl font-bold">Raporty sprzedaży</h1>
+    <div class="flex gap-2 text-sm">
+        <a href="?tryb=demo" class="px-3 py-1.5 rounded-lg {% if is_demo %}bg-amber-500 text-black font-bold{% else %}bg-zinc-800{% endif %}">DEMO</a>
+        <a href="?tryb=live" class="px-3 py-1.5 rounded-lg {% if not is_demo %}bg-emerald-500 text-black font-bold{% else %}bg-zinc-800{% endif %}">LIVE</a>
+    </div>
+</div>
+
+<h2 class="mt-8 text-lg font-semibold">Przepływy pieniężne ({{ currency }})</h2>
+<div class="mt-2 grid grid-cols-3 gap-3 text-center">
+    <div class="bg-zinc-900 rounded-xl p-4">
+        <div class="text-zinc-500 text-sm">Wpłaty</div>
+        <div class="text-xl font-bold text-emerald-400">{{ totals.inflow }}</div>
+    </div>
+    <div class="bg-zinc-900 rounded-xl p-4">
+        <div class="text-zinc-500 text-sm">Zwroty</div>
+        <div class="text-xl font-bold text-red-400">{{ totals.outflow }}</div>
+    </div>
+    <div class="bg-zinc-900 rounded-xl p-4">
+        <div class="text-zinc-500 text-sm">Saldo</div>
+        <div class="text-xl font-bold">{{ totals.net }}</div>
+    </div>
+</div>
+
+<table class="mt-4 w-full text-sm">
+    <thead><tr class="text-zinc-500 text-left">
+        <th class="py-1">Dzień</th><th>Wpłaty</th><th>Zwroty</th><th>Saldo</th>
+    </tr></thead>
+    <tbody>
+        {% for row in flows %}
+        <tr class="border-t border-zinc-800">
+            <td class="py-1.5">{{ row.day }}</td>
+            <td class="text-emerald-400">{{ row.inflow }}</td>
+            <td class="text-red-400">{{ row.outflow }}</td>
+            <td>{{ row.net }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="py-3 text-zinc-500">Brak przepływów.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+<a href="{% url 'reports:cash_flow_csv' %}?tryb={% if is_demo %}demo{% else %}live{% endif %}"
+   class="inline-block mt-2 text-sm text-zinc-400 hover:text-zinc-200">Pobierz CSV przepływów &darr;</a>
+
+<h2 class="mt-10 text-lg font-semibold">Sprzedaż per wydarzenie</h2>
+<table class="mt-2 w-full text-sm">
+    <thead><tr class="text-zinc-500 text-left">
+        <th class="py-1">Wydarzenie</th><th>Zam. opł.</th><th>Zam. zwr.</th>
+        <th>Bilety ważne</th><th>Wykorzyst.</th><th>Zwrócone</th>
+        <th>Przychód</th><th>Zwroty</th>
+    </tr></thead>
+    <tbody>
+        {% for row in sales %}
+        <tr class="border-t border-zinc-800">
+            <td class="py-1.5">{{ row.event.title }} <span class="text-zinc-600">{{ row.event.start_at|date:"j.m.Y" }}</span></td>
+            <td>{{ row.orders_paid }}</td>
+            <td>{{ row.orders_refunded }}</td>
+            <td>{{ row.issued }}</td>
+            <td>{{ row.checked_in }}</td>
+            <td>{{ row.refunded }}</td>
+            <td class="text-emerald-400">{{ row.revenue_paid }}</td>
+            <td class="text-red-400">{{ row.revenue_refunded }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="py-3 text-zinc-500">Brak sprzedaży.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+<a href="{% url 'reports:sales_csv' %}?tryb={% if is_demo %}demo{% else %}live{% endif %}"
+   class="inline-block mt-2 text-sm text-zinc-400 hover:text-zinc-200">Pobierz CSV sprzedaży &darr;</a>
+{% endblock %}

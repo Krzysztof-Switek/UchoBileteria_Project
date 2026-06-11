@@ -1,5 +1,7 @@
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.core.exceptions import ValidationError
 
+from . import refunds
 from .models import Order, PaymentConfig, PaymentEvent
 
 
@@ -35,12 +37,24 @@ class OrderAdmin(admin.ModelAdmin):
         "refunded_at",
     ]
     date_hierarchy = "created_at"
+    actions = ["refund_selected_orders"]
 
     def has_add_permission(self, request):
         return False  # orders are created only by the purchase flow
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    @admin.action(description="Zwróć zaznaczone zamówienia (pełny zwrot)")
+    def refund_selected_orders(self, request, queryset):
+        for order in queryset:
+            try:
+                refunds.refund_order(order, actor=request.user)
+                messages.success(request, f"Zwrócono zamówienie {order.short_id}.")
+            except ValidationError as exc:
+                messages.error(request, f"{order.short_id}: {'; '.join(exc.messages)}")
+            except Exception as exc:  # noqa: BLE001 - report provider failures per order
+                messages.error(request, f"{order.short_id}: błąd zwrotu ({exc}).")
 
 
 @admin.register(PaymentEvent)

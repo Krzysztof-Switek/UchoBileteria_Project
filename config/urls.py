@@ -13,6 +13,7 @@ urlpatterns = [
     ),
     path("wyloguj/", auth_views.LogoutView.as_view(next_page="/"), name="logout"),
     path("", include("apps.checkin.urls")),
+    path("", include("apps.reports.urls")),
     path("", include("apps.orders.urls")),
     path("", include("apps.events.urls")),
 ]

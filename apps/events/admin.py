@@ -29,7 +29,7 @@ class EventAdmin(admin.ModelAdmin):
     readonly_fields = ["sold_total", "calendar_event_id", "created_at", "updated_at"]
     date_hierarchy = "start_at"
     inlines = [TicketPoolInline]
-    actions = ["publish_events", "cancel_events"]
+    actions = ["publish_events", "cancel_events", "cancel_events_with_refunds"]
 
     @admin.display(description="stan sprzedaży")
     def sales_state(self, obj):
@@ -50,6 +50,22 @@ class EventAdmin(admin.ModelAdmin):
             try:
                 services.cancel_event(event, actor=request.user)
                 messages.warning(request, f"Odwołano: {event}")
+            except ValidationError as exc:
+                messages.error(request, f"{event}: {'; '.join(exc.messages)}")
+
+    @admin.action(description="Odwołaj i zwróć wszystkie opłacone zamówienia")
+    def cancel_events_with_refunds(self, request, queryset):
+        from apps.orders.refunds import cancel_event_with_refunds
+
+        for event in queryset:
+            try:
+                summary = cancel_event_with_refunds(event, actor=request.user)
+                messages.warning(
+                    request,
+                    f"Odwołano {event}: zwroty {summary['refunded']}, "
+                    f"błędy {summary['failed']}, anulowane nieopłacone "
+                    f"{summary['cancelled_unpaid']}.",
+                )
             except ValidationError as exc:
                 messages.error(request, f"{event}: {'; '.join(exc.messages)}")
 

@@ -134,12 +134,19 @@ def mark_order_failed(order: Order) -> bool:
 
 
 def mark_order_refunded(order: Order) -> bool:
-    """PAID -> REFUNDED. Ticket invalidation lives in the refund service."""
-    claimed = Order.objects.filter(pk=order.pk, status=OrderStatus.PAID).update(
-        status=OrderStatus.REFUNDED, refunded_at=timezone.now()
-    )
-    if not claimed:
-        return False
+    """PAID -> REFUNDED; refunded seats go back on sale."""
+    with transaction.atomic():
+        claimed = Order.objects.filter(pk=order.pk, status=OrderStatus.PAID).update(
+            status=OrderStatus.REFUNDED, refunded_at=timezone.now()
+        )
+        if not claimed:
+            return False
+        TicketPool.objects.filter(pk=order.pool_id).update(
+            sold_count=models.F("sold_count") - order.quantity
+        )
+        Event.objects.filter(pk=order.event_id).update(
+            sold_total=models.F("sold_total") - order.quantity
+        )
     order.refresh_from_db()
     log_action("order.refunded", order, metadata={"amount": str(order.amount_gross)})
     _invalidate_tickets_after_refund(order)
