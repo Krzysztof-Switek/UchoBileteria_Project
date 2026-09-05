@@ -41,6 +41,18 @@ class TestDemoHappyPath:
         assert "kasa demo" in content.lower()
         assert "DEMO" in content
 
+    def test_demo_checkout_shows_countdown_and_collapses_test_scenarios(self, client):
+        # KUP-05/KUP-06: countdown to expiry + test-only actions tucked behind <details>.
+        event, order = start_paid_checkout(client)
+        content = client.get(f"/kasa-demo/{order.id}/").content.decode()
+        assert "data-countdown=" in content
+        assert "<details" in content
+        assert "Scenariusze testowe" in content
+        # The "pay" button stays outside the collapsed section (primary action).
+        pay_index = content.index("Zapłać")
+        details_index = content.index("<details")
+        assert pay_index < details_index
+
     def test_demo_pay_marks_order_paid_via_webhook_pipeline(self, client):
         event, order = start_paid_checkout(client)
         response = client.post(f"/kasa-demo/{order.id}/zaplac/")

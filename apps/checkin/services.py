@@ -71,6 +71,20 @@ def check_in_by_short_code(code: str, event: Event, staff=None) -> tuple[str, Ti
     return _attempt_check_in(ticket, event, staff), ticket
 
 
+def undo_check_in(ticket: Ticket, staff=None) -> bool:
+    """OBS-06: reverses a check-in made by mistake. Only takes effect while
+    the ticket is still CHECKED_IN — a ticket refunded/invalidated since
+    the scan is left alone (nothing to undo back to)."""
+    reverted = Ticket.objects.filter(pk=ticket.pk, status=TicketStatus.CHECKED_IN).update(
+        status=TicketStatus.ISSUED,
+        checked_in_at=None,
+        checked_in_by=None,
+    )
+    if reverted:
+        log_action("ticket.check_in_undone", ticket, actor=staff)
+    return bool(reverted)
+
+
 def find_tickets(event: Event, query: str):
     """Manual lookup by short code or buyer e-mail (emergency desk search)."""
     query = query.strip()
@@ -81,6 +95,27 @@ def find_tickets(event: Event, query: str):
         .filter(Q(short_code__icontains=query) | Q(buyer_email__icontains=query))
         .order_by("buyer_email")
     )
+
+
+def offline_manifest_tickets(event: Event) -> list[dict]:
+    """
+    OBS-07: data the scanner caches in the browser for offline verification.
+    `token_hash` is the same SHA-256 already stored server-side (never the
+    raw QR token, which the server itself doesn't retain after issuing) — the
+    browser hashes a scanned token client-side and compares hashes, so no
+    secret material has to leave the server.
+    """
+    return [
+        {
+            "short_code": t.short_code,
+            "token_hash": t.qr_token_hash,
+            "buyer_email": t.buyer_email,
+            "status": t.status,
+        }
+        for t in Ticket.objects.filter(event=event).only(
+            "short_code", "qr_token_hash", "buyer_email", "status"
+        )
+    ]
 
 
 def write_emergency_list(event: Event, file_obj, actor=None) -> int:

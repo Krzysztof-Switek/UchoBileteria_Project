@@ -100,6 +100,45 @@ def issue_tickets_for_order(order: Order) -> list[Ticket]:
     return [t for t, _ in tickets]
 
 
+def generate_tickets_pdf(order: Order) -> bytes:
+    """KUP-03: one A5 page per ticket — event, date, venue, pool, QR and
+    short code — so a ticket is self-sufficient without the site around it."""
+    from io import BytesIO
+
+    from reportlab.lib.pagesizes import A5
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A5)
+    width, height = A5
+
+    for ticket in order.tickets.all():
+        pdf.setFont("Helvetica-Bold", 16)
+        pdf.drawString(15 * mm, height - 20 * mm, ticket.event.title)
+
+        pdf.setFont("Helvetica", 11)
+        pdf.drawString(
+            15 * mm, height - 28 * mm, ticket.event.start_at.strftime("%d.%m.%Y %H:%M")
+        )
+        pdf.drawString(15 * mm, height - 34 * mm, ticket.event.venue_name)
+        pdf.drawString(15 * mm, height - 40 * mm, ticket.pool.name)
+
+        qr_path = qr_png_path(ticket)
+        if qr_path.exists():
+            pdf.drawImage(str(qr_path), 15 * mm, height - 100 * mm, width=60 * mm, height=60 * mm)
+
+        pdf.setFont("Helvetica-Bold", 14)
+        pdf.drawString(15 * mm, height - 108 * mm, ticket.short_code)
+        pdf.setFont("Helvetica", 9)
+        pdf.drawString(15 * mm, height - 114 * mm, ticket.get_status_display())
+
+        pdf.showPage()
+
+    pdf.save()
+    return buffer.getvalue()
+
+
 def invalidate_tickets_for_refunded_order(order: Order) -> int:
     """Mark all still-valid tickets of a refunded order as REFUNDED."""
     now = timezone.now()

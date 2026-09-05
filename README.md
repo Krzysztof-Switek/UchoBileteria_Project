@@ -19,6 +19,7 @@ produkcyjnymi w raportach.
 
 ```bash
 python -m venv .venv && .venv/Scripts/pip install -r requirements-dev.txt
+npm install && npm run build:css   # kompiluje static/dist/tailwind.css lokalnie (bez CDN)
 cp .env.example .env          # DEBUG=True wystarczy na start
 python manage.py migrate
 python manage.py setup_roles  # grupy: ADMIN, EVENT_MANAGER, SALES_MANAGER, DOOR_STAFF, READ_ONLY
@@ -26,6 +27,11 @@ python manage.py createsuperuser
 python manage.py seed_demo    # przykładowe wydarzenie z 3 pulami
 python manage.py runserver
 ```
+
+Style (`static/src/input.css`) trzeba przebudować po każdej zmianie klas w
+szablonach: `npm run build:css` (jednorazowo) albo `npm run watch:css`
+(przy aktywnej pracy nad frontendem). Obraz Dockera robi to automatycznie
+w osobnym etapie builda — na produkcji Node nie jest potrzebny w runtime.
 
 Przeklik trybu demo: `/wydarzenia/test-koncert/` → kup bilet → kasa demo →
 zapłać → bilet z QR na stronie zamówienia → `/wejscie/` (skaner) →

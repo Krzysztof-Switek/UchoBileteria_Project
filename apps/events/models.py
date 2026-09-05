@@ -38,7 +38,9 @@ class Event(models.Model):
     status = models.CharField(
         max_length=20, choices=EventStatus.choices, default=EventStatus.DRAFT
     )
-    max_tickets_per_order = models.PositiveSmallIntegerField(default=10)
+    max_tickets_per_order = models.PositiveSmallIntegerField(
+        "maks. biletów na zamówienie", default=10
+    )
     calendar_event_id = models.CharField(max_length=200, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

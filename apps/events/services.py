@@ -70,6 +70,15 @@ def get_active_pool(event: Event, now=None) -> TicketPool | None:
     return None
 
 
+def get_next_pool(event: Event, now=None) -> TicketPool | None:
+    """First pool that isn't sellable yet — used for the "kolejna pula" hint
+    on the public event page (KUP-02)."""
+    for pool, status in pools_with_status(event, now):
+        if status == PoolStatus.DRAFT:
+            return pool
+    return None
+
+
 def get_sales_state(event: Event, now=None) -> str:
     """Effective sales state for a PUBLISHED event (public page logic)."""
     now = now or timezone.now()

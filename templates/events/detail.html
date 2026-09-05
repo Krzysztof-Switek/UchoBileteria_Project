@@ -1,59 +1,113 @@
-{% extends "base.html" %}
+{% extends "base_public.html" %}
 
 {% block title %}{{ event.title }} — Klub UCHO{% endblock %}
 
 {% block content %}
-<a href="{% url 'events:list' %}" class="text-zinc-400 hover:text-zinc-200 text-sm">&larr; wszystkie wydarzenia</a>
+<a href="{% url 'events:list' %}" class="link-quiet text-sm">&larr; wszystkie wydarzenia</a>
 
 <h1 class="text-3xl font-bold mt-4">{{ event.title }}</h1>
 
-<dl class="mt-4 space-y-1 text-zinc-300">
-    <div><dt class="inline text-zinc-500">Kiedy:</dt> <dd class="inline">{{ event.start_at|date:"l, j E Y, H:i" }}</dd></div>
-    <div><dt class="inline text-zinc-500">Gdzie:</dt> <dd class="inline">{{ event.venue_name }}{% if event.venue_address %}, {{ event.venue_address }}{% endif %}</dd></div>
+<dl class="mt-4 space-y-1 text-quiet">
+    <div><dt class="inline text-muted">Kiedy:</dt> <dd class="inline">{{ event.start_at|date:"l, j E Y, H:i" }}</dd></div>
+    <div><dt class="inline text-muted">Gdzie:</dt> <dd class="inline">{{ event.venue_name }}{% if event.venue_address %}, {{ event.venue_address }}{% endif %}</dd></div>
 </dl>
 
 {% if event.description %}
-<div class="mt-6 text-zinc-300 whitespace-pre-line">{{ event.description }}</div>
+<div class="mt-6 text-quiet whitespace-pre-line">{{ event.description }}</div>
 {% endif %}
 
-<div class="mt-8 bg-zinc-900 rounded-xl p-6">
+<div class="mt-8 card rounded-xl p-6">
     {% if is_cancelled %}
-        <p class="text-red-400 font-semibold text-lg">Wydarzenie odwołane.</p>
-        <p class="text-zinc-400 mt-1">Jeśli masz bilet, otrzymasz zwrot — sprawdź e-mail.</p>
+        <div class="text-center py-4">
+            <div class="text-4xl leading-none">✕</div>
+            <p class="text-danger font-semibold text-lg mt-2">Wydarzenie odwołane.</p>
+            <p class="text-muted mt-1">Jeśli masz bilet, otrzymasz zwrot — sprawdź e-mail.</p>
+            <a href="{% url 'events:list' %}" class="input-theme inline-block mt-4 rounded-lg px-5 py-2.5">Zobacz inne wydarzenia</a>
+        </div>
     {% elif sales_state == "ON_SALE" and active_pool %}
         <div class="flex items-baseline justify-between flex-wrap gap-2">
             <div>
                 <span class="text-2xl font-bold">{{ active_pool.price_gross }} {{ active_pool.currency }}</span>
-                <span class="text-zinc-500 ml-2">{{ active_pool.name }}</span>
+                <span class="text-muted ml-2">{{ active_pool.name }}</span>
             </div>
+            <span class="text-sm {% if active_pool.tickets_left <= 10 %}text-warning font-semibold{% else %}text-muted{% endif %}">
+                Zostało {{ active_pool.tickets_left }} z tej puli
+            </span>
         </div>
+        {% if next_pool %}
+        <p class="text-muted text-sm mt-1">
+            Kolejna pula: {{ next_pool.name }} — {{ next_pool.price_gross }} {{ next_pool.currency }}
+        </p>
+        {% endif %}
         <form method="post" action="{% url 'orders:purchase' event.slug %}" class="mt-4 space-y-3">
             {% csrf_token %}
             <div>
-                <label for="id_buyer_email" class="block text-sm text-zinc-400 mb-1">Twój e-mail (na ten adres wyślemy bilety)</label>
+                <label for="id_buyer_email" class="block text-sm text-quiet mb-1">Twój e-mail (na ten adres wyślemy bilety)</label>
                 <input type="email" name="buyer_email" id="id_buyer_email" required
-                       class="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-zinc-100">
+                       class="input-theme w-full px-3 py-2">
             </div>
             <div>
-                <label for="id_quantity" class="block text-sm text-zinc-400 mb-1">Liczba biletów</label>
+                <label for="id_quantity" class="block text-sm text-quiet mb-1">Liczba biletów</label>
                 <select name="quantity" id="id_quantity"
-                        class="rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-zinc-100">
+                        class="input-theme px-3 py-2">
                     {% for i in quantity_choices %}<option value="{{ i }}">{{ i }}</option>{% endfor %}
                 </select>
             </div>
-            <button type="submit"
-                    class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-lg px-6 py-3">
+            <p class="text-sm text-quiet">
+                <span id="purchase-qty">1</span> &times; {{ active_pool.price_gross }} {{ active_pool.currency }} =
+                <span id="purchase-total" class="font-bold"
+                      data-price="{{ active_pool_price_raw }}" data-currency="{{ active_pool.currency }}">{{ active_pool.price_gross }} {{ active_pool.currency }}</span>
+            </p>
+            <button type="submit" class="btn-primary font-bold rounded-lg px-6 py-3">
                 Kup bilet
             </button>
         </form>
+        {% block extra_script %}
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const qtySelect = document.getElementById("id_quantity");
+                const qtyLabel = document.getElementById("purchase-qty");
+                const totalEl = document.getElementById("purchase-total");
+                if (!qtySelect || !totalEl) return;
+                const price = parseFloat(totalEl.dataset.price);
+                const currency = totalEl.dataset.currency;
+                const update = () => {
+                    const qty = parseInt(qtySelect.value, 10) || 1;
+                    qtyLabel.textContent = qty;
+                    totalEl.textContent = (qty * price).toFixed(2).replace(".", ",") + " " + currency;
+                };
+                qtySelect.addEventListener("change", update);
+                update();
+            });
+        </script>
+        {% endblock %}
     {% elif sales_state == "SOLD_OUT" %}
-        <p class="text-amber-400 font-semibold text-lg">Wyprzedane!</p>
+        <div class="text-center py-4">
+            <div class="text-4xl leading-none">🎟</div>
+            <p class="text-warning font-semibold text-lg mt-2">Wyprzedane!</p>
+            <p class="text-muted mt-1">Wszystkie bilety na to wydarzenie zostały sprzedane.</p>
+            <a href="{% url 'events:list' %}" class="input-theme inline-block mt-4 rounded-lg px-5 py-2.5">Zobacz inne wydarzenia</a>
+        </div>
     {% elif sales_state == "NOT_STARTED" %}
-        <p class="text-zinc-300 font-semibold">Sprzedaż biletów rozpocznie się {{ event.sales_start_at|date:"j E Y, H:i" }}.</p>
+        <div class="text-center py-4">
+            <div class="text-4xl leading-none">⏳</div>
+            <p class="text-quiet font-semibold text-lg mt-2">
+                Sprzedaż biletów rozpocznie się {{ event.sales_start_at|date:"j E Y, H:i" }}.
+            </p>
+            <a href="{% url 'events:sales_start_reminder' event.slug %}"
+               class="btn-primary inline-block mt-4 font-bold rounded-lg px-5 py-2.5">Dodaj przypomnienie do kalendarza</a>
+        </div>
     {% elif sales_state == "PAUSED" %}
-        <p class="text-zinc-300 font-semibold">Sprzedaż chwilowo wstrzymana — kolejna pula biletów wkrótce.</p>
+        <div class="text-center py-4">
+            <div class="text-4xl leading-none">⏸</div>
+            <p class="text-quiet font-semibold text-lg mt-2">Sprzedaż chwilowo wstrzymana — kolejna pula biletów wkrótce.</p>
+            <a href="{% url 'events:list' %}" class="input-theme inline-block mt-4 rounded-lg px-5 py-2.5">Zobacz inne wydarzenia</a>
+        </div>
     {% else %}
-        <p class="text-zinc-400 font-semibold text-lg">Sprzedaż biletów zakończona.</p>
+        <div class="text-center py-4">
+            <p class="text-muted font-semibold text-lg">Sprzedaż biletów zakończona.</p>
+            <a href="{% url 'events:list' %}" class="input-theme inline-block mt-4 rounded-lg px-5 py-2.5">Zobacz inne wydarzenia</a>
+        </div>
     {% endif %}
 </div>
 {% endblock %}

@@ -88,6 +88,8 @@ class TestTicketTransitions:
             (TicketStatus.ISSUED, TicketStatus.CANCELLED),
             (TicketStatus.ISSUED, TicketStatus.INVALIDATED),
             (TicketStatus.CHECKED_IN, TicketStatus.INVALIDATED),
+            # OBS-06: door staff can undo a mistaken scan.
+            (TicketStatus.CHECKED_IN, TicketStatus.ISSUED),
         ],
     )
     def test_allowed(self, old, new):
@@ -100,7 +102,6 @@ class TestTicketTransitions:
         ("old", "new"),
         [
             (TicketStatus.CHECKED_IN, TicketStatus.CHECKED_IN),  # double scan
-            (TicketStatus.CHECKED_IN, TicketStatus.ISSUED),
             (TicketStatus.REFUNDED, TicketStatus.CHECKED_IN),
             (TicketStatus.CANCELLED, TicketStatus.CHECKED_IN),
             (TicketStatus.INVALIDATED, TicketStatus.CHECKED_IN),

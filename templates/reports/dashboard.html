@@ -1,76 +1,260 @@
-{% extends "base.html" %}
+{% extends "base_app.html" %}
 
 {% block title %}Raporty — Klub UCHO{% endblock %}
 
 {% block content %}
 <div class="flex items-center justify-between flex-wrap gap-3">
     <h1 class="text-2xl font-bold">Raporty sprzedaży</h1>
-    <div class="flex gap-2 text-sm">
-        <a href="?tryb=demo" class="px-3 py-1.5 rounded-lg {% if is_demo %}bg-amber-500 text-black font-bold{% else %}bg-zinc-800{% endif %}">DEMO</a>
-        <a href="?tryb=live" class="px-3 py-1.5 rounded-lg {% if not is_demo %}bg-emerald-500 text-black font-bold{% else %}bg-zinc-800{% endif %}">LIVE</a>
+    <div class="flex gap-2 text-sm no-print">
+        <a href="?tryb=demo{{ date_qs }}" class="px-3 py-1.5 rounded-lg {% if is_demo %}bg-amber-500 text-black font-bold{% else %}input-theme{% endif %}">DEMO</a>
+        <a href="?tryb=live{{ date_qs }}" class="px-3 py-1.5 rounded-lg {% if not is_demo %}bg-emerald-500 text-black font-bold{% else %}input-theme{% endif %}">LIVE</a>
+        <button type="button" onclick="window.print()" class="input-theme px-3 py-1.5 rounded-lg">Drukuj / zapisz PDF</button>
     </div>
 </div>
 
-<h2 class="mt-8 text-lg font-semibold">Przepływy pieniężne ({{ currency }})</h2>
+<div class="mt-4 flex flex-wrap gap-2 text-sm no-print">
+    {% for value, label in period_choices %}
+    <a href="?tryb={% if is_demo %}demo{% else %}live{% endif %}&okres={{ value }}"
+       class="px-3 py-1.5 rounded-lg {% if okres == value %}btn-primary font-bold{% else %}input-theme{% endif %}">{{ label }}</a>
+    {% endfor %}
+</div>
+
+<form method="get" class="mt-3 flex flex-wrap items-end gap-3 text-sm no-print">
+    <input type="hidden" name="tryb" value="{% if is_demo %}demo{% else %}live{% endif %}">
+    <div>
+        <label class="block text-muted mb-1">Od (zakres własny)</label>
+        <input type="date" name="od" value="{{ date_from|date:'Y-m-d'|default:'' }}"
+               class="input-theme px-2 py-1.5">
+    </div>
+    <div>
+        <label class="block text-muted mb-1">Do</label>
+        <input type="date" name="do" value="{{ date_to|date:'Y-m-d'|default:'' }}"
+               class="input-theme px-2 py-1.5">
+    </div>
+    <button type="submit" class="input-theme px-3 py-1.5 rounded-lg">Filtruj</button>
+    {% if date_from or date_to %}
+    <a href="?tryb={% if is_demo %}demo{% else %}live{% endif %}" class="link-quiet">Wyczyść</a>
+    {% endif %}
+</form>
+
+<h2 class="mt-8 text-lg font-semibold">Kluczowe liczby ({{ currency }})</h2>
+{% if kpis %}
+<div class="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+    <div class="card rounded-xl p-4">
+        <div class="text-muted text-sm">Przychód netto</div>
+        <div class="text-xl font-bold font-mono">{{ kpis.revenue_net }}</div>
+        {% if kpi_changes.revenue_net is not None %}
+        <div class="text-xs mt-1 {% if kpi_changes.revenue_net >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {% if kpi_changes.revenue_net >= 0 %}▲{% else %}▼{% endif %} {{ kpi_changes.revenue_net|floatformat:1 }}%
+        </div>
+        {% else %}
+        <div class="text-xs mt-1 text-muted">brak porównania</div>
+        {% endif %}
+    </div>
+    <div class="card rounded-xl p-4">
+        <div class="text-muted text-sm">Bilety sprzedane</div>
+        <div class="text-xl font-bold font-mono">{{ kpis.tickets_sold }}</div>
+        {% if kpi_changes.tickets_sold is not None %}
+        <div class="text-xs mt-1 {% if kpi_changes.tickets_sold >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {% if kpi_changes.tickets_sold >= 0 %}▲{% else %}▼{% endif %} {{ kpi_changes.tickets_sold|floatformat:1 }}%
+        </div>
+        {% else %}
+        <div class="text-xs mt-1 text-muted">brak porównania</div>
+        {% endif %}
+    </div>
+    <div class="card rounded-xl p-4">
+        <div class="text-muted text-sm">Śr. wartość zamówienia</div>
+        <div class="text-xl font-bold font-mono">{{ kpis.avg_order_value|floatformat:2 }}</div>
+        {% if kpi_changes.avg_order_value is not None %}
+        <div class="text-xs mt-1 {% if kpi_changes.avg_order_value >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {% if kpi_changes.avg_order_value >= 0 %}▲{% else %}▼{% endif %} {{ kpi_changes.avg_order_value|floatformat:1 }}%
+        </div>
+        {% else %}
+        <div class="text-xs mt-1 text-muted">brak porównania</div>
+        {% endif %}
+    </div>
+    <div class="card rounded-xl p-4">
+        <div class="text-muted text-sm">Zwroty</div>
+        <div class="text-xl font-bold font-mono text-danger">{{ kpis.refunds }}</div>
+        {% if kpi_changes.refunds is not None %}
+        <div class="text-xs mt-1 {% if kpi_changes.refunds <= 0 %}text-success{% else %}text-danger{% endif %}">
+            {% if kpi_changes.refunds >= 0 %}▲{% else %}▼{% endif %} {{ kpi_changes.refunds|floatformat:1 }}%
+        </div>
+        {% else %}
+        <div class="text-xs mt-1 text-muted">brak porównania</div>
+        {% endif %}
+    </div>
+</div>
+<p class="text-xs text-muted mt-1">Zmiana % liczona wobec poprzedniego okresu tej samej długości.</p>
+{% else %}
 <div class="mt-2 grid grid-cols-3 gap-3 text-center">
-    <div class="bg-zinc-900 rounded-xl p-4">
-        <div class="text-zinc-500 text-sm">Wpłaty</div>
-        <div class="text-xl font-bold text-emerald-400">{{ totals.inflow }}</div>
+    <div class="card rounded-xl p-4">
+        <div class="text-muted text-sm">Wpłaty</div>
+        <div class="text-xl font-bold font-mono text-success">{{ totals.inflow }}</div>
     </div>
-    <div class="bg-zinc-900 rounded-xl p-4">
-        <div class="text-zinc-500 text-sm">Zwroty</div>
-        <div class="text-xl font-bold text-red-400">{{ totals.outflow }}</div>
+    <div class="card rounded-xl p-4">
+        <div class="text-muted text-sm">Zwroty</div>
+        <div class="text-xl font-bold font-mono text-danger">{{ totals.outflow }}</div>
     </div>
-    <div class="bg-zinc-900 rounded-xl p-4">
-        <div class="text-zinc-500 text-sm">Saldo</div>
-        <div class="text-xl font-bold">{{ totals.net }}</div>
+    <div class="card rounded-xl p-4">
+        <div class="text-muted text-sm">Saldo</div>
+        <div class="text-xl font-bold font-mono">{{ totals.net }}</div>
     </div>
 </div>
+<p class="text-xs text-muted mt-1">Wybierz okres powyżej, żeby zobaczyć porównanie z poprzednim.</p>
+{% endif %}
 
+{% if chart.bars %}
+<div class="mt-4 card rounded-xl p-4">
+    <div class="flex items-center gap-4 text-xs text-muted mb-2">
+        <span><span class="inline-block w-2.5 h-2.5 rounded-sm align-middle" style="background:var(--success)"></span> Wpłaty</span>
+        <span><span class="inline-block w-2.5 h-2.5 rounded-sm align-middle" style="background:var(--danger)"></span> Zwroty</span>
+    </div>
+    <svg viewBox="0 0 {{ chart.width }} {{ chart.height }}" class="w-full" style="max-height:200px"
+         role="img" aria-label="Wpłaty i zwroty w czasie">
+        {% for bar in chart.bars %}
+        <rect x="{{ bar.inflow_x }}" y="{{ bar.inflow_y }}" width="{{ bar.bar_width }}" height="{{ bar.inflow_h }}"
+              rx="2" fill="var(--success)"><title>{{ bar.label }} — wpłaty: {{ bar.inflow }}</title></rect>
+        <rect x="{{ bar.outflow_x }}" y="{{ bar.outflow_y }}" width="{{ bar.bar_width }}" height="{{ bar.outflow_h }}"
+              rx="2" fill="var(--danger)"><title>{{ bar.label }} — zwroty: {{ bar.outflow }}</title></rect>
+        {% endfor %}
+    </svg>
+</div>
+{% endif %}
+
+<h3 class="mt-8 text-sm font-semibold text-muted uppercase tracking-wide">Wpłaty i zwroty dzień po dniu</h3>
+<div class="overflow-x-auto">
 <table class="mt-4 w-full text-sm">
-    <thead><tr class="text-zinc-500 text-left">
-        <th class="py-1">Dzień</th><th>Wpłaty</th><th>Zwroty</th><th>Saldo</th>
+    <thead><tr class="text-muted text-left">
+        <th class="py-1">Dzień</th><th class="text-right">Wpłaty</th><th class="text-right">Zwroty</th><th class="text-right">Saldo</th>
     </tr></thead>
     <tbody>
         {% for row in flows %}
-        <tr class="border-t border-zinc-800">
+        <tr class="border-t-theme">
             <td class="py-1.5">{{ row.day }}</td>
-            <td class="text-emerald-400">{{ row.inflow }}</td>
-            <td class="text-red-400">{{ row.outflow }}</td>
-            <td>{{ row.net }}</td>
+            <td class="text-success font-mono text-right">{{ row.inflow }}</td>
+            <td class="text-danger font-mono text-right">{{ row.outflow }}</td>
+            <td class="font-mono text-right">{{ row.net }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="4" class="py-3 text-zinc-500">Brak przepływów.</td></tr>
+        <tr><td colspan="4" class="py-3 text-muted">Brak przepływów.</td></tr>
         {% endfor %}
     </tbody>
+    {% if flows %}
+    <tfoot>
+        <tr class="border-t-theme font-semibold">
+            <td class="py-1.5">Razem</td>
+            <td class="text-success font-mono text-right">{{ totals.inflow }}</td>
+            <td class="text-danger font-mono text-right">{{ totals.outflow }}</td>
+            <td class="font-mono text-right">{{ totals.net }}</td>
+        </tr>
+    </tfoot>
+    {% endif %}
 </table>
-<a href="{% url 'reports:cash_flow_csv' %}?tryb={% if is_demo %}demo{% else %}live{% endif %}"
-   class="inline-block mt-2 text-sm text-zinc-400 hover:text-zinc-200">Pobierz CSV przepływów &darr;</a>
+</div>
+<div class="mt-2 flex gap-4 text-sm no-print">
+    <a href="{% url 'reports:cash_flow_csv' %}?tryb={% if is_demo %}demo{% else %}live{% endif %}{{ date_qs }}"
+       class="link-quiet">Pobierz CSV przepływów &darr;</a>
+    <a href="{% url 'reports:cash_flow_xlsx' %}?tryb={% if is_demo %}demo{% else %}live{% endif %}{{ date_qs }}"
+       class="link-quiet">XLSX &darr;</a>
+</div>
 
 <h2 class="mt-10 text-lg font-semibold">Sprzedaż per wydarzenie</h2>
+<div class="overflow-x-auto">
 <table class="mt-2 w-full text-sm">
-    <thead><tr class="text-zinc-500 text-left">
-        <th class="py-1">Wydarzenie</th><th>Zam. opł.</th><th>Zam. zwr.</th>
-        <th>Bilety ważne</th><th>Wykorzyst.</th><th>Zwrócone</th>
-        <th>Przychód</th><th>Zwroty</th>
+    <thead><tr class="text-muted text-left">
+        <th class="py-1">Wydarzenie</th><th class="text-right">Zamówienia opłacone</th><th class="text-right">Zamówienia zwrócone</th>
+        <th class="text-right">Bilety ważne</th><th class="text-right">Wykorzystane</th><th class="text-right">Zwrócone</th>
+        <th class="text-right">Przychód</th><th class="text-right">Zwroty</th>
     </tr></thead>
     <tbody>
         {% for row in sales %}
-        <tr class="border-t border-zinc-800">
-            <td class="py-1.5">{{ row.event.title }} <span class="text-zinc-600">{{ row.event.start_at|date:"j.m.Y" }}</span></td>
-            <td>{{ row.orders_paid }}</td>
-            <td>{{ row.orders_refunded }}</td>
-            <td>{{ row.issued }}</td>
-            <td>{{ row.checked_in }}</td>
-            <td>{{ row.refunded }}</td>
-            <td class="text-emerald-400">{{ row.revenue_paid }}</td>
-            <td class="text-red-400">{{ row.revenue_refunded }}</td>
+        <tr class="border-t-theme card-hover">
+            <td class="py-1.5">
+                <a href="{% url 'reports:event_report' row.event.id %}?tryb={% if is_demo %}demo{% else %}live{% endif %}" class="link-accent">{{ row.event.title }}</a>
+                <span class="text-muted">{{ row.event.start_at|date:"j.m.Y" }}</span>
+            </td>
+            <td class="font-mono text-right">{{ row.orders_paid }}</td>
+            <td class="font-mono text-right">{{ row.orders_refunded }}</td>
+            <td class="font-mono text-right">{{ row.issued }}</td>
+            <td class="font-mono text-right">{{ row.checked_in }}</td>
+            <td class="font-mono text-right">{{ row.refunded }}</td>
+            <td class="text-success font-mono text-right">{{ row.revenue_paid }}</td>
+            <td class="text-danger font-mono text-right">{{ row.revenue_refunded }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="8" class="py-3 text-zinc-500">Brak sprzedaży.</td></tr>
+        <tr><td colspan="8" class="py-3 text-muted">Brak sprzedaży.</td></tr>
         {% endfor %}
     </tbody>
+    {% if sales %}
+    <tfoot>
+        <tr class="border-t-theme font-semibold">
+            <td class="py-1.5">Razem</td>
+            <td class="font-mono text-right">{{ sales_totals.orders_paid }}</td>
+            <td class="font-mono text-right">{{ sales_totals.orders_refunded }}</td>
+            <td class="font-mono text-right">{{ sales_totals.issued }}</td>
+            <td class="font-mono text-right">{{ sales_totals.checked_in }}</td>
+            <td class="font-mono text-right">{{ sales_totals.refunded }}</td>
+            <td class="text-success font-mono text-right">{{ sales_totals.revenue_paid }}</td>
+            <td class="text-danger font-mono text-right">{{ sales_totals.revenue_refunded }}</td>
+        </tr>
+    </tfoot>
+    {% endif %}
 </table>
-<a href="{% url 'reports:sales_csv' %}?tryb={% if is_demo %}demo{% else %}live{% endif %}"
-   class="inline-block mt-2 text-sm text-zinc-400 hover:text-zinc-200">Pobierz CSV sprzedaży &darr;</a>
+</div>
+<div class="mt-2 flex gap-4 text-sm no-print">
+    <a href="{% url 'reports:sales_csv' %}?tryb={% if is_demo %}demo{% else %}live{% endif %}{{ date_qs }}"
+       class="link-quiet">Pobierz CSV sprzedaży &darr;</a>
+    <a href="{% url 'reports:sales_xlsx' %}?tryb={% if is_demo %}demo{% else %}live{% endif %}{{ date_qs }}"
+       class="link-quiet">XLSX &darr;</a>
+</div>
+
+<h2 class="mt-10 text-lg font-semibold">Sprzedaż per pula</h2>
+<div class="overflow-x-auto">
+<table class="mt-2 w-full text-sm">
+    <thead><tr class="text-muted text-left">
+        <th class="py-1">Wydarzenie</th><th>Pula</th><th class="text-right">Zamówienia opłacone</th><th class="text-right">Zamówienia zwrócone</th>
+        <th class="text-right">Bilety ważne</th><th class="text-right">Wykorzystane</th><th class="text-right">Zwrócone</th>
+        <th class="text-right">Przychód</th><th class="text-right">Zwroty</th>
+    </tr></thead>
+    <tbody>
+        {% for row in pools %}
+        <tr class="border-t-theme">
+            <td class="py-1.5">{{ row.event.title }} <span class="text-muted">{{ row.event.start_at|date:"j.m.Y" }}</span></td>
+            <td>{{ row.pool.name }}</td>
+            <td class="font-mono text-right">{{ row.orders_paid }}</td>
+            <td class="font-mono text-right">{{ row.orders_refunded }}</td>
+            <td class="font-mono text-right">{{ row.issued }}</td>
+            <td class="font-mono text-right">{{ row.checked_in }}</td>
+            <td class="font-mono text-right">{{ row.refunded }}</td>
+            <td class="text-success font-mono text-right">{{ row.revenue_paid }}</td>
+            <td class="text-danger font-mono text-right">{{ row.revenue_refunded }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="py-3 text-muted">Brak sprzedaży.</td></tr>
+        {% endfor %}
+    </tbody>
+    {% if pools %}
+    <tfoot>
+        <tr class="border-t-theme font-semibold">
+            <td class="py-1.5">Razem</td>
+            <td></td>
+            <td class="font-mono text-right">{{ pools_totals.orders_paid }}</td>
+            <td class="font-mono text-right">{{ pools_totals.orders_refunded }}</td>
+            <td class="font-mono text-right">{{ pools_totals.issued }}</td>
+            <td class="font-mono text-right">{{ pools_totals.checked_in }}</td>
+            <td class="font-mono text-right">{{ pools_totals.refunded }}</td>
+            <td class="text-success font-mono text-right">{{ pools_totals.revenue_paid }}</td>
+            <td class="text-danger font-mono text-right">{{ pools_totals.revenue_refunded }}</td>
+        </tr>
+    </tfoot>
+    {% endif %}
+</table>
+</div>
+<div class="mt-2 flex gap-4 text-sm no-print">
+    <a href="{% url 'reports:pool_sales_csv' %}?tryb={% if is_demo %}demo{% else %}live{% endif %}{{ date_qs }}"
+       class="link-quiet">Pobierz CSV pul &darr;</a>
+    <a href="{% url 'reports:pool_sales_xlsx' %}?tryb={% if is_demo %}demo{% else %}live{% endif %}{{ date_qs }}"
+       class="link-quiet">XLSX &darr;</a>
+</div>
 {% endblock %}

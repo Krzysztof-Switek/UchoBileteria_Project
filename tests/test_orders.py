@@ -214,6 +214,30 @@ class TestPurchaseView:
         assert order.short_id in content
         assert "oczekuje na płatność" in content.lower()
 
+    def test_pending_order_detail_shows_countdown(self, client):
+        # KUP-05: live countdown to order.expires_at on the pending-payment page.
+        event = make_event()
+        make_pool(event)
+        order = services.create_order(event, "k@example.com", 1)
+        content = client.get(f"/zamowienie/{order.id}/").content.decode()
+        assert 'id="order-countdown"' in content
+        assert "data-countdown=" in content
+
+    def test_expired_order_detail_offers_way_back_to_event(self, client):
+        # KUP-05: an EXPIRED order should not be a dead end.
+        event = make_event()
+        make_pool(event)
+        order = services.create_order(event, "k@example.com", 1)
+        order.expires_at = NOW - timedelta(minutes=1)
+        order.save()
+        services.expire_stale_orders()
+        order.refresh_from_db()
+        assert order.status == OrderStatus.EXPIRED
+        content = client.get(f"/zamowienie/{order.id}/").content.decode()
+        assert "Zamówienie wygasło" in content
+        assert "Wróć do wydarzenia" in content
+        assert f"/wydarzenia/{event.slug}/" in content
+
     def test_rate_limit_blocks_excessive_purchases(self, client, settings):
         settings.CACHES = {
             "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache",

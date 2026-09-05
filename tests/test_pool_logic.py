@@ -123,6 +123,27 @@ class TestPoolActivation:
         assert services.get_active_pool(event, NOW) == second
 
 
+class TestNextPool:
+    """KUP-02: the "kolejna pula" hint on the public event page."""
+
+    def test_returns_first_draft_pool(self):
+        event = make_event()
+        early, regular, _ = make_three_pools(event)
+        assert services.get_next_pool(event, NOW) == regular
+
+    def test_none_when_only_one_pool(self):
+        event = make_event()
+        make_pool(event)
+        assert services.get_next_pool(event, NOW) is None
+
+    def test_none_when_all_pools_already_active_or_closed(self):
+        event = make_event()
+        pool = make_pool(event, capacity=10, manual_status=PoolManualStatus.FORCED_OPEN)
+        pool.sold_count = 10
+        pool.save()
+        assert services.get_next_pool(event, NOW) is None
+
+
 class TestSalesState:
     def test_on_sale(self):
         event = make_event()

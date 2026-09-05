@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.events.models import Event, EventStatus
+from apps.tickets.models import Ticket, TicketStatus
 
 from . import services
 from .services import ScanResult
@@ -34,7 +35,12 @@ def event_select(request):
 @can_scan
 def scanner(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
-    return render(request, "checkin/scanner.html", {"event": event})
+    checked_in_count = Ticket.objects.filter(event=event, status=TicketStatus.CHECKED_IN).count()
+    return render(
+        request,
+        "checkin/scanner.html",
+        {"event": event, "checked_in_count": checked_in_count},
+    )
 
 
 @login_required
@@ -67,6 +73,18 @@ def scan(request, event_id):
             "buyer_email": ticket.buyer_email if ticket else "",
         }
     )
+
+
+@login_required
+@can_scan
+@require_POST
+def undo_check_in(request, event_id):
+    """OBS-06: undo a check-in from the scanner's last-5-scans history."""
+    event = get_object_or_404(Event, pk=event_id)
+    code = request.POST.get("code", "").strip()
+    ticket = Ticket.objects.filter(event=event, short_code__iexact=code).first()
+    ok = bool(ticket) and services.undo_check_in(ticket, request.user)
+    return JsonResponse({"ok": ok})
 
 
 @login_required
@@ -129,6 +147,16 @@ def check_in_code(request, event_id):
             "event": event,
         },
     )
+
+
+@login_required
+@can_scan
+def offline_manifest(request, event_id):
+    """OBS-07: ticket data the scanner caches for offline verification —
+    short code, buyer e-mail, status, and the QR token hash (never the raw
+    token). Fetched once while online, then reused when the network drops."""
+    event = get_object_or_404(Event, pk=event_id)
+    return JsonResponse({"tickets": services.offline_manifest_tickets(event)})
 
 
 @login_required

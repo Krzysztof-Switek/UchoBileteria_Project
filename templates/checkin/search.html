@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_terminal.html" %}
 
 {% block title %}Szukaj biletu — {{ event.title }}{% endblock %}
 
@@ -7,8 +7,8 @@
 
 <form method="get" class="mt-4 flex gap-2">
     <input type="text" name="q" value="{{ query }}" placeholder="kod biletu lub e-mail"
-           class="flex-1 rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2" autofocus>
-    <button class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-lg px-4 py-2">Szukaj</button>
+           class="flex-1 min-h-[56px] rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2" autofocus>
+    <button class="min-h-[56px] px-5 bg-cyan-400 text-zinc-950 font-bold rounded-lg">Szukaj</button>
 </form>
 
 {% if query %}
@@ -27,7 +27,7 @@
         <form method="post" action="{% url 'checkin:check_in_code' event.id %}">
             {% csrf_token %}
             <input type="hidden" name="code" value="{{ ticket.short_code }}">
-            <button class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-lg px-4 py-2">
+            <button class="min-h-[56px] px-5 bg-cyan-400 text-zinc-950 font-bold rounded-lg">
                 Wpuść
             </button>
         </form>

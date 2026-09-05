@@ -11,7 +11,7 @@ from .providers import get_provider
 from .services import cancel_unpaid_order
 
 
-def refund_order(order: Order, actor=None) -> str:
+def refund_order(order: Order, actor=None, reason: str = "") -> str:
     """
     Request a full refund from the order's own provider (a demo order never
     touches Stripe). The actual status change happens when the provider's
@@ -20,7 +20,7 @@ def refund_order(order: Order, actor=None) -> str:
     if order.status != OrderStatus.PAID:
         raise ValidationError("Zwrócić można tylko opłacone zamówienie.")
     log_action("refund.requested", order, actor=actor,
-               metadata={"amount": str(order.amount_gross)})
+               metadata={"amount": str(order.amount_gross), "reason": reason})
     return get_provider(order).refund(order)
 
 

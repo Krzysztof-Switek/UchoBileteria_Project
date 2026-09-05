@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_public.html" %}
 
 {% block title %}Koncerty — Klub UCHO{% endblock %}
 
@@ -10,17 +10,22 @@
     {% for event in events %}
     <li>
         <a href="{% url 'events:detail' event.slug %}"
-           class="block bg-zinc-900 hover:bg-zinc-800 rounded-xl p-5 transition">
+           class="card card-hover block rounded-xl p-5 transition">
             <div class="flex items-baseline justify-between gap-4 flex-wrap">
                 <span class="text-xl font-semibold">{{ event.title }}</span>
-                <span class="text-zinc-400">{{ event.start_at|date:"j E Y, H:i" }}</span>
+                <span class="text-quiet">{{ event.start_at|date:"j E Y, H:i" }}</span>
             </div>
-            <div class="text-zinc-500 mt-1">{{ event.venue_name }}</div>
+            <div class="text-muted mt-1">
+                {{ event.venue_name }}{% if event.venue_address %}, {{ event.venue_address }}{% endif %}
+            </div>
+            {% if event.description %}
+            <p class="text-quiet mt-2 text-sm line-clamp-2">{{ event.description }}</p>
+            {% endif %}
         </a>
     </li>
     {% endfor %}
 </ul>
 {% else %}
-<p class="text-zinc-400">Brak nadchodzących wydarzeń. Zajrzyj tu wkrótce!</p>
+<p class="text-muted">Brak nadchodzących wydarzeń. Zajrzyj tu wkrótce!</p>
 {% endif %}
 {% endblock %}

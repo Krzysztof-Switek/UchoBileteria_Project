@@ -87,6 +87,17 @@ class TestOtherRolesAccess:
         client.login(username="event_manager", password="x")
         assert client.get("/raporty/").status_code == 403
 
+    def test_sales_manager_can_use_global_search(self, client, django_user_model):
+        # OBS-04: search gate mirrors the reports gate (orders.view_order).
+        user_in_role(django_user_model, "SALES_MANAGER", is_staff=True)
+        client.login(username="sales_manager", password="x")
+        assert client.get("/szukaj/?q=abc").status_code == 200
+
+    def test_event_manager_cannot_use_global_search(self, client, django_user_model):
+        user_in_role(django_user_model, "EVENT_MANAGER", is_staff=True)
+        client.login(username="event_manager", password="x")
+        assert client.get("/szukaj/?q=abc").status_code == 403
+
     def test_regular_logged_in_user_cannot_scan(self, client, django_user_model):
         django_user_model.objects.create_user("nikt", password="x")
         client.login(username="nikt", password="x")

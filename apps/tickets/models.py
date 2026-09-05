@@ -21,8 +21,9 @@ TICKET_TRANSITIONS = {
         TicketStatus.CANCELLED,
         TicketStatus.INVALIDATED,
     },
-    # Admin correction after offline check-in reconciliation:
-    TicketStatus.CHECKED_IN: {TicketStatus.INVALIDATED},
+    # Admin correction after offline check-in reconciliation, and OBS-06's
+    # door-staff "cofnij wpuszczenie" for a scan made by mistake:
+    TicketStatus.CHECKED_IN: {TicketStatus.INVALIDATED, TicketStatus.ISSUED},
     TicketStatus.REFUNDED: set(),
     TicketStatus.CANCELLED: set(),
     TicketStatus.INVALIDATED: set(),

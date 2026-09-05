@@ -7,6 +7,9 @@ app_name = "orders"
 urlpatterns = [
     path("kup/<slug:slug>/", views.purchase, name="purchase"),
     path("zamowienie/<uuid:order_id>/", views.order_detail, name="detail"),
+    path("zamowienie/<uuid:order_id>/wyslij-ponownie/", views.resend_tickets,
+         name="resend_tickets"),
+    path("zamowienie/<uuid:order_id>/bilety.pdf", views.tickets_pdf, name="tickets_pdf"),
     # Demo checkout (virtual currency)
     path("kasa-demo/<uuid:order_id>/", views.demo_checkout, name="demo_checkout"),
     path("kasa-demo/<uuid:order_id>/zaplac/", views.demo_pay, name="demo_pay"),

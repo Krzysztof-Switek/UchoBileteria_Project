@@ -8,9 +8,12 @@ from apps.checkin.services import (
     ScanResult,
     check_in_by_short_code,
     check_in_by_token,
+    offline_manifest_tickets,
+    undo_check_in,
     write_emergency_list,
 )
 from apps.tickets.models import TicketStatus
+from apps.tickets.services import hash_token
 from tests.factories import make_event, make_order, make_pool, make_ticket
 
 pytestmark = pytest.mark.django_db
@@ -83,6 +86,41 @@ class TestCheckInService:
         event, ticket, _ = ticket_with_token()
         result, _ = check_in_by_short_code(ticket.short_code.lower(), event)
         assert result == ScanResult.VALID_CHECKED_IN
+
+
+class TestUndoCheckIn:
+    """OBS-06: "cofnij wpuszczenie" from the scanner's last-5-scans history."""
+
+    def test_reverts_checked_in_ticket_to_issued(self, django_user_model):
+        staff = staff_user(django_user_model)
+        event, ticket, token = ticket_with_token()
+        check_in_by_token(token, event, staff)
+        ticket.refresh_from_db()
+        assert ticket.status == TicketStatus.CHECKED_IN
+
+        assert undo_check_in(ticket, staff) is True
+        ticket.refresh_from_db()
+        assert ticket.status == TicketStatus.ISSUED
+        assert ticket.checked_in_at is None
+        assert ticket.checked_in_by is None
+
+    def test_logs_audit_action(self, django_user_model):
+        from apps.auditlog.models import AuditLog
+
+        staff = staff_user(django_user_model)
+        event, ticket, token = ticket_with_token()
+        check_in_by_token(token, event, staff)
+        ticket.refresh_from_db()
+        undo_check_in(ticket, staff)
+        assert AuditLog.objects.filter(
+            action="ticket.check_in_undone", entity_id=str(ticket.pk)
+        ).exists()
+
+    def test_does_nothing_if_not_checked_in(self):
+        event, ticket, token = ticket_with_token(status=TicketStatus.ISSUED)
+        assert undo_check_in(ticket) is False
+        ticket.refresh_from_db()
+        assert ticket.status == TicketStatus.ISSUED
 
 
 @pytest.mark.django_db(transaction=True)
@@ -164,6 +202,41 @@ class TestScanViews:
         ticket.refresh_from_db()
         assert ticket.status == TicketStatus.CHECKED_IN
 
+    def test_scanner_page_shows_checked_in_counter(self, client, django_user_model):
+        self.login(client, django_user_model)
+        event, ticket, token = ticket_with_token()
+        check_in_by_token(token, event)
+        response = client.get(f"/wejscie/{event.id}/skaner/")
+        content = response.content.decode()
+        assert 'id="checked-in-count">1<' in content
+        assert f"/ {event.sold_total}" in content
+
+    def test_undo_check_in_endpoint(self, client, django_user_model):
+        self.login(client, django_user_model)
+        event, ticket, token = ticket_with_token()
+        check_in_by_token(token, event)
+        response = client.post(
+            f"/wejscie/{event.id}/cofnij/", {"code": ticket.short_code}
+        )
+        assert response.json()["ok"] is True
+        ticket.refresh_from_db()
+        assert ticket.status == TicketStatus.ISSUED
+
+    def test_scanner_page_wires_up_offline_fallback(self, client, django_user_model):
+        self.login(client, django_user_model)
+        event, ticket, token = ticket_with_token()
+        content = client.get(f"/wejscie/{event.id}/skaner/").content.decode()
+        assert f"/wejscie/{event.id}/tryb-offline.json" in content
+        assert 'id="offline-indicator"' in content
+        assert "navigator.onLine" in content
+
+    def test_undo_check_in_requires_login(self, client):
+        event, ticket, token = ticket_with_token()
+        response = client.post(
+            f"/wejscie/{event.id}/cofnij/", {"code": ticket.short_code}
+        )
+        assert response.status_code == 302
+
 
 class TestEmergencyList:
     def test_csv_contains_required_columns(self):
@@ -209,3 +282,53 @@ class TestEmergencyList:
         call_command("snapshot_emergency_lists")
         files = list((tmp_path / "emergency").glob("*.csv"))
         assert len(files) == 1
+
+
+class TestOfflineManifest:
+    """OBS-07: the scanner's offline fallback data — short code, e-mail,
+    status, and the QR token HASH (never the raw token)."""
+
+    def test_includes_hash_not_raw_token(self):
+        event, ticket, token = ticket_with_token()
+        rows = offline_manifest_tickets(event)
+        assert len(rows) == 1
+        row = rows[0]
+        assert row["short_code"] == ticket.short_code
+        assert row["buyer_email"] == ticket.buyer_email
+        assert row["status"] == TicketStatus.ISSUED
+        assert row["token_hash"] == hash_token(token)
+        assert token not in row.values()
+
+    def test_reflects_current_status(self):
+        event, ticket, token = ticket_with_token(status=TicketStatus.CHECKED_IN)
+        [row] = offline_manifest_tickets(event)
+        assert row["status"] == TicketStatus.CHECKED_IN
+
+    def test_only_includes_tickets_for_the_requested_event(self):
+        event, ticket, _ = ticket_with_token()
+        other_event, other_ticket, _ = ticket_with_token()
+        rows = offline_manifest_tickets(event)
+        codes = {row["short_code"] for row in rows}
+        assert ticket.short_code in codes
+        assert other_ticket.short_code not in codes
+
+    def test_manifest_view_requires_login(self, client):
+        event, *_ = ticket_with_token()
+        response = client.get(f"/wejscie/{event.id}/tryb-offline.json")
+        assert response.status_code == 302
+
+    def test_manifest_view_returns_json(self, client, django_user_model):
+        staff_user(django_user_model)
+        client.login(username="bramkarz", password="x")
+        event, ticket, token = ticket_with_token()
+        response = client.get(f"/wejscie/{event.id}/tryb-offline.json")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["tickets"] == [
+            {
+                "short_code": ticket.short_code,
+                "token_hash": hash_token(token),
+                "buyer_email": ticket.buyer_email,
+                "status": TicketStatus.ISSUED,
+            }
+        ]

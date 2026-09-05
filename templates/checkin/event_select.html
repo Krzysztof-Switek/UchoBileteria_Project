@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_terminal.html" %}
 
 {% block title %}Kontrola wejścia — wybierz wydarzenie{% endblock %}
 
@@ -15,11 +15,11 @@
         </div>
         <div class="flex gap-2">
             <a href="{% url 'checkin:scanner' event.id %}"
-               class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-lg px-4 py-2">Skaner</a>
+               class="bg-cyan-400 text-zinc-950 font-bold rounded-lg px-4 py-2">Skaner</a>
             <a href="{% url 'checkin:search' event.id %}"
-               class="bg-zinc-800 hover:bg-zinc-700 rounded-lg px-4 py-2">Szukaj</a>
+               class="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2">Szukaj</a>
             <a href="{% url 'checkin:emergency_list' event.id %}"
-               class="bg-zinc-800 hover:bg-zinc-700 rounded-lg px-4 py-2">Lista awaryjna (CSV)</a>
+               class="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2">Lista awaryjna (CSV)</a>
         </div>
     </li>
     {% empty %}

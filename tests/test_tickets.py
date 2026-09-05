@@ -172,3 +172,95 @@ class TestPaidOrderPage:
         content = client.get(f"/zamowienie/{order.id}/").content.decode()
         for ticket in order.tickets.all():
             assert ticket.short_code in content
+
+    def test_ticket_card_is_self_sufficient(self, client):
+        # KUP-03: event name/date/venue/pool type on the same card as the QR,
+        # not just a bare code — readable at the door without the site around it.
+        order = paid_order(client, quantity=1)
+        ticket = order.tickets.get()
+        content = client.get(f"/zamowienie/{order.id}/").content.decode()
+        assert order.event.title in content
+        assert order.event.venue_name in content
+        assert ticket.pool.name in content
+        assert 'class="ticket-card bg-white' in content
+
+    def test_single_ticket_order_has_no_carousel_controls(self, client):
+        order = paid_order(client, quantity=1)
+        content = client.get(f"/zamowienie/{order.id}/").content.decode()
+        assert 'id="ticket-prev"' not in content
+
+    def test_multi_ticket_order_shows_carousel_controls(self, client):
+        # KUP-03: a counter + prev/next when there's more than one ticket.
+        order = paid_order(client, quantity=3)
+        content = client.get(f"/zamowienie/{order.id}/").content.decode()
+        assert 'id="ticket-prev"' in content
+        assert 'id="ticket-next"' in content
+        assert "Bilet" in content and "z 3" in content
+
+    def test_paid_order_offers_pdf_and_resend_actions(self, client):
+        order = paid_order(client, quantity=1)
+        content = client.get(f"/zamowienie/{order.id}/").content.decode()
+        assert f"/zamowienie/{order.id}/bilety.pdf" in content
+        assert "Pobierz PDF" in content
+        assert f"/zamowienie/{order.id}/wyslij-ponownie/" in content
+        assert "Wyślij ponownie e-mailem" in content
+
+
+class TestTicketsPdfDownload:
+    def test_downloads_a_pdf_for_a_paid_order(self, client):
+        order = paid_order(client, quantity=2)
+        response = client.get(f"/zamowienie/{order.id}/bilety.pdf")
+        assert response.status_code == 200
+        assert response["Content-Type"] == "application/pdf"
+        assert response.content.startswith(b"%PDF")
+        assert f'filename="bilety-{order.short_id}.pdf"' in response["Content-Disposition"]
+
+    def test_unpaid_order_redirects_instead_of_downloading(self, client):
+        from apps.orders import services as order_services
+
+        event = make_event()
+        make_pool(event)
+        order = order_services.create_order(event, "k@example.com", 1)
+        response = client.get(f"/zamowienie/{order.id}/bilety.pdf", follow=True)
+        assert response.status_code == 200  # followed redirect, not a PDF
+        assert response["Content-Type"] != "application/pdf"
+        assert "Dla tego zamówienia nie ma jeszcze biletów" in response.content.decode()
+
+
+class TestResendTickets:
+    def test_resend_queues_a_fresh_ticket_email(
+        self, client, django_capture_on_commit_callbacks
+    ):
+        order = paid_order(client, quantity=2)
+        mail.outbox.clear()
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(f"/zamowienie/{order.id}/wyslij-ponownie/")
+        assert response.status_code == 302
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].to == [order.buyer_email]
+        assert EmailOutbox.objects.filter(order=order).count() == 2  # original + resend
+
+    def test_resend_is_cooled_down_on_immediate_repeat(self, client, settings):
+        settings.CACHES = {
+            "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                        "LOCATION": "resend-cooldown-test"}
+        }
+        order = paid_order(client, quantity=1)
+        client.post(f"/zamowienie/{order.id}/wyslij-ponownie/")
+        response = client.post(f"/zamowienie/{order.id}/wyslij-ponownie/", follow=True)
+        assert "wysłany przed chwilą" in response.content.decode()
+        assert EmailOutbox.objects.filter(order=order).count() == 2  # original + first resend only
+
+    def test_resend_rejected_for_unpaid_order(self, client):
+        from apps.orders import services as order_services
+
+        event = make_event()
+        make_pool(event)
+        order = order_services.create_order(event, "k@example.com", 1)
+        response = client.post(f"/zamowienie/{order.id}/wyslij-ponownie/", follow=True)
+        assert "nie ma jeszcze biletów" in response.content.decode()
+        assert EmailOutbox.objects.filter(order=order).count() == 0
+
+    def test_resend_requires_post(self, client):
+        order = paid_order(client, quantity=1)
+        assert client.get(f"/zamowienie/{order.id}/wyslij-ponownie/").status_code == 405

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Bileteria UCHO{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'dist/tailwind.css' %}">
+</head>
+<body class="min-h-screen">
+    {% if payment_demo_mode %}
+    <div class="bg-amber-500 text-black text-center text-sm font-bold py-1.5 px-4">
+        TRYB DEMO — płatności realizowane są wirtualną walutą, żadne prawdziwe pieniądze nie są pobierane.
+    </div>
+    {% endif %}
+    <header class="border-b-theme">
+        <div class="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+            <a href="{% url 'events:list' %}" class="text-lg font-bold tracking-tight">{{ club_name }}</a>
+            <div class="text-xs whitespace-nowrap">
+                {% if user.is_authenticated and user.is_staff %}
+                <a href="{% url 'admin:index' %}" class="link-quiet">Panel administracyjny ({{ user.email|default:user.get_username }})</a>
+                {% elif user.is_authenticated %}
+                <a href="{% url 'logout' %}" class="link-quiet">Wyloguj</a>
+                {% else %}
+                <a href="{% url 'admin:index' %}" class="link-quiet">Zaloguj (obsługa)</a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+    <main class="max-w-3xl mx-auto px-4 py-8">
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="rounded-lg px-4 py-3 {% if message.tags == 'error' %}msg-danger{% elif message.tags == 'warning' %}msg-warning{% else %}msg-success{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="border-t-theme mt-12">
+        <div class="max-w-3xl mx-auto px-4 py-8 text-sm text-muted">
+            <div class="flex flex-wrap gap-x-8 gap-y-3 justify-between">
+                <div>
+                    <div class="font-semibold text-quiet">{{ club_name }}</div>
+                    {% if club_address %}<div class="mt-0.5">{{ club_address }}</div>{% endif %}
+                    <div class="mt-0.5">
+                        {% if club_contact_email %}<a href="mailto:{{ club_contact_email }}" class="link-quiet">{{ club_contact_email }}</a>{% endif %}
+                        {% if club_phone %}<span>{% if club_contact_email %} · {% endif %}{{ club_phone }}</span>{% endif %}
+                    </div>
+                </div>
+                <div class="space-x-4 whitespace-nowrap">
+                    <a href="{% url 'regulamin' %}" class="link-quiet">Regulamin</a>
+                    <a href="{% url 'polityka_prywatnosci' %}" class="link-quiet">Polityka prywatności</a>
+                </div>
+            </div>
+            <p class="mt-6 text-xs text-muted">
+                Twój e-mail wykorzystujemy wyłącznie do realizacji zamówienia i wysyłki biletów —
+                szczegóły w <a href="{% url 'polityka_prywatnosci' %}" class="link-quiet">Polityce prywatności</a>.
+            </p>
+        </div>
+    </footer>
+    <script>
+        // KUP-05: shared countdown for reservation deadlines. Any element with
+        // data-countdown="<ISO datetime>" gets a live mm:ss readout and fires
+        // a bubbling "countdown:expired" event once, for the page to react to.
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll("[data-countdown]").forEach((el) => {
+                const deadline = new Date(el.dataset.countdown).getTime();
+                const tick = () => {
+                    const diff = deadline - Date.now();
+                    if (diff <= 0) {
+                        el.textContent = "0:00";
+                        clearInterval(timer);
+                        el.dispatchEvent(new CustomEvent("countdown:expired", {bubbles: true}));
+                        return;
+                    }
+                    const m = Math.floor(diff / 60000);
+                    const s = Math.floor((diff % 60000) / 1000);
+                    el.textContent = `${m}:${String(s).padStart(2, "0")}`;
+                };
+                tick();
+                const timer = setInterval(tick, 1000);
+            });
+        });
+    </script>
+    {% block extra_script %}{% endblock %}
+</body>
+</html>

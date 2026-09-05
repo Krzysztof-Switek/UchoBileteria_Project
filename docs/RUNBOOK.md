@@ -9,6 +9,7 @@
    - `SITE_BASE_URL=https://bilety.twojadomena.pl`,
    - `POSTGRES_PASSWORD` (losowe),
    - `EMAIL_URL=smtp://user:pass@smtp.dostawca.pl:587` + `DEFAULT_FROM_EMAIL`.
+   - `CLUB_ADDRESS`, `CLUB_PHONE` (i opcjonalnie inny `CLUB_CONTACT_EMAIL`) — bez nich stopka publicznej strony pokazuje tylko nazwę klubu i e-mail. Uzupełnij też realną treść `/regulamin/` i `/polityka-prywatnosci/` (`templates/legal/*.html`) — dziś to szkice z placeholderami (KUP-04), nie gotowa treść prawna.
 3. W `Caddyfile` podmień domenę (Caddy sam wystawi HTTPS przez Let's Encrypt).
 4. `docker compose up -d --build`
 5. Pierwsze uruchomienie:
@@ -21,9 +22,23 @@
 
 ## 2. Konta personelu
 
-- Administratorzy/menedżerowie: konto z `is_staff` + odpowiednia grupa.
-- **Bramkarze (DOOR_STAFF): bez `is_staff`**, tylko grupa DOOR_STAFF.
-  Logują się na `/logowanie/` i trafiają prosto do `/wejscie/`.
+Konta zakłada się komendą `manage.py create_staff_user <email> <ROLA>`
+(hasło wpisywane interaktywnie, nigdy jako argument), np.:
+
+```bash
+python manage.py create_staff_user jan.kowalski@klub.pl EVENT_MANAGER
+```
+
+- Loginem jest zawsze adres e-mail (logowanie po e-mailu, wielkość liter bez znaczenia).
+- Role: `ADMIN`, `EVENT_MANAGER`, `SALES_MANAGER`, `READ_ONLY` → dostają `is_staff`
+  i logują się na `/admin/`.
+- **`DOOR_STAFF` (bramkarze): bez `is_staff`**, logują się na `/logowanie/`
+  i trafiają prosto do `/wejscie/`.
+- Hasło musi mieć min. 12 znaków (zaostrzone `AUTH_PASSWORD_VALIDATORS` — panel
+  jest publicznie dostępny). Logowanie jest throttlowane per IP+adres e-mail
+  (5 nieudanych prób / 15 min, `apps/accounts/ratelimit.py`) — dotyczy zarówno
+  `/admin/login/`, jak i `/logowanie/`.
+- Wymaga wcześniejszego `manage.py setup_roles` (grupy muszą już istnieć).
 
 ## 3. Przejście z DEMO na LIVE (prawdziwe płatności)
 

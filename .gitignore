@@ -6,6 +6,8 @@ __pycache__/
 *.sqlite3
 /staticfiles/
 /media/
+/node_modules/
+/static/dist/
 /.test_media/
 .pytest_cache/
 .ruff_cache/

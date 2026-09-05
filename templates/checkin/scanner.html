@@ -1,47 +1,289 @@
-{% extends "base.html" %}
+{% extends "base_terminal.html" %}
 
 {% block title %}Skaner — {{ event.title }}{% endblock %}
 
 {% block content %}
-<h1 class="text-xl font-bold">{{ event.title }} — skaner biletów</h1>
-<p class="text-zinc-500 text-sm mt-1">Nakieruj kamerę na kod QR biletu.</p>
+<div class="flex items-center justify-between flex-wrap gap-2">
+    <div>
+        <h1 class="text-xl font-bold">{{ event.title }} — skaner biletów</h1>
+        <p class="text-zinc-500 text-sm mt-1">Nakieruj kamerę na kod QR biletu.</p>
+    </div>
+    <div class="text-right">
+        <div class="text-xs text-zinc-500 uppercase tracking-wide">Wpuszczono</div>
+        <div class="text-2xl font-mono font-bold">
+            <span id="checked-in-count">{{ checked_in_count }}</span>
+            <span class="text-zinc-600">/ {{ event.sold_total }}</span>
+        </div>
+    </div>
+</div>
+
+<div id="offline-indicator" class="hidden mt-3 inline-flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-full bg-amber-500 text-black">
+    <span id="offline-indicator-text">offline · 0 w kolejce</span>
+</div>
 
 <div id="reader" class="mt-4 rounded-xl overflow-hidden bg-zinc-900"></div>
 
-<div id="result" class="mt-4 hidden rounded-xl p-6 text-center text-2xl font-bold"></div>
+<div id="result" class="mt-4 hidden rounded-xl p-6 text-center text-2xl font-bold text-white min-h-[120px] flex flex-col items-center justify-center"
+     role="status" aria-live="assertive">
+    <div id="result-symbol" class="text-5xl leading-none mb-2"></div>
+    <div id="result-message"></div>
+</div>
 
 <form method="get" action="{% url 'checkin:search' event.id %}" class="mt-6 flex gap-2">
     <input type="text" name="q" placeholder="kod biletu lub e-mail"
-           class="flex-1 rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2">
-    <button class="bg-zinc-700 hover:bg-zinc-600 rounded-lg px-4 py-2">Szukaj ręcznie</button>
+           class="flex-1 min-h-[56px] rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2">
+    <button class="min-h-[56px] px-4 bg-zinc-800 border border-zinc-700 rounded-lg">Szukaj ręcznie</button>
 </form>
+
+<h2 class="mt-8 text-sm font-semibold text-zinc-500 uppercase tracking-wide">Ostatnie skany</h2>
+<ul id="scan-history" class="mt-2 space-y-2">
+    <li class="text-zinc-600 text-sm" data-placeholder>Jeszcze nic nie zeskanowano.</li>
+</ul>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 const resultBox = document.getElementById("result");
+const resultSymbol = document.getElementById("result-symbol");
+const resultMessage = document.getElementById("result-message");
+const countEl = document.getElementById("checked-in-count");
+const historyEl = document.getElementById("scan-history");
 let busy = false;
+let history = [];
+
+// --- OBS-07: offline fallback ----------------------------------------------
+// The manifest holds short code + buyer e-mail + status + QR token HASH for
+// every ticket of this event (never the raw token — the server itself only
+// keeps the hash after issuing). While offline, a scanned QR's token is
+// hashed client-side with the same SHA-256 the server used and matched
+// against this list, so entrance control keeps working without the network.
+const SCAN_URL = "{% url 'checkin:scan' event.id %}";
+const CSRF_TOKEN = "{{ csrf_token }}";
+const MANIFEST_URL = "{% url 'checkin:offline_manifest' event.id %}";
+const MANIFEST_KEY = "ucho-offline-manifest-{{ event.id }}";
+const QUEUE_KEY = "ucho-offline-queue-{{ event.id }}";
+const OFFLINE_STATUS_MESSAGES = {
+    CHECKED_IN: "Bilet już wykorzystany! (offline)",
+    REFUNDED: "Bilet zwrócony — wejście nieważne. (offline)",
+    CANCELLED: "Bilet anulowany — wejście nieważne. (offline)",
+    INVALIDATED: "Bilet anulowany — wejście nieważne. (offline)",
+};
+
+let manifestByShortCode = new Map();
+let manifestByTokenHash = new Map();
+let offlineQueue = [];
+let flushing = false;
+
+function applyManifest(tickets) {
+    manifestByShortCode = new Map();
+    manifestByTokenHash = new Map();
+    tickets.forEach((t) => {
+        manifestByShortCode.set(t.short_code.toUpperCase(), t);
+        manifestByTokenHash.set(t.token_hash, t);
+    });
+}
+
+function loadCachedState() {
+    try {
+        const raw = localStorage.getItem(MANIFEST_KEY);
+        if (raw) applyManifest(JSON.parse(raw));
+    } catch (e) { /* corrupt cache — next online fetch replaces it */ }
+    try {
+        const raw = localStorage.getItem(QUEUE_KEY);
+        if (raw) offlineQueue = JSON.parse(raw);
+    } catch (e) { /* ignore */ }
+}
+
+function fetchManifest() {
+    fetch(MANIFEST_URL)
+        .then((r) => r.json())
+        .then((data) => {
+            applyManifest(data.tickets);
+            localStorage.setItem(MANIFEST_KEY, JSON.stringify(data.tickets));
+        })
+        .catch(() => { /* offline already, or server error — keep the cache we have */ });
+}
+
+function saveQueue() {
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(offlineQueue));
+    updateOfflineIndicator();
+}
+
+function updateOfflineIndicator() {
+    const indicator = document.getElementById("offline-indicator");
+    const text = document.getElementById("offline-indicator-text");
+    if (!navigator.onLine) {
+        indicator.classList.remove("hidden");
+        text.textContent = `offline · ${offlineQueue.length} w kolejce`;
+    } else if (offlineQueue.length > 0) {
+        indicator.classList.remove("hidden");
+        text.textContent = `wysyłanie zaległych skanów… (${offlineQueue.length})`;
+    } else {
+        indicator.classList.add("hidden");
+    }
+}
+
+async function sha256Hex(text) {
+    const bytes = new TextEncoder().encode(text);
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function extractToken(scanned) {
+    if (scanned.includes("t=")) {
+        return scanned.split("t=")[1].split("&")[0];
+    }
+    return scanned;
+}
+
+async function handleOfflineScan(decodedText) {
+    const looksLikeShortCode = decodedText.includes("-") && decodedText.length <= 12;
+    let ticket = looksLikeShortCode
+        ? manifestByShortCode.get(decodedText.trim().toUpperCase())
+        : manifestByTokenHash.get(await sha256Hex(extractToken(decodedText)));
+
+    if (!ticket) {
+        showResult({
+            ok: false,
+            message: "Nieznany bilet (offline — sprawdź listę awaryjną).",
+            ticket_code: "", buyer_email: "",
+        });
+        return;
+    }
+
+    if (ticket.status !== "ISSUED") {
+        showResult({
+            ok: false,
+            message: OFFLINE_STATUS_MESSAGES[ticket.status] || "Bilet nieważny (offline).",
+            ticket_code: ticket.short_code, buyer_email: ticket.buyer_email,
+        });
+        return;
+    }
+
+    ticket.status = "CHECKED_IN"; // local-only, so a second offline scan is caught immediately
+    offlineQueue.push({code: ticket.short_code, scannedAt: new Date().toISOString()});
+    saveQueue();
+    showResult({
+        ok: true,
+        message: "Bilet ważny — wpuść! (offline, wyślę po powrocie łącza)",
+        ticket_code: ticket.short_code, buyer_email: ticket.buyer_email,
+    });
+}
+
+function flushQueue() {
+    if (!navigator.onLine || offlineQueue.length === 0 || flushing) return;
+    flushing = true;
+    const item = offlineQueue[0];
+    fetch(SCAN_URL, {
+        method: "POST",
+        headers: {"X-CSRFToken": CSRF_TOKEN, "Content-Type": "application/x-www-form-urlencoded"},
+        body: new URLSearchParams({code: item.code}),
+    }).then((r) => r.json()).then(() => {
+        offlineQueue.shift();
+        saveQueue();
+        flushing = false;
+        if (offlineQueue.length > 0) flushQueue();
+        else fetchManifest(); // back online with an empty queue — refresh the cache
+    }).catch(() => {
+        flushing = false; // still no real connectivity — retried on the next timer tick
+    });
+}
+
+loadCachedState();
+updateOfflineIndicator();
+fetchManifest();
+window.addEventListener("online", () => { updateOfflineIndicator(); flushQueue(); });
+window.addEventListener("offline", updateOfflineIndicator);
+setInterval(() => { updateOfflineIndicator(); flushQueue(); }, 15000);
+// --- end OBS-07 --------------------------------------------------------
+
+function beep(ok) {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = ok ? 880 : 220;
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+    } catch (e) { /* no audio support — vibration still fires */ }
+}
+
+function renderHistory() {
+    if (!history.length) {
+        historyEl.innerHTML = '<li class="text-zinc-600 text-sm">Jeszcze nic nie zeskanowano.</li>';
+        return;
+    }
+    historyEl.innerHTML = history.slice(0, 5).map((entry, i) => `
+        <li class="bg-zinc-900 rounded-lg p-3 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+                <span class="font-mono font-bold ${entry.ok ? 'text-emerald-400' : 'text-red-400'}">${entry.code || '—'}</span>
+                <span class="text-zinc-500 text-sm ml-2">${entry.message}</span>
+            </div>
+            ${entry.ok ? `<button data-undo-index="${i}" class="min-h-[44px] px-3 text-sm bg-zinc-800 border border-zinc-700 rounded-lg">Cofnij wpuszczenie</button>` : ''}
+        </li>
+    `).join("");
+}
 
 function showResult(data) {
-    resultBox.classList.remove("hidden", "bg-emerald-600", "bg-red-700", "bg-amber-600");
+    resultBox.classList.remove("hidden", "bg-emerald-600", "bg-red-700");
     resultBox.classList.add(data.ok ? "bg-emerald-600" : "bg-red-700");
-    resultBox.innerHTML = data.message +
+    resultSymbol.textContent = data.ok ? "✓" : "✗";
+    resultMessage.innerHTML = data.message +
         (data.ticket_code ? `<div class="text-base font-normal mt-2">${data.ticket_code} · ${data.buyer_email}</div>` : "");
     if (navigator.vibrate) navigator.vibrate(data.ok ? 100 : [80, 60, 80]);
+    beep(data.ok);
+    if (data.ok) {
+        countEl.textContent = String(Number(countEl.textContent) + 1);
+    }
+    history.unshift({ ok: data.ok, code: data.ticket_code, message: data.message });
+    renderHistory();
     setTimeout(() => { busy = false; }, 1500);
 }
 
 function onScan(decodedText) {
     if (busy) return;
     busy = true;
+    if (!navigator.onLine) {
+        handleOfflineScan(decodedText);
+        return;
+    }
     const body = new URLSearchParams({code: decodedText});
-    fetch("{% url 'checkin:scan' event.id %}", {
+    fetch(SCAN_URL, {
         method: "POST",
-        headers: {"X-CSRFToken": "{{ csrf_token }}",
+        headers: {"X-CSRFToken": CSRF_TOKEN,
                   "Content-Type": "application/x-www-form-urlencoded"},
         body: body,
     }).then(r => r.json()).then(showResult)
-      .catch(() => showResult({ok: false, message: "Błąd połączenia — użyj listy awaryjnej."}));
+      .catch(() => handleOfflineScan(decodedText));
 }
+
+historyEl.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-undo-index]");
+    if (!button) return;
+    const entry = history[Number(button.dataset.undoIndex)];
+    if (!entry || !entry.code) return;
+    button.disabled = true;
+    button.textContent = "Cofanie…";
+    fetch("{% url 'checkin:undo_check_in' event.id %}", {
+        method: "POST",
+        headers: {"X-CSRFToken": "{{ csrf_token }}",
+                  "Content-Type": "application/x-www-form-urlencoded"},
+        body: new URLSearchParams({code: entry.code}),
+    }).then(r => r.json()).then((data) => {
+        if (data.ok) {
+            entry.ok = false;
+            entry.message = "Wpuszczenie cofnięte";
+            countEl.textContent = String(Math.max(0, Number(countEl.textContent) - 1));
+            renderHistory();
+        } else {
+            button.disabled = false;
+            button.textContent = "Cofnij wpuszczenie";
+        }
+    });
+});
 
 new Html5Qrcode("reader").start(
     {facingMode: "environment"},

@@ -14,7 +14,7 @@ from .models import Order, OrderStatus, PaymentProviderKind
 from .payments import SignatureError
 from .providers import demo as demo_provider
 from .providers import get_provider
-from .ratelimit import is_rate_limited
+from .ratelimit import is_rate_limited, resend_is_cooling_down
 
 
 @require_POST
@@ -50,6 +50,41 @@ def order_detail(request, order_id):
     if order.status in (OrderStatus.CREATED, OrderStatus.PAYMENT_PENDING):
         checkout_url = get_provider(order).start_checkout(order)
     return render(request, "orders/detail.html", {"order": order, "checkout_url": checkout_url})
+
+
+@require_POST
+def resend_tickets(request, order_id):
+    """KUP-03: let a buyer re-trigger their own ticket e-mail without
+    calling the club — the most common support request per the audit."""
+    order = get_object_or_404(Order, id=order_id)
+    if order.status != OrderStatus.PAID or not order.tickets.exists():
+        messages.error(request, "Dla tego zamówienia nie ma jeszcze biletów do wysłania.")
+        return redirect("orders:detail", order_id=order.id)
+
+    if resend_is_cooling_down(order.id):
+        messages.warning(request, "E-mail z biletami został już wysłany przed chwilą.")
+        return redirect("orders:detail", order_id=order.id)
+
+    from apps.tickets.services import queue_ticket_email
+
+    queue_ticket_email(order, list(order.tickets.all()))
+    messages.success(request, f"Bilety zostały ponownie wysłane na {order.buyer_email}.")
+    return redirect("orders:detail", order_id=order.id)
+
+
+def tickets_pdf(request, order_id):
+    """KUP-03: a self-sufficient PDF download for a paid order's tickets."""
+    order = get_object_or_404(Order, id=order_id)
+    if order.status != OrderStatus.PAID or not order.tickets.exists():
+        messages.error(request, "Dla tego zamówienia nie ma jeszcze biletów do pobrania.")
+        return redirect("orders:detail", order_id=order.id)
+
+    from apps.tickets.services import generate_tickets_pdf
+
+    pdf_bytes = generate_tickets_pdf(order)
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="bilety-{order.short_id}.pdf"'
+    return response
 
 
 # --- Demo checkout (virtual currency) -------------------------------------

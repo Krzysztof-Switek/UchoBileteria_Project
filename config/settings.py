@@ -69,6 +69,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.orders.context_processors.payment_mode",
+                "apps.accounts.context_processors.club_identity",
             ],
         },
     },
@@ -88,9 +89,20 @@ if DATABASES["default"]["ENGINE"].endswith("sqlite3"):
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        # Staff accounts guard a publicly reachable admin (payments, refunds) —
+        # require a real passphrase, not just Django's 8-char default.
+        "OPTIONS": {"min_length": 12},
+    },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+
+# Staff log in with their e-mail address (see apps.accounts.auth_backends);
+# this also rate-limits every login form in the project against brute force.
+AUTHENTICATION_BACKENDS = [
+    "apps.accounts.auth_backends.EmailOrUsernameBackend",
 ]
 
 LANGUAGE_CODE = "pl"
@@ -118,6 +130,14 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="bilety@example.com")
 
 # Base URL used in QR codes and e-mail links.
 SITE_BASE_URL = env("SITE_BASE_URL", default="http://localhost:8000")
+
+# Club identity shown in the public header/footer (KUP-04). Address and phone
+# default to "" (hidden in the footer) rather than a fabricated placeholder —
+# fill these in via .env before a real launch.
+CLUB_NAME = env("CLUB_NAME", default="Klub UCHO")
+CLUB_CONTACT_EMAIL = env("CLUB_CONTACT_EMAIL", default=DEFAULT_FROM_EMAIL)
+CLUB_ADDRESS = env("CLUB_ADDRESS", default="")
+CLUB_PHONE = env("CLUB_PHONE", default="")
 
 # Stripe (live payments; demo mode works without any of these).
 STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", default="")
