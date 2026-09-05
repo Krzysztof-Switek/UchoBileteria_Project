@@ -1,0 +1,38 @@
+{% extends "base_public.html" %}
+
+{% block title %}Regulamin — {{ club_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold">Regulamin sprzedaży biletów</h1>
+<p class="text-muted text-sm mt-1">Szkic do uzupełnienia przez obsługę {{ club_name }} — poniższe sekcje to typowy układ regulaminu sprzedaży biletów, nie gotowa treść prawna.</p>
+
+<div class="mt-6 space-y-6 text-quiet">
+    <section>
+        <h2 class="text-lg font-semibold text-quiet">1. Postanowienia ogólne</h2>
+        <p class="mt-1">[Treść do uzupełnienia — kto jest sprzedawcą, czego dotyczy regulamin.]</p>
+    </section>
+    <section>
+        <h2 class="text-lg font-semibold text-quiet">2. Zakup i płatność biletów</h2>
+        <p class="mt-1">[Treść do uzupełnienia — sposób zakupu, formy płatności, moment zawarcia umowy.]</p>
+    </section>
+    <section>
+        <h2 class="text-lg font-semibold text-quiet">3. Zwroty i odwołane wydarzenia</h2>
+        <p class="mt-1">[Treść do uzupełnienia — zasady zwrotu przy odwołaniu lub zmianie terminu.]</p>
+    </section>
+    <section>
+        <h2 class="text-lg font-semibold text-quiet">4. Wejście na wydarzenie</h2>
+        <p class="mt-1">[Treść do uzupełnienia — regulamin obiektu, zasady weryfikacji biletu przy wejściu.]</p>
+    </section>
+    <section>
+        <h2 class="text-lg font-semibold text-quiet">5. Reklamacje</h2>
+        <p class="mt-1">[Treść do uzupełnienia — tryb i termin składania reklamacji.]</p>
+    </section>
+    <section>
+        <h2 class="text-lg font-semibold text-quiet">6. Dane kontaktowe</h2>
+        <p class="mt-1">
+            {% if club_contact_email %}{{ club_contact_email }}{% else %}[adres e-mail do uzupełnienia]{% endif %}
+            {% if club_address %} · {{ club_address }}{% endif %}
+        </p>
+    </section>
+</div>
+{% endblock %}

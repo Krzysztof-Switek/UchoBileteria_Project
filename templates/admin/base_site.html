@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+{% comment %}
+Extends admin/base.html (not admin/base_site.html): this file's own path
+shadows "admin/base_site.html", and other admin templates (e.g. admin/index.html)
+extend that name too, so self-extending it here would recurse. {% extends %}
+must also be the literal first tag in the file, hence the comment goes after it.
+Branding/title/nav-global blocks below are copied from Django's stock
+admin/base_site.html so behaviour is unchanged; only extrastyle is new.
+{% endcomment %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></div>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block nav-global %}
+<nav class="ucho-nav">
+    <a href="{% url 'admin:index' %}">Pulpit</a>
+    <a href="{% url 'admin:events_event_changelist' %}">Wydarzenia</a>
+    <a href="{% url 'admin:orders_order_changelist' %}">Zamówienia</a>
+    <a href="{% url 'admin:tickets_ticket_changelist' %}">Bilety</a>
+    <a href="{% url 'checkin:event_select' %}">Odprawa</a>
+    <a href="{% url 'reports:dashboard' %}">Raporty</a>
+    <a href="{% url 'admin:auditlog_auditlog_changelist' %}">Dziennik</a>
+    <form method="get" action="{% url 'reports:global_search' %}" class="ucho-nav-search ucho-nav-spacer">
+        <input type="search" name="q" id="global-search-input"
+               placeholder="Szukaj: kod, e-mail, ID, wydarzenie… (/)">
+    </form>
+    {% if payment_demo_mode %}
+    <span class="ucho-badge ucho-badge-demo">DEMO</span>
+    {% else %}
+    <span class="ucho-badge ucho-badge-live">LIVE</span>
+    {% endif %}
+</nav>
+<script>
+    document.addEventListener("keydown", (event) => {
+        if (event.key !== "/") return;
+        const tag = (document.activeElement && document.activeElement.tagName) || "";
+        if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement.isContentEditable) return;
+        event.preventDefault();
+        document.getElementById("global-search-input").focus();
+    });
+</script>
+{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin_theme.css' %}">
+{% endblock %}

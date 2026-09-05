@@ -1,0 +1,89 @@
+{% extends "base_app.html" %}
+
+{% block title %}Szukaj — Klub UCHO{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold">Wyszukiwarka</h1>
+<p class="text-muted text-sm mt-1">Kod biletu, e-mail kupującego, ID zamówienia albo nazwa wydarzenia.</p>
+
+<form method="get" class="mt-4">
+    <input type="search" name="q" value="{{ query }}" autofocus
+           placeholder="Szukaj…"
+           class="input-theme w-full max-w-xl px-4 py-2.5 rounded-lg">
+</form>
+
+{% if not searched %}
+<p class="mt-6 text-muted text-sm">Wpisz co najmniej 2 znaki.</p>
+{% elif not has_results %}
+<p class="mt-6 text-muted">Brak wyników dla &bdquo;{{ query }}&rdquo;.</p>
+{% else %}
+
+{% if events %}
+<h2 class="mt-8 text-lg font-semibold">Wydarzenia</h2>
+<div class="overflow-x-auto">
+<table class="mt-2 w-full text-sm">
+    <thead><tr class="text-muted text-left">
+        <th class="py-1 pr-4">Nazwa</th><th class="pr-4">Termin</th><th class="pr-4">Miejsce</th><th>Status</th>
+    </tr></thead>
+    <tbody>
+        {% for event in events %}
+        <tr class="border-t-theme card-hover">
+            <td class="py-1.5 pr-4"><a href="{% url 'admin:events_event_change' event.pk %}" class="link-accent">{{ event.title }}</a></td>
+            <td class="pr-4">{{ event.start_at|date:"j.m.Y H:i" }}</td>
+            <td class="text-muted pr-4">{{ event.venue_name }}</td>
+            <td>{{ event.get_status_display }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+
+{% if orders %}
+<h2 class="mt-8 text-lg font-semibold">Zamówienia</h2>
+<div class="overflow-x-auto">
+<table class="mt-2 w-full text-sm">
+    <thead><tr class="text-muted text-left">
+        <th class="py-1 pr-4">ID</th><th class="pr-4">Wydarzenie</th><th class="pr-4">E-mail</th><th class="pr-4">Bilety</th><th class="text-right pr-4">Kwota</th><th class="pr-4">Status</th><th>Tryb</th>
+    </tr></thead>
+    <tbody>
+        {% for order in orders %}
+        <tr class="border-t-theme card-hover">
+            <td class="py-1.5 pr-4 font-mono"><a href="{% url 'admin:orders_order_change' order.pk %}" class="link-accent">{{ order.short_id }}</a></td>
+            <td class="pr-4">{{ order.event.title }}</td>
+            <td class="text-muted pr-4">{{ order.buyer_email }}</td>
+            <td class="pr-4">{{ order.quantity }} &times; {{ order.pool.name }}</td>
+            <td class="font-mono text-right pr-4">{{ order.amount_gross }} {{ order.currency }}</td>
+            <td class="pr-4">{{ order.get_status_display }}</td>
+            <td>{% if order.is_demo %}<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500 text-black">DEMO</span>{% else %}<span class="text-xs font-bold px-2 py-0.5 rounded-full btn-primary">LIVE</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+
+{% if tickets %}
+<h2 class="mt-8 text-lg font-semibold">Bilety</h2>
+<div class="overflow-x-auto">
+<table class="mt-2 w-full text-sm">
+    <thead><tr class="text-muted text-left">
+        <th class="py-1 pr-4">Kod</th><th class="pr-4">Wydarzenie</th><th class="pr-4">E-mail</th><th class="pr-4">Status</th><th>Tryb</th>
+    </tr></thead>
+    <tbody>
+        {% for ticket in tickets %}
+        <tr class="border-t-theme card-hover">
+            <td class="py-1.5 pr-4 font-mono"><a href="{% url 'admin:tickets_ticket_change' ticket.pk %}" class="link-accent">{{ ticket.short_code }}</a></td>
+            <td class="pr-4">{{ ticket.event.title }}</td>
+            <td class="text-muted pr-4">{{ ticket.buyer_email }}</td>
+            <td class="pr-4">{{ ticket.get_status_display }}</td>
+            <td>{% if ticket.is_demo %}<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500 text-black">DEMO</span>{% else %}<span class="text-xs font-bold px-2 py-0.5 rounded-full btn-primary">LIVE</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

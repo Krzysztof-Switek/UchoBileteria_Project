@@ -1,0 +1,72 @@
+{% extends "admin/change_form.html" %}
+
+{% block form_top %}
+{{ block.super }}
+{% if add %}
+<div id="ucho-wizard" class="ucho-wizard">
+    <div class="ucho-wizard-steps">
+        <button type="button" class="ucho-wizard-step" data-step="0">1. Podstawy</button>
+        <button type="button" class="ucho-wizard-step" data-step="1">2. Opis i miejsce</button>
+        <button type="button" class="ucho-wizard-step" data-step="2">3. Termin wydarzenia</button>
+        <button type="button" class="ucho-wizard-step" data-step="3">4. Sprzedaż</button>
+    </div>
+    <div id="ucho-wizard-hint" class="ucho-wizard-hint"></div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block after_field_sets %}
+{{ block.super }}
+{% if add %}
+<div class="ucho-wizard-nav">
+    <button type="button" id="ucho-wizard-prev" class="button">&larr; Wstecz</button>
+    <button type="button" id="ucho-wizard-next" class="default button">Dalej &rarr;</button>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("{{ opts.model_name }}_form");
+    if (!form) return;
+    const fieldsets = Array.from(form.querySelectorAll("fieldset.module"));
+    if (fieldsets.length < 2) return; // nothing to page through
+
+    const stepButtons = Array.from(document.querySelectorAll(".ucho-wizard-step"));
+    const hintEl = document.getElementById("ucho-wizard-hint");
+    const prevBtn = document.getElementById("ucho-wizard-prev");
+    const nextBtn = document.getElementById("ucho-wizard-next");
+    const submitRow = form.querySelector(".submit-row");
+
+    const HINTS = [
+        "Tytuł widoczny publicznie na stronie wydarzenia. Adres strony (slug) tworzy się sam z tytułu. Status zostaw jako „Szkic” — opublikujesz wydarzenie w ostatnim kroku, gdy wszystko będzie gotowe.",
+        "Opis i miejsce widoczne dla kupujących na stronie wydarzenia — pisz z ich perspektywy.",
+        "To termin samej imprezy (kiedy się odbywa). Termin sprzedaży biletów ustawisz w następnym kroku — to dwie osobne rzeczy.",
+        "Okno sprzedaży to czas, w którym w ogóle można kupować bilety — osobno od terminu imprezy. Po zapisaniu wydarzenia dodasz tu pule biletowe (np. Early Bird, Regular), każda z własną ceną i datą startu. Reguła aktywacji pul: kolejna pula włącza się automatycznie, gdy nadejdzie jej data startu ALBO gdy poprzednia pula się wyprzeda — cokolwiek nastąpi pierwsze.",
+    ];
+
+    // Land on the step with an error (if the form bounced back with one)
+    // instead of silently resetting to step 1 and hiding the problem.
+    let current = fieldsets.findIndex((fs) => fs.querySelector(".errorlist, .errors"));
+    if (current < 0) current = 0;
+
+    function show(index) {
+        current = index;
+        fieldsets.forEach((fs, i) => { fs.style.display = i === index ? "" : "none"; });
+        stepButtons.forEach((btn, i) => {
+            btn.classList.toggle("active", i === index);
+            btn.classList.toggle("done", i < index);
+        });
+        hintEl.textContent = HINTS[index] || "";
+        prevBtn.disabled = index === 0;
+        const isLast = index === fieldsets.length - 1;
+        nextBtn.style.display = isLast ? "none" : "";
+        if (submitRow) submitRow.style.display = isLast ? "" : "none";
+    }
+
+    stepButtons.forEach((btn, i) => btn.addEventListener("click", () => show(i)));
+    prevBtn.addEventListener("click", () => show(Math.max(0, current - 1)));
+    nextBtn.addEventListener("click", () => show(Math.min(fieldsets.length - 1, current + 1)));
+
+    show(current);
+});
+</script>
+{% endif %}
+{% endblock %}

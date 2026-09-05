@@ -1,0 +1,79 @@
+{% extends "base_app.html" %}
+
+{% block title %}{{ event.title }} — raport{% endblock %}
+
+{% block content %}
+<a href="{% url 'reports:dashboard' %}?tryb={% if is_demo %}demo{% else %}live{% endif %}"
+   class="link-quiet text-sm no-print">&larr; Wszystkie raporty</a>
+
+<div class="mt-1 flex items-center justify-between flex-wrap gap-3">
+    <div>
+        <h1 class="text-2xl font-bold">{{ event.title }}</h1>
+        <p class="text-muted text-sm mt-1">
+            {{ event.start_at|date:"l, j E Y, H:i" }} ·
+            {{ event.venue_name }}{% if event.venue_address %}, {{ event.venue_address }}{% endif %}
+        </p>
+    </div>
+    <div class="flex gap-2 text-sm no-print">
+        <a href="?tryb=demo" class="px-3 py-1.5 rounded-lg {% if is_demo %}bg-amber-500 text-black font-bold{% else %}input-theme{% endif %}">DEMO</a>
+        <a href="?tryb=live" class="px-3 py-1.5 rounded-lg {% if not is_demo %}bg-emerald-500 text-black font-bold{% else %}input-theme{% endif %}">LIVE</a>
+        <button type="button" onclick="window.print()" class="input-theme px-3 py-1.5 rounded-lg">Drukuj / zapisz PDF</button>
+    </div>
+</div>
+
+<div class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+    <div class="card rounded-xl p-4">
+        <div class="text-muted text-sm">Przychód ({{ currency }})</div>
+        <div class="text-xl font-bold font-mono text-success">{{ revenue.paid }}</div>
+    </div>
+    <div class="card rounded-xl p-4">
+        <div class="text-muted text-sm">Zwroty ({{ currency }})</div>
+        <div class="text-xl font-bold font-mono text-danger">{{ revenue.refunded }}</div>
+    </div>
+    <div class="card rounded-xl p-4">
+        <div class="text-muted text-sm">Bilety ważne / wykorzystane</div>
+        <div class="text-xl font-bold font-mono">{{ ticket_counts.issued }} / {{ ticket_counts.checked_in }}</div>
+    </div>
+    <div class="card rounded-xl p-4">
+        <div class="text-muted text-sm">Frekwencja</div>
+        <div class="text-xl font-bold font-mono">
+            {% if attendance_pct is not None %}{{ attendance_pct }}%{% else %}—{% endif %}
+        </div>
+    </div>
+</div>
+
+{% if curve_chart.bars %}
+<h2 class="mt-8 text-lg font-semibold">Krzywa sprzedaży (skumulowany przychód)</h2>
+<div class="mt-2 card rounded-xl p-4">
+    <svg viewBox="0 0 {{ curve_chart.width }} {{ curve_chart.height }}" class="w-full" style="max-height:180px"
+         role="img" aria-label="Skumulowany przychód od pierwszej sprzedaży do dziś">
+        {% for bar in curve_chart.bars %}
+        <rect x="{{ bar.x }}" y="{{ bar.y }}" width="{{ bar.width }}" height="{{ bar.h }}"
+              rx="2" fill="var(--accent)"><title>{{ bar.value }} {{ currency }}</title></rect>
+        {% endfor %}
+    </svg>
+</div>
+{% else %}
+<p class="text-muted mt-6">Brak sprzedaży — krzywa pojawi się po pierwszym opłaconym zamówieniu.</p>
+{% endif %}
+
+<h2 class="mt-8 text-lg font-semibold">Udział pul biletowych</h2>
+<div class="mt-2 space-y-2">
+    {% for row in pools %}
+    <div class="card rounded-lg p-3">
+        <div class="flex items-center justify-between text-sm">
+            <span class="font-semibold">{{ row.pool.name }}</span>
+            <span class="text-muted font-mono">{{ row.share_pct }}% · {{ row.revenue_paid }} {{ currency }}</span>
+        </div>
+        <div class="mt-2 h-2 rounded-full" style="background:var(--surface-2)">
+            <div class="h-2 rounded-full btn-primary" style="width:{{ row.share_pct }}%"></div>
+        </div>
+        <div class="mt-1 text-xs text-muted">
+            {{ row.issued }} ważnych · {{ row.checked_in }} wykorzystanych · {{ row.refunded }} zwróconych
+        </div>
+    </div>
+    {% empty %}
+    <p class="text-muted">Brak sprzedaży w żadnej puli.</p>
+    {% endfor %}
+</div>
+{% endblock %}

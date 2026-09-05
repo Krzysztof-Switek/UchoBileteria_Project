@@ -1,0 +1,106 @@
+@import "tailwindcss";
+@source "../../templates";
+
+/* Bileteria UCHO theme — hi-tech: deep neutrals + a signal cyan accent,
+   reserved for calls-to-action, links and active states. Adapts to
+   the visitor's OS light/dark preference automatically. */
+:root {
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --surface-2: #f1f5f9;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --text-quiet: #475569;
+    --text-muted: #64748b;
+
+    --accent: #0891b2;
+    --accent-hover: #0e7490;
+    --accent-fg: #ffffff;
+
+    --success: #059669;
+    --danger: #dc2626;
+    --warning: #b45309;
+
+    --success-bg: #d1fae5;
+    --success-fg: #065f46;
+    --danger-bg: #fee2e2;
+    --danger-fg: #991b1b;
+    --warning-bg: #fef3c7;
+    --warning-fg: #92400e;
+
+    color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #09090b;
+        --surface: #18181b;
+        --surface-2: #27272a;
+        --border: #27272a;
+        --text: #f4f4f5;
+        --text-quiet: #a1a1aa;
+        --text-muted: #71717a;
+
+        --accent: #22d3ee;
+        --accent-hover: #67e8f9;
+        --accent-fg: #09090b;
+
+        --success: #34d399;
+        --danger: #f87171;
+        --warning: #fbbf24;
+
+        --success-bg: rgba(16, 185, 129, 0.15);
+        --success-fg: #6ee7b7;
+        --danger-bg: rgba(239, 68, 68, 0.15);
+        --danger-fg: #fca5a5;
+        --warning-bg: rgba(245, 158, 11, 0.15);
+        --warning-fg: #fcd34d;
+
+        color-scheme: dark;
+    }
+}
+
+body { background: var(--bg); color: var(--text); }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; }
+.card-hover:hover { background: var(--surface-2); }
+
+.border-theme { border: 1px solid var(--border); }
+.border-t-theme { border-top: 1px solid var(--border); }
+.border-b-theme { border-bottom: 1px solid var(--border); }
+.divide-theme > * + * { border-top: 1px solid var(--border); }
+
+.text-quiet { color: var(--text-quiet); }
+.text-muted { color: var(--text-muted); }
+
+.link-quiet { color: var(--text-muted); }
+.link-quiet:hover { color: var(--text); }
+.link-accent { color: var(--accent); }
+.link-accent:hover { color: var(--accent-hover); }
+
+.btn-primary { background: var(--accent); color: var(--accent-fg); }
+.btn-primary:hover { background: var(--accent-hover); }
+
+.input-theme {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 0.5rem;
+}
+.input-theme::placeholder { color: var(--text-muted); }
+
+.text-success { color: var(--success); }
+.text-danger { color: var(--danger); }
+.text-warning { color: var(--warning); }
+
+.msg-success { background: var(--success-bg); color: var(--success-fg); }
+.msg-danger { background: var(--danger-bg); color: var(--danger-fg); }
+.msg-warning { background: var(--warning-bg); color: var(--warning-fg); }
+
+/* RAP-06: "drukuj / zapisz PDF" — plain white print, no chrome. */
+@media print {
+    nav, .no-print { display: none !important; }
+    body { background: #fff !important; color: #000 !important; }
+    .card { border: 1px solid #ccc !important; break-inside: avoid; }
+    a { color: #000 !important; text-decoration: none !important; }
+}

@@ -1,0 +1,19 @@
+{% if nearest_event %}
+<div class="ucho-dash-card">
+    <div class="ucho-dash-label">Najbliższe wydarzenie</div>
+    <div class="ucho-dash-title">
+        <a href="{% url 'admin:events_event_change' nearest_event.pk %}">{{ nearest_event.title }}</a>
+        <span class="ucho-dash-muted">{{ nearest_event.start_at|date:"j E Y, H:i" }}</span>
+    </div>
+    {% if fill_pct is not None %}
+    <div class="ucho-fill-track"><div class="ucho-fill-bar" style="width:{{ fill_pct_str }}%"></div></div>
+    <div class="ucho-dash-muted" style="font-size:0.8rem;margin-top:4px;">
+        {{ nearest_event.sold_total }} / {{ nearest_event.capacity_total }} miejsc ({{ fill_pct }}%)
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="ucho-dash-card">
+    <div class="ucho-dash-muted">Brak nadchodzących opublikowanych wydarzeń.</div>
+</div>
+{% endif %}

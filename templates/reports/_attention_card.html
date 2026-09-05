@@ -1,0 +1,16 @@
+{% if has_attention %}
+<div class="ucho-dash-card">
+    <div class="ucho-dash-label">Wymaga uwagi</div>
+    <ul class="ucho-attention-list">
+        {% if attention.payment_pending %}
+        <li><a href="{% url 'admin:orders_order_changelist' %}?status__exact=PAYMENT_PENDING">{{ attention.payment_pending }} płatności w toku</a></li>
+        {% endif %}
+        {% if attention.failed_webhooks %}
+        <li><a href="{% url 'admin:orders_paymentevent_changelist' %}?processing_status__exact=ERROR">{{ attention.failed_webhooks }} nieudanych webhooków</a></li>
+        {% endif %}
+        {% if attention.failed_emails %}
+        <li><a href="{% url 'admin:tickets_emailoutbox_changelist' %}?status__exact=FAILED">{{ attention.failed_emails }} e-maili z błędem</a></li>
+        {% endif %}
+    </ul>
+</div>
+{% endif %}

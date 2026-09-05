@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Bileteria UCHO — odprawa{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'dist/tailwind.css' %}">
+</head>
+{% comment %}
+Forced dark regardless of OS preference: door duty happens in low light,
+on a phone, one-handed — this shell does not follow prefers-color-scheme
+like base_public/base_app do.
+{% endcomment %}
+<body class="min-h-screen bg-zinc-950 text-zinc-100">
+    <main class="px-4 py-6">
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="rounded-lg px-4 py-3 {% if message.tags == 'error' %}bg-red-950 text-red-200{% elif message.tags == 'warning' %}bg-amber-950 text-amber-200{% else %}bg-emerald-950 text-emerald-200{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

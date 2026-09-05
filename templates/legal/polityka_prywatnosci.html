@@ -1,0 +1,40 @@
+{% extends "base_public.html" %}
+
+{% block title %}Polityka prywatności — {{ club_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold">Polityka prywatności</h1>
+<p class="text-muted text-sm mt-1">Szkic do uzupełnienia przez obsługę {{ club_name }} — poniższe sekcje to typowy układ polityki prywatności zgodnej z RODO, nie gotowa treść prawna.</p>
+
+<div class="mt-6 space-y-6 text-quiet">
+    <section>
+        <h2 class="text-lg font-semibold text-quiet">1. Administrator danych</h2>
+        <p class="mt-1">
+            Administratorem danych jest {{ club_name }}{% if club_address %}, {{ club_address }}{% endif %}.
+            {% if club_contact_email %}Kontakt: <a href="mailto:{{ club_contact_email }}" class="link-accent">{{ club_contact_email }}</a>.{% else %}[adres kontaktowy do uzupełnienia]{% endif %}
+        </p>
+    </section>
+    <section>
+        <h2 class="text-lg font-semibold text-quiet">2. Jakie dane przetwarzamy</h2>
+        <p class="mt-1">Adres e-mail podany przy zakupie biletu — używany do wysyłki biletów i informacji o zamówieniu.</p>
+    </section>
+    <section>
+        <h2 class="text-lg font-semibold text-quiet">3. Cel i podstawa prawna przetwarzania</h2>
+        <p class="mt-1">[Treść do uzupełnienia — realizacja umowy sprzedaży biletu, ewentualnie obowiązki księgowe.]</p>
+    </section>
+    <section>
+        <h2 class="text-lg font-semibold text-quiet">4. Okres przechowywania danych</h2>
+        <p class="mt-1">[Treść do uzupełnienia — jak długo dane są przechowywane po zakończeniu wydarzenia.]</p>
+    </section>
+    <section>
+        <h2 class="text-lg font-semibold text-quiet">5. Prawa osoby, której dane dotyczą</h2>
+        <p class="mt-1">[Treść do uzupełnienia — prawo dostępu, sprostowania, usunięcia, sprzeciwu, skargi do PUODO.]</p>
+    </section>
+    <section>
+        <h2 class="text-lg font-semibold text-quiet">6. Kontakt w sprawach danych osobowych</h2>
+        <p class="mt-1">
+            {% if club_contact_email %}{{ club_contact_email }}{% else %}[adres e-mail do uzupełnienia]{% endif %}
+        </p>
+    </section>
+</div>
+{% endblock %}

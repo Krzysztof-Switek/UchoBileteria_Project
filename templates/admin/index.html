@@ -1,0 +1,17 @@
+{% extends "admin/index.html" %}
+{% load dashboard_tags %}
+
+{% block content %}
+<div class="ucho-quick-links">
+    <a href="{% url 'checkin:event_select' %}" class="ucho-dash-shortcut">Otwórz odprawę &rarr;</a>
+</div>
+{% if perms.orders.view_order %}
+{% render_nearest_event_card %}
+<div class="ucho-callout">
+    <strong>Raporty sprzedaży</strong> —
+    <a href="{% url 'reports:dashboard' %}">otwórz pełny dashboard raportów (okresy, wykres, sprzedaż per wydarzenie/pula) &rarr;</a>
+</div>
+{% render_attention_card %}
+{% endif %}
+{{ block.super }}
+{% endblock %}

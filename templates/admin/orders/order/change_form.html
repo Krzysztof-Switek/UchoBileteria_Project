@@ -1,0 +1,10 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+{% if original.status == "PAID" %}
+<li>
+    <a href="{% url 'admin:orders_order_refund' original.pk %}" class="button">Zwróć zamówienie</a>
+</li>
+{% endif %}
+{{ block.super }}
+{% endblock %}

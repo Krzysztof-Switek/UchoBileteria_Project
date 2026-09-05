@@ -1,0 +1,480 @@
+/* Bileteria UCHO — admin theme.
+   Re-skins Django's built-in admin (kept, per team decision, instead of a
+   bespoke UI) with the same hi-tech system used on the public pages: deep
+   neutrals + a signal cyan accent, in both a light and a dark variant. Django's
+   own light/dark toggle (top-right) switches between them. */
+
+:root,
+html[data-theme="light"] {
+    --primary: #ffffff;
+    --secondary: #e2e8f0;
+    --accent: #0891b2;
+    --primary-fg: #0f172a;
+
+    --body-fg: #0f172a;
+    --body-bg: #f8fafc;
+    --body-quiet-color: #475569;
+    --body-medium-color: #334155;
+    --body-loud-color: #0f172a;
+
+    --header-color: #0f172a;
+    --header-branding-color: #0891b2;
+    --header-bg: #ffffff;
+    --header-link-color: #0f172a;
+
+    --breadcrumbs-fg: #475569;
+    --breadcrumbs-link-fg: #0f172a;
+    --breadcrumbs-bg: #f8fafc;
+
+    --link-fg: #0891b2;
+    --link-hover-color: #0e7490;
+    --link-selected-fg: #0891b2;
+
+    --hairline-color: #e2e8f0;
+    --border-color: #e2e8f0;
+
+    --error-fg: #dc2626;
+
+    --message-success-bg: #d1fae5;
+    --message-warning-bg: #fef3c7;
+    --message-error-bg: #fee2e2;
+    --message-info-bg: #dbeafe;
+
+    --darkened-bg: #ffffff;
+    --selected-bg: #f1f5f9;
+    --selected-row: #ecfeff;
+
+    --button-fg: #ffffff;
+    --button-bg: #0891b2;
+    --button-hover-bg: #0e7490;
+    --default-button-bg: #0891b2;
+    --default-button-hover-bg: #0e7490;
+    --close-button-bg: #64748b;
+    --close-button-hover-bg: #475569;
+    --delete-button-bg: #dc2626;
+    --delete-button-hover-bg: #b91c1c;
+
+    --object-tools-fg: #ffffff;
+    --object-tools-bg: #334155;
+    --object-tools-hover-bg: #1e293b;
+
+    color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --primary: #18181b;
+        --secondary: #27272a;
+        --accent: #22d3ee;
+        --primary-fg: #f4f4f5;
+
+        --body-fg: #e4e4e7;
+        --body-bg: #09090b;
+        --body-quiet-color: #a1a1aa;
+        --body-medium-color: #d4d4d8;
+        --body-loud-color: #f4f4f5;
+
+        --header-color: #f4f4f5;
+        --header-branding-color: #22d3ee;
+        --header-bg: #18181b;
+        --header-link-color: #f4f4f5;
+
+        --breadcrumbs-fg: #a1a1aa;
+        --breadcrumbs-link-fg: #e4e4e7;
+        --breadcrumbs-bg: #09090b;
+
+        --link-fg: #22d3ee;
+        --link-hover-color: #67e8f9;
+        --link-selected-fg: #22d3ee;
+
+        --hairline-color: #27272a;
+        --border-color: #27272a;
+
+        --error-fg: #f87171;
+
+        --message-success-bg: #052e21;
+        --message-warning-bg: #451a03;
+        --message-error-bg: #450a0a;
+        --message-info-bg: #172554;
+
+        --darkened-bg: #18181b;
+        --selected-bg: #27272a;
+        --selected-row: #052e21;
+
+        --button-fg: #09090b;
+        --button-bg: #22d3ee;
+        --button-hover-bg: #67e8f9;
+        --default-button-bg: #22d3ee;
+        --default-button-hover-bg: #67e8f9;
+        --close-button-bg: #3f3f46;
+        --close-button-hover-bg: #52525b;
+        --delete-button-bg: #dc2626;
+        --delete-button-hover-bg: #b91c1c;
+
+        --object-tools-fg: #09090b;
+        --object-tools-bg: #27272a;
+        --object-tools-hover-bg: #3f3f46;
+
+        color-scheme: dark;
+    }
+}
+
+html[data-theme="dark"] {
+    --primary: #18181b;
+    --secondary: #27272a;
+    --accent: #22d3ee;
+    --primary-fg: #f4f4f5;
+
+    --body-fg: #e4e4e7;
+    --body-bg: #09090b;
+    --body-quiet-color: #a1a1aa;
+    --body-medium-color: #d4d4d8;
+    --body-loud-color: #f4f4f5;
+
+    --header-color: #f4f4f5;
+    --header-branding-color: #22d3ee;
+    --header-bg: #18181b;
+    --header-link-color: #f4f4f5;
+
+    --breadcrumbs-fg: #a1a1aa;
+    --breadcrumbs-link-fg: #e4e4e7;
+    --breadcrumbs-bg: #09090b;
+
+    --link-fg: #22d3ee;
+    --link-hover-color: #67e8f9;
+    --link-selected-fg: #22d3ee;
+
+    --hairline-color: #27272a;
+    --border-color: #27272a;
+
+    --error-fg: #f87171;
+
+    --message-success-bg: #052e21;
+    --message-warning-bg: #451a03;
+    --message-error-bg: #450a0a;
+    --message-info-bg: #172554;
+
+    --darkened-bg: #18181b;
+    --selected-bg: #27272a;
+    --selected-row: #052e21;
+
+    --button-fg: #09090b;
+    --button-bg: #22d3ee;
+    --button-hover-bg: #67e8f9;
+    --default-button-bg: #22d3ee;
+    --default-button-hover-bg: #67e8f9;
+    --close-button-bg: #3f3f46;
+    --close-button-hover-bg: #52525b;
+    --delete-button-bg: #dc2626;
+    --delete-button-hover-bg: #b91c1c;
+
+    --object-tools-fg: #09090b;
+    --object-tools-bg: #27272a;
+    --object-tools-hover-bg: #3f3f46;
+
+    color-scheme: dark;
+}
+
+#header {
+    border-bottom: 1px solid var(--hairline-color);
+    box-shadow: none;
+    flex-wrap: wrap;
+    row-gap: 6px;
+}
+
+/* UX-04: same staff navigation as base_app.html (templates/partials/staff_nav.html),
+   styled for Django admin's own CSS-variable system instead of Tailwind, so
+   panel, raporty and odprawa share one frame without loading two CSS systems
+   on the same page. */
+.ucho-nav {
+    display: flex;
+    align-items: center;
+    flex: 1 0 100%;
+    overflow-x: auto;
+    border-top: 1px solid var(--hairline-color);
+    margin-top: 8px;
+    padding-top: 6px;
+    font-size: 0.85rem;
+}
+
+.ucho-nav a {
+    padding: 8px 10px;
+    color: var(--body-quiet-color);
+    white-space: nowrap;
+}
+
+.ucho-nav a:hover {
+    color: var(--link-fg);
+}
+
+.ucho-nav-spacer {
+    margin-left: auto;
+}
+
+/* OBS-04: one search box in the nav, reachable from any admin/report screen. */
+.ucho-nav-search {
+    display: flex;
+    align-items: center;
+    flex: 0 1 260px;
+    margin-right: 12px;
+}
+
+.ucho-nav-search input {
+    width: 100%;
+    padding: 5px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--hairline-color);
+    background: var(--body-bg);
+    color: var(--body-fg);
+    font-size: 0.8rem;
+}
+
+.ucho-nav-search input::placeholder {
+    color: var(--body-quiet-color);
+}
+
+.ucho-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.ucho-badge-demo { background: #f59e0b; color: #000; }
+.ucho-badge-live { background: var(--accent); color: var(--button-fg); }
+
+#branding h1, #branding #site-name a {
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+div.breadcrumbs {
+    background: var(--body-bg);
+    border-bottom: 1px solid var(--hairline-color);
+    padding: 10px 40px;
+}
+
+/* Django's stock base.css pins the admin index page ("dashboard" bodyclass)
+   to a fixed 600px — sized for the original bare app-link list. Our own
+   ops-dashboard cards (below) need real room to breathe; widen it without
+   going edge-to-edge, which would look just as awkward on a wide monitor. */
+.dashboard #content {
+    width: min(1000px, calc(100% - 80px));
+}
+
+/* Fieldsets read as clean, well-spaced cards instead of Django's default
+   solid-color header bar. */
+.module {
+    background: var(--darkened-bg);
+    border: 1px solid var(--hairline-color);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.module h2, .module caption, .inline-group h2 {
+    background: transparent;
+    color: var(--body-loud-color);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
+    padding: 16px 20px 4px;
+}
+
+.module .description {
+    padding: 0 20px 14px;
+    color: var(--body-quiet-color);
+    font-size: 0.825rem;
+    line-height: 1.5;
+}
+
+.module div.form-row,
+.module .form-row {
+    padding: 10px 20px;
+    border-top: 1px solid var(--hairline-color);
+}
+
+.module details summary {
+    cursor: pointer;
+}
+
+.submit-row {
+    background: transparent;
+    border: none;
+    padding: 14px 0 0;
+    margin-top: 8px;
+}
+
+.submit-row input.default {
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.submit-row input, .submit-row a {
+    border-radius: 8px;
+}
+
+#content-related .module {
+    background: var(--darkened-bg);
+}
+
+.inline-group .tabular fieldset.module {
+    border-radius: 12px;
+}
+
+a:link, a:visited {
+    text-decoration: none;
+}
+
+.button, input[type="submit"], input[type="button"], .submit-row input, a.button {
+    border-radius: 8px;
+}
+
+.ucho-callout {
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: 12px;
+}
+
+/* OBS-01: operations dashboard on the admin landing page. */
+.ucho-dash-card {
+    background: var(--darkened-bg);
+    border: 1px solid var(--hairline-color);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 14px;
+}
+
+.ucho-dash-label {
+    font-size: 0.8rem;
+    color: var(--body-quiet-color);
+    margin-bottom: 6px;
+}
+
+.ucho-dash-title a {
+    font-weight: 600;
+}
+
+.ucho-dash-muted {
+    color: var(--body-quiet-color);
+    font-size: 0.85rem;
+}
+
+.ucho-fill-track {
+    margin-top: 10px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--selected-bg);
+    overflow: hidden;
+}
+
+.ucho-fill-bar {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--accent);
+}
+
+.ucho-attention-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 10px;
+}
+
+.ucho-attention-list li {
+    padding: 3px 0;
+}
+
+/* :link/:visited variants: Django's own a:link, a:visited rule (base.css)
+   has the same specificity as a plain ".foo a" selector, and source order
+   alone isn't reliable here — matching its pseudo-classes is the only way
+   to reliably win instead of silently rendering link-blue text. */
+.ucho-attention-list a,
+.ucho-attention-list a:link,
+.ucho-attention-list a:visited {
+    color: var(--error-fg);
+    font-weight: 600;
+}
+
+.ucho-dash-shortcut,
+.ucho-dash-shortcut:link,
+.ucho-dash-shortcut:visited {
+    display: inline-flex;
+    align-items: center;
+    background: var(--button-bg);
+    color: var(--button-fg);
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 8px 16px;
+    /* base.css's a:not(...) underline rule outranks class selectors via an
+       ID selector inside :not() — !important is the only reliable way out. */
+    text-decoration: none !important;
+    font-size: 0.85rem;
+}
+
+/* Standalone quick-action row above the dashboard cards (e.g. "Otwórz
+   odprawę") — a shortcut to a daily task, not a status card itself. */
+.ucho-quick-links {
+    margin-bottom: 16px;
+}
+
+/* OBS-08: step-by-step wizard shell wrapped around the "add event" form —
+   same fieldsets Django already renders, just paged one at a time with a
+   contextual hint per step (JS hides/shows fieldset.module in place). */
+.ucho-wizard {
+    margin-bottom: 20px;
+}
+
+.ucho-wizard-steps {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.ucho-wizard-step {
+    flex: 1 1 auto;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--hairline-color);
+    background: var(--darkened-bg);
+    color: var(--body-quiet-color);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.ucho-wizard-step.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.ucho-wizard-step.done {
+    color: var(--body-fg);
+}
+
+.ucho-wizard-step.done::before {
+    content: "✓ ";
+}
+
+.ucho-wizard-hint {
+    padding: 12px 16px;
+    background: var(--message-info-bg);
+    border-radius: 10px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--body-fg);
+}
+
+.ucho-wizard-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 4px 0 16px;
+}
