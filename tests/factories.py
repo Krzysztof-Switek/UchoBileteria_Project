@@ -17,6 +17,7 @@ def make_event(**kwargs) -> Event:
     defaults = {
         "title": "Testowy koncert",
         "slug": f"testowy-koncert-{uuid.uuid4().hex[:6]}",
+        "gates_open_at": now + timedelta(days=7, hours=-1),
         "start_at": now + timedelta(days=7),
         "end_at": now + timedelta(days=7, hours=4),
         "sales_start_at": now - timedelta(days=1),
@@ -29,9 +30,10 @@ def make_event(**kwargs) -> Event:
 
 
 def make_pool(event: Event, **kwargs) -> TicketPool:
+    # No more explicit priority — activation order is sales_start_at itself.
+    kwargs.pop("priority", None)
     defaults = {
         "name": "Regular",
-        "priority": kwargs.pop("priority", 1),
         "price_gross": Decimal("60.00"),
         "capacity": 100,
     }

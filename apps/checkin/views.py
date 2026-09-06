@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required, permission_required
+from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -20,8 +21,10 @@ can_scan = permission_required("tickets.checkin_ticket", raise_exception=True)
 def _scannable_events():
     """Events staff may check people into: published, not long finished."""
     cutoff = timezone.now() - timedelta(hours=12)
+    # end_at is optional (KUP schema change) — fall back to start_at when unset.
     return Event.objects.filter(
-        status__in=[EventStatus.PUBLISHED, EventStatus.FINISHED], end_at__gte=cutoff
+        Q(end_at__gte=cutoff) | Q(end_at__isnull=True, start_at__gte=cutoff),
+        status__in=[EventStatus.PUBLISHED, EventStatus.FINISHED],
     ).order_by("start_at")
 
 

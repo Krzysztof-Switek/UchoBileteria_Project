@@ -139,6 +139,9 @@ CLUB_CONTACT_EMAIL = env("CLUB_CONTACT_EMAIL", default=DEFAULT_FROM_EMAIL)
 CLUB_ADDRESS = env("CLUB_ADDRESS", default="")
 CLUB_PHONE = env("CLUB_PHONE", default="")
 
+# Hard venue capacity — no event can be configured above this.
+CLUB_MAX_CAPACITY = env.int("CLUB_MAX_CAPACITY", default=500)
+
 # Stripe (live payments; demo mode works without any of these).
 STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", default="")
 STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY", default="")

@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from apps.auditlog.services import log_action
 
-from .models import Event, EventStatus, PoolManualStatus, PoolStatus, TicketPool
+from .models import Event, EventStatus, PoolManualStatus, PoolSelloutAction, PoolStatus, TicketPool
 
 
 class SalesState:
@@ -25,10 +25,12 @@ class SalesState:
 
 def pools_with_status(event: Event, now=None) -> list[tuple[TicketPool, str]]:
     """
-    Return [(pool, computed_status), ...] ordered by priority.
+    Return [(pool, computed_status), ...] ordered chronologically by
+    sales_start_at — there's no separate priority field; time IS the order.
 
     Activation rule C: a pool becomes sellable when its start date has been
-    reached OR every previous pool is exhausted (sold out or closed).
+    reached OR the previous pool is exhausted (sold out or closed) *and*
+    that previous pool's on_sellout is ACTIVATE_NEXT rather than PAUSE.
     Manual status always wins: FORCED_CLOSED -> CLOSED, FORCED_OPEN -> ACTIVE
     (unless sold out).
     """
@@ -37,8 +39,9 @@ def pools_with_status(event: Event, now=None) -> list[tuple[TicketPool, str]]:
     # There is no previous pool for the first one, so only its start date
     # (or missing date) can activate it.
     previous_exhausted = False
+    previous_cascades = True
 
-    for pool in event.pools.order_by("priority"):
+    for pool in event.pools.order_by("sales_start_at"):
         if pool.manual_status == PoolManualStatus.FORCED_CLOSED:
             status = PoolStatus.CLOSED
         elif pool.is_sold_out:
@@ -54,16 +57,18 @@ def pools_with_status(event: Event, now=None) -> list[tuple[TicketPool, str]]:
                 # No date set: first pool opens immediately, later pools wait
                 # for previous pools to sell out / close.
                 date_trigger = not result
-            status = PoolStatus.ACTIVE if (date_trigger or previous_exhausted) else PoolStatus.DRAFT
+            cascade_trigger = previous_exhausted and previous_cascades
+            status = PoolStatus.ACTIVE if (date_trigger or cascade_trigger) else PoolStatus.DRAFT
 
         result.append((pool, status))
         previous_exhausted = status in (PoolStatus.SOLD_OUT, PoolStatus.CLOSED)
+        previous_cascades = pool.on_sellout == PoolSelloutAction.ACTIVATE_NEXT
 
     return result
 
 
 def get_active_pool(event: Event, now=None) -> TicketPool | None:
-    """The single sellable pool: lowest priority among ACTIVE ones."""
+    """The single sellable pool: earliest (by sales_start_at) among ACTIVE ones."""
     for pool, status in pools_with_status(event, now):
         if status == PoolStatus.ACTIVE:
             return pool
@@ -107,7 +112,13 @@ def publish_event(event: Event, actor=None) -> Event:
         raise ValidationError("Wydarzenie musi mieć co najmniej jedną pulę biletów.")
     if event.sales_end_at <= event.sales_start_at:
         raise ValidationError("Koniec sprzedaży musi być po jej rozpoczęciu.")
-    if event.end_at <= event.start_at:
+    if event.gates_open_at is None:
+        raise ValidationError("Wydarzenie musi mieć ustawiony czas otwarcia bramek.")
+    if event.gates_open_at > event.start_at:
+        raise ValidationError(
+            "Bramki muszą się otworzyć przed startem koncertu (lub w tym samym momencie)."
+        )
+    if event.end_at is not None and event.end_at <= event.start_at:
         raise ValidationError("Koniec wydarzenia musi być po jego rozpoczęciu.")
 
     event.status = EventStatus.PUBLISHED

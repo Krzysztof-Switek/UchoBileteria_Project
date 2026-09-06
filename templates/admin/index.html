@@ -6,12 +6,16 @@
     <a href="{% url 'checkin:event_select' %}" class="ucho-dash-shortcut">Otwórz odprawę &rarr;</a>
 </div>
 {% if perms.orders.view_order %}
-{% render_nearest_event_card %}
-<div class="ucho-callout">
-    <strong>Raporty sprzedaży</strong> —
-    <a href="{% url 'reports:dashboard' %}">otwórz pełny dashboard raportów (okresy, wykres, sprzedaż per wydarzenie/pula) &rarr;</a>
+{% render_events_overview %}
+<div class="ucho-tile-grid">
+    <a href="{% url 'reports:dashboard' %}" class="ucho-tile">
+        <span class="ucho-tile-title">Raporty sprzedaży</span>
+        <span class="ucho-tile-desc">Okresy, wykres, sprzedaż per wydarzenie/pula</span>
+    </a>
 </div>
 {% render_attention_card %}
 {% endif %}
 {{ block.super }}
 {% endblock %}
+
+{% block sidebar %}{% endblock %}

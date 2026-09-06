@@ -1,68 +1,107 @@
 @import "tailwindcss";
 @source "../../templates";
 
-/* Bileteria UCHO theme — hi-tech: deep neutrals + a signal cyan accent,
-   reserved for calls-to-action, links and active states. Adapts to
-   the visitor's OS light/dark preference automatically. */
+/* Bileteria UCHO theme — dark-first navy + a signal blue accent, matching
+   the design system also used by the club's reservation-calendar tool.
+   Default follows the visitor's OS light/dark preference; data-theme on
+   <html> ("light"/"dark", set by the toggle below and persisted in
+   localStorage) overrides that either way. */
 :root {
-    --bg: #f8fafc;
+    --bg: #f6f7fb;
     --surface: #ffffff;
-    --surface-2: #f1f5f9;
-    --border: #e2e8f0;
-    --text: #0f172a;
-    --text-quiet: #475569;
-    --text-muted: #64748b;
+    --surface-2: #f2f4f8;
+    --border: rgba(12, 18, 32, 0.12);
+    --text: #0c1220;
+    --text-quiet: rgba(12, 18, 32, 0.70);
+    --text-muted: rgba(12, 18, 32, 0.50);
 
-    --accent: #0891b2;
-    --accent-hover: #0e7490;
+    --accent: #2f6fed;
+    --accent-hover: color-mix(in srgb, var(--accent) 85%, black);
     --accent-fg: #ffffff;
+    --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
 
-    --success: #059669;
-    --danger: #dc2626;
+    --success: #039855;
+    --danger: #d92d20;
     --warning: #b45309;
 
-    --success-bg: #d1fae5;
-    --success-fg: #065f46;
-    --danger-bg: #fee2e2;
-    --danger-fg: #991b1b;
+    --success-bg: rgba(3, 152, 85, 0.10);
+    --success-fg: #027a45;
+    --danger-bg: rgba(217, 45, 32, 0.10);
+    --danger-fg: #b91c1c;
     --warning-bg: #fef3c7;
     --warning-fg: #92400e;
 
     color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg: #09090b;
-        --surface: #18181b;
-        --surface-2: #27272a;
-        --border: #27272a;
-        --text: #f4f4f5;
-        --text-quiet: #a1a1aa;
-        --text-muted: #71717a;
+:root[data-theme="dark"],
+html:not([data-theme="light"]) {
+    --bg: #0b0f17;
+    --surface: #101828;
+    --surface-2: #0f172a;
+    --border: rgba(230, 232, 238, 0.12);
+    --text: #e6e8ee;
+    --text-quiet: rgba(230, 232, 238, 0.75);
+    --text-muted: rgba(230, 232, 238, 0.55);
 
-        --accent: #22d3ee;
-        --accent-hover: #67e8f9;
-        --accent-fg: #09090b;
+    --accent: #8ab4ff;
+    --accent-hover: color-mix(in srgb, var(--accent) 80%, white);
+    --accent-fg: #0b0f17;
+    --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
 
-        --success: #34d399;
-        --danger: #f87171;
-        --warning: #fbbf24;
+    --success: #4ade80;
+    --danger: #ff6b6b;
+    --warning: #fbbf24;
 
-        --success-bg: rgba(16, 185, 129, 0.15);
-        --success-fg: #6ee7b7;
-        --danger-bg: rgba(239, 68, 68, 0.15);
-        --danger-fg: #fca5a5;
-        --warning-bg: rgba(245, 158, 11, 0.15);
-        --warning-fg: #fcd34d;
+    --success-bg: rgba(74, 222, 128, 0.14);
+    --success-fg: #86efac;
+    --danger-bg: rgba(255, 107, 107, 0.14);
+    --danger-fg: #fca5a5;
+    --warning-bg: rgba(245, 158, 11, 0.15);
+    --warning-fg: #fcd34d;
 
-        color-scheme: dark;
+    color-scheme: dark;
+}
+
+/* Dark is the default look (matches the design system's philosophy), so an
+   explicit data-theme="dark" and "no explicit choice yet" both render dark
+   — only data-theme="light" opts out. Without JS (no localStorage choice
+   made yet) still respect the OS preference for a first-visit light user. */
+@media (prefers-color-scheme: light) {
+    html:not([data-theme]) {
+        --bg: #f6f7fb;
+        --surface: #ffffff;
+        --surface-2: #f2f4f8;
+        --border: rgba(12, 18, 32, 0.12);
+        --text: #0c1220;
+        --text-quiet: rgba(12, 18, 32, 0.70);
+        --text-muted: rgba(12, 18, 32, 0.50);
+        --accent: #2f6fed;
+        --accent-hover: color-mix(in srgb, var(--accent) 85%, black);
+        --accent-fg: #ffffff;
+        --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+        --success: #039855;
+        --danger: #d92d20;
+        --warning: #b45309;
+        --success-bg: rgba(3, 152, 85, 0.10);
+        --success-fg: #027a45;
+        --danger-bg: rgba(217, 45, 32, 0.10);
+        --danger-fg: #b91c1c;
+        --warning-bg: #fef3c7;
+        --warning-fg: #92400e;
+        color-scheme: light;
     }
 }
 
-body { background: var(--bg); color: var(--text); }
+body {
+    background:
+        radial-gradient(1200px 700px at 20% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 55%),
+        radial-gradient(900px 600px at 90% 10%, color-mix(in srgb, var(--success) 6%, transparent), transparent 60%),
+        var(--bg);
+    color: var(--text);
+}
 
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; }
+.card { background: linear-gradient(180deg, color-mix(in srgb, var(--text) 4%, var(--surface)), var(--surface)); border: 1px solid var(--border); border-radius: 1rem; }
 .card-hover:hover { background: var(--surface-2); }
 
 .border-theme { border: 1px solid var(--border); }
@@ -85,9 +124,11 @@ body { background: var(--bg); color: var(--text); }
     background: var(--surface-2);
     border: 1px solid var(--border);
     color: var(--text);
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
+    transition: box-shadow 120ms ease, border-color 120ms ease;
 }
 .input-theme::placeholder { color: var(--text-muted); }
+.input-theme:focus { outline: none; box-shadow: var(--ring); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
 
 .text-success { color: var(--success); }
 .text-danger { color: var(--danger); }
@@ -96,6 +137,40 @@ body { background: var(--bg); color: var(--text); }
 .msg-success { background: var(--success-bg); color: var(--success-fg); }
 .msg-danger { background: var(--danger-bg); color: var(--danger-fg); }
 .msg-warning { background: var(--warning-bg); color: var(--warning-fg); }
+
+/* Every real control gets the same tactile feedback regardless of its
+   color classes — a small lift on hover, a settle on press, a visible
+   focus ring for keyboard users. Scoped to actual buttons/links-as-buttons,
+   not to .btn-primary used as a plain status pill or progress-bar fill. */
+button, input[type="submit"], input[type="button"], a.btn-primary {
+    transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+button:hover, input[type="submit"]:hover, input[type="button"]:hover, a.btn-primary:hover {
+    transform: translateY(-1px);
+}
+button:active, input[type="submit"]:active, input[type="button"]:active, a.btn-primary:active {
+    transform: translateY(0);
+}
+button:focus-visible, input[type="submit"]:focus-visible, input[type="button"]:focus-visible, a.btn-primary:focus-visible {
+    outline: none;
+    box-shadow: var(--ring);
+}
+button[disabled] { opacity: 0.55; cursor: not-allowed; transform: none !important; }
+
+/* Manual theme toggle (☀️/🌙) — see base_public.html/base_app.html. */
+.theme-toggle-btn {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+.theme-toggle-btn:hover { border-color: var(--accent); }
 
 /* RAP-06: "drukuj / zapisz PDF" — plain white print, no chrome. */
 @media print {

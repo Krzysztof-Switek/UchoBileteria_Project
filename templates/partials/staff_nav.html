@@ -1,13 +1,13 @@
 {% load static %}
 <nav class="border-b-theme" style="background: var(--surface);">
     <div class="max-w-6xl mx-auto px-4 flex items-center gap-1 overflow-x-auto text-sm">
-        <a href="{% url 'admin:index' %}" class="link-quiet px-3 py-3 whitespace-nowrap">Pulpit</a>
-        <a href="{% url 'admin:events_event_changelist' %}" class="link-quiet px-3 py-3 whitespace-nowrap">Wydarzenia</a>
-        <a href="{% url 'admin:orders_order_changelist' %}" class="link-quiet px-3 py-3 whitespace-nowrap">Zamówienia</a>
-        <a href="{% url 'admin:tickets_ticket_changelist' %}" class="link-quiet px-3 py-3 whitespace-nowrap">Bilety</a>
-        <a href="{% url 'checkin:event_select' %}" class="link-quiet px-3 py-3 whitespace-nowrap">Odprawa</a>
-        <a href="{% url 'reports:dashboard' %}" class="link-quiet px-3 py-3 whitespace-nowrap">Raporty</a>
-        <a href="{% url 'admin:auditlog_auditlog_changelist' %}" class="link-quiet px-3 py-3 whitespace-nowrap">Dziennik</a>
+        <a href="{% url 'admin:index' %}" class="link-quiet px-3 py-1.5 my-1.5 whitespace-nowrap rounded-full hover:bg-[var(--surface-2)] transition-colors">Start</a>
+        <a href="{% url 'admin:events_event_changelist' %}" class="link-quiet px-3 py-1.5 my-1.5 whitespace-nowrap rounded-full hover:bg-[var(--surface-2)] transition-colors">Wydarzenia</a>
+        <a href="{% url 'admin:orders_order_changelist' %}" class="link-quiet px-3 py-1.5 my-1.5 whitespace-nowrap rounded-full hover:bg-[var(--surface-2)] transition-colors">Zamówienia</a>
+        <a href="{% url 'admin:tickets_ticket_changelist' %}" class="link-quiet px-3 py-1.5 my-1.5 whitespace-nowrap rounded-full hover:bg-[var(--surface-2)] transition-colors">Bilety</a>
+        <a href="{% url 'checkin:event_select' %}" class="link-quiet px-3 py-1.5 my-1.5 whitespace-nowrap rounded-full hover:bg-[var(--surface-2)] transition-colors">Odprawa</a>
+        <a href="{% url 'reports:dashboard' %}" class="link-quiet px-3 py-1.5 my-1.5 whitespace-nowrap rounded-full hover:bg-[var(--surface-2)] transition-colors">Raporty</a>
+        <a href="{% url 'admin:auditlog_auditlog_changelist' %}" class="link-quiet px-3 py-1.5 my-1.5 whitespace-nowrap rounded-full hover:bg-[var(--surface-2)] transition-colors">Dziennik</a>
         <form method="get" action="{% url 'reports:global_search' %}" class="ml-auto flex items-center py-2">
             <input type="search" name="q" id="global-search-input"
                    placeholder="Szukaj: kod, e-mail, ID, wydarzenie… (/)"
@@ -22,6 +22,7 @@
             {% if user.is_authenticated %}
             <span class="text-muted text-xs">{{ user.email|default:user.get_username }}</span>
             {% endif %}
+            <button type="button" id="themeToggle" class="theme-toggle-btn" aria-label="Przełącz motyw">☀️</button>
         </div>
     </div>
 </nav>

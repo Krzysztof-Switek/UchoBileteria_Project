@@ -25,12 +25,6 @@ class TestDbConstraints:
         with pytest.raises(IntegrityError), transaction.atomic():
             pool.save()
 
-    def test_pool_priority_unique_per_event(self):
-        event = make_event()
-        make_pool(event, priority=1)
-        with pytest.raises(IntegrityError), transaction.atomic():
-            make_pool(event, priority=1, name="Duplikat")
-
     def test_order_quantity_must_be_positive(self):
         event = make_event()
         pool = make_pool(event)

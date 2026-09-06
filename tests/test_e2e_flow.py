@@ -31,6 +31,7 @@ def test_full_event_lifecycle(client, django_user_model):
     event = Event.objects.create(
         title="UCHO: Nocny koncert",
         slug="nocny-koncert",
+        gates_open_at=now + timedelta(days=14, hours=-1),
         start_at=now + timedelta(days=14),
         end_at=now + timedelta(days=14, hours=5),
         sales_start_at=now - timedelta(hours=1),
@@ -40,11 +41,11 @@ def test_full_event_lifecycle(client, django_user_model):
         created_by=admin,
     )
     early = TicketPool.objects.create(
-        event=event, name="Early Bird", priority=1, price_gross=Decimal("40.00"),
+        event=event, name="Early Bird", price_gross=Decimal("40.00"),
         capacity=2,
     )
     TicketPool.objects.create(
-        event=event, name="Regular", priority=2, price_gross=Decimal("60.00"),
+        event=event, name="Regular", price_gross=Decimal("60.00"),
         capacity=5, sales_start_at=now + timedelta(days=7),
     )
 

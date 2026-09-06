@@ -1,0 +1,50 @@
+<script>
+(function () {
+    // Manual dark/light override on top of the OS preference — "auto" (no
+    // data-theme attribute) lets input.css's @media rule decide; an explicit
+    // choice here always wins, persisted so it survives across pages/visits.
+    var STORAGE_KEY = "ucho_theme";
+
+    function getInitialTheme() {
+        var saved = String(localStorage.getItem(STORAGE_KEY) || "").trim();
+        if (saved === "light" || saved === "dark") return saved;
+        return "auto";
+    }
+
+    function systemPrefersLight() {
+        return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+    }
+
+    function updateToggleUi(effectiveMode) {
+        var btn = document.getElementById("themeToggle");
+        if (!btn) return;
+        var isLight = effectiveMode === "light";
+        btn.setAttribute("aria-label", isLight ? "Przełącz na motyw ciemny" : "Przełącz na motyw jasny");
+        btn.title = isLight ? "Ciemny" : "Jasny";
+        btn.textContent = isLight ? "🌙" : "☀️";
+    }
+
+    function applyTheme(mode) {
+        if (mode === "auto") {
+            document.documentElement.removeAttribute("data-theme");
+            updateToggleUi(systemPrefersLight() ? "light" : "dark");
+        } else {
+            document.documentElement.setAttribute("data-theme", mode);
+            updateToggleUi(mode);
+        }
+    }
+
+    function toggleTheme() {
+        var current = document.documentElement.getAttribute("data-theme") || (systemPrefersLight() ? "light" : "dark");
+        var next = current === "light" ? "dark" : "light";
+        localStorage.setItem(STORAGE_KEY, next);
+        applyTheme(next);
+    }
+
+    applyTheme(getInitialTheme());
+    document.addEventListener("DOMContentLoaded", function () {
+        var btn = document.getElementById("themeToggle");
+        if (btn) btn.addEventListener("click", toggleTheme);
+    });
+})();
+</script>

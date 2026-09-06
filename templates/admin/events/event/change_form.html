@@ -1,23 +1,342 @@
 {% extends "admin/change_form.html" %}
 
+{% block extrastyle %}
+{{ block.super }}
+<style>
+/* Event link box — shown on both add and change, so it's always in view
+   while working on the event, not just on one step. */
+.ucho-event-link-box { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; padding: 7px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--body-bg); flex-wrap: wrap; }
+.ucho-event-link-label { font-size: 0.75rem; font-weight: 700; color: var(--body-quiet-color); white-space: nowrap; }
+.ucho-event-link-href { font-size: 0.78rem; color: var(--link-fg); word-break: break-all; margin-right: auto; }
+.ucho-event-link-copy { padding: 3px 12px; font-size: 0.72rem; }
+.ucho-event-link-copy.copied { color: #22c55e; border-color: #22c55e; }
+
+/* Delete controls on pool rows are destructive — a plain "Usuń" checkbox/link
+   blends in with the rest of the row. A round red X reads as a delete
+   button at a glance (the universal icon for it), without needing to be a
+   shouting, oversaturated red at rest — hover/focus is where it darkens.
+   Applies on both add (a JS-driven <a>, no saved row yet) and change (a
+   plain checkbox for each already-saved pool) — same look either way. */
+#pools-group td.delete { text-align: center; }
+#pools-group .inline-deletelink,
+#pools-group td.delete input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #ef4444;
+    background: transparent;
+    position: relative;
+    font-size: 0;
+    color: transparent;
+    text-decoration: none !important;
+    cursor: pointer;
+    margin: 0 auto;
+    transition: background-color 120ms ease, border-color 120ms ease;
+}
+#pools-group .inline-deletelink::before,
+#pools-group .inline-deletelink::after,
+#pools-group td.delete input[type="checkbox"]::before,
+#pools-group td.delete input[type="checkbox"]::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 12px;
+    height: 2px;
+    background: #ef4444;
+    border-radius: 1px;
+}
+#pools-group .inline-deletelink::before,
+#pools-group td.delete input[type="checkbox"]::before { transform: translate(-50%, -50%) rotate(45deg); }
+#pools-group .inline-deletelink::after,
+#pools-group td.delete input[type="checkbox"]::after { transform: translate(-50%, -50%) rotate(-45deg); }
+#pools-group .inline-deletelink:hover,
+#pools-group td.delete input[type="checkbox"]:hover {
+    border-color: #b91c1c;
+    background: rgba(239, 68, 68, 0.16);
+}
+#pools-group .inline-deletelink:hover::before,
+#pools-group .inline-deletelink:hover::after,
+#pools-group td.delete input[type="checkbox"]:hover::before,
+#pools-group td.delete input[type="checkbox"]:hover::after {
+    background: #b91c1c;
+}
+/* Checked = marked for deletion on save — a filled circle reads as
+   "confirmed" rather than the same idle outline. */
+#pools-group td.delete input[type="checkbox"]:checked {
+    background: #ef4444;
+    border-color: #ef4444;
+}
+#pools-group td.delete input[type="checkbox"]:checked::before,
+#pools-group td.delete input[type="checkbox"]:checked::after {
+    background: #fff;
+}
+</style>
+{% if add %}
+<style>
+.ucho-cal-panel { margin: 6px 0; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--body-bg); }
+#ucho-cal-conflict.ucho-cal-panel { max-width: 480px; }
+
+/* Day-selection calendar ("Termin wydarzenia") — visual language adapted from
+   a reservation-calendar reference; interaction logic is our own (soft
+   conflict warnings, no hard blocking, single-day by default). */
+.calFestivalToggle { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--body-fg); margin-bottom: 6px; cursor: pointer; }
+.calTitle { font-size: 0.8rem; font-weight: 800; text-transform: capitalize; color: var(--body-fg); }
+.calNavBtn { padding: 1px 8px; font-size: 0.75rem; }
+.calWeekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; font-size: 9.5px; font-weight: 700; color: var(--body-quiet-color); text-align: center; margin-bottom: 3px; }
+.calGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.calDay { height: 28px; min-width: 0; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 2px; border-radius: 6px; border: 1px solid var(--border-color); background: color-mix(in srgb, var(--body-fg) 4%, transparent); color: var(--body-fg); font-size: 11px; font-family: inherit; cursor: pointer; padding: 0; transition: border-color .15s, background .15s; }
+.calDay--blank { visibility: hidden; border: none; background: transparent; cursor: default; }
+.calDay--past { opacity: 0.35; cursor: not-allowed; background: transparent; }
+.calDay--available:hover { border-color: var(--accent); background: color-mix(in srgb, var(--body-fg) 8%, transparent); }
+.calDay--occupied { border-color: #f59e0b; background: rgba(245, 158, 11, 0.14); color: #f59e0b; }
+.calDay--occupied:hover { background: rgba(245, 158, 11, 0.22); }
+.calDay--occupied .calDayNum { color: var(--body-fg); }
+.calLockIcon { width: 11px; height: 11px; }
+.calDay--conflict { border-color: #ef4444 !important; box-shadow: 0 0 0 1px #ef4444; }
+.calDay--in-range { border-color: #22c55e; background: rgba(34, 197, 94, 0.16); font-weight: 700; }
+.calDay--edge { background: rgba(34, 197, 94, 0.32); }
+.calDayNum { line-height: 1; }
+.calLegend { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-size: 10.5px; color: var(--body-quiet-color); margin-top: 6px; }
+.calLegendItem { display: flex; align-items: center; gap: 4px; }
+.calLegendSwatch { width: 11px; height: 11px; border-radius: 3px; border: 2px solid transparent; background: color-mix(in srgb, var(--body-fg) 4%, transparent); }
+.calLegendSwatch--occupied { border-color: #f59e0b; }
+.calLegendSwatch--selected { border-color: #22c55e; }
+.calHint { font-size: 10px; color: var(--body-quiet-color); font-style: italic; margin-top: 5px; }
+.calSummary { font-size: 11px; color: var(--body-quiet-color); margin-top: 4px; }
+.calSummary--ok { color: var(--body-fg); }
+.calSummary--warn { color: #f87171; font-weight: 600; }
+
+/* Each step is its own one-screen-no-scroll view — fieldsets 2-4 (Termin,
+   Sprzedaż, Pule biletowe) get a denser row rhythm than Django's default so
+   time fields, the pool table and a calendar all fit together. Steps 0-1
+   (title/description) are short enough already and stay at default spacing. */
+.ucho-compact.module { margin: 0 0 4px; }
+.ucho-compact.module h2 { font-size: 0.76rem; padding: 4px 10px; }
+.ucho-compact .description { font-size: 0.7rem; padding: 3px 10px; margin: 0; line-height: 1.25; }
+.ucho-compact div.form-row, .ucho-compact .form-row { padding: 2px 10px; }
+#id_description { height: 64px; }
+/* "Dzisiaj|kalendarz"/"Teraz|zegar" shortcuts wrap onto their own line in
+   these narrower rows/table cells, roughly tripling row height — drop them
+   here, dates/times are still typeable directly. */
+.ucho-compact .datetimeshortcuts, .ucho-compact-inline .datetimeshortcuts { display: none; }
+/* Put "Data: [x] Czas: [x]" on one line instead of two (the <br> Django's
+   split-datetime widget inserts between them) — there's room now that the
+   shortcuts are gone, and it roughly halves these rows again. */
+.ucho-compact p.datetime br, .ucho-compact-inline p.datetime br { display: none; }
+.ucho-compact p.datetime label:last-of-type, .ucho-compact-inline p.datetime label:last-of-type { margin-left: 10px; }
+
+/* Pool inline table: same denser rhythm. */
+.ucho-compact-inline .inline-heading { font-size: 0.78rem; padding: 3px 10px; }
+.ucho-compact-inline table th, .ucho-compact-inline table td { padding: 2px 5px; font-size: 0.75rem; }
+.ucho-compact-inline input, .ucho-compact-inline select { font-size: 0.75rem; padding: 1px 3px; }
+.ucho-compact-inline .add-row a { padding: 3px 10px; font-size: 0.75rem; }
+/* Django's own "Add another Pula biletów" label ships every Polish
+   grammatical case at once (it can't know which applies) — replace the
+   text via CSS, not JS: the row itself is built by Django's inlines.js on
+   window "load", after this script's DOMContentLoaded already ran, so a
+   one-time JS rewrite loses the race and gets overwritten. */
+.ucho-compact-inline .tabular tr.add-row td a.addlink { font-size: 0; }
+.ucho-compact-inline .tabular tr.add-row td a.addlink::before { content: "Dodaj pulę"; font-size: 0.75rem; }
+
+/* A pool's sales window is set on the calendar below, not typed — hide the
+   native date/time widgets for sales_start_at on every pool row and show a
+   colored "Wybierz zakres" button instead (appended by JS). Its value
+   already covers the whole period (see cal-pool-range-btn), so the
+   sales_end_at column is redundant — its inputs stay in the DOM (still
+   posted, still written by JS) but the whole column is hidden, not just
+   its widgets. */
+.ucho-compact-inline td.field-sales_start_at input,
+.ucho-compact-inline td.field-sales_start_at label,
+.ucho-compact-inline td.field-sales_start_at br {
+    display: none;
+}
+.ucho-compact-inline th.column-sales_end_at,
+.ucho-compact-inline td.field-sales_end_at {
+    display: none;
+}
+.cal-pool-range-btn { display: block; width: 100%; padding: 3px 6px; border: 2px solid var(--border-color); border-radius: 4px; background: transparent; color: var(--body-fg); font-size: 0.72rem; cursor: pointer; text-align: left; white-space: nowrap; }
+.cal-pool-range-btn.active { border-style: solid; font-weight: 700; }
+.cal-pool-range-btn:hover { border-color: var(--accent); }
+
+/* Read-only "1., 2., ..." sequence label in the otherwise-empty first
+   column — order is chronological (sales_start_at), not editable here. */
+.ucho-pool-order { font-weight: 700; color: var(--body-quiet-color); }
+
+/* "3. Sprzedaż" pools calendar — 3 months forced onto one row, per pool a
+   distinct color instead of Zajęte/Wybrany (this calendar tracks several
+   simultaneous ranges, one per pool, not a single selection). */
+.calMonths3 { display: flex; flex-wrap: nowrap; gap: 10px; overflow-x: auto; }
+.calMonths3 > div { flex: 1 1 0; min-width: 150px; }
+.calMonths3 h4 { margin: 0 0 3px; font-size: 0.72rem; text-align: center; color: var(--body-quiet-color); font-weight: 700; }
+.calDay--offlimits { opacity: 0.4; cursor: not-allowed; background: repeating-linear-gradient(45deg, transparent, transparent 3px, color-mix(in srgb, #ef4444 18%, transparent) 3px, color-mix(in srgb, #ef4444 18%, transparent) 6px); }
+.calLegendSwatch--active { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* The concert date itself (fixed on the previous screen) needs to read as
+   "this is the reference point", not just another blocked day — solid
+   orange wins over the generic offlimits hatch, with a lock standing in
+   for "set elsewhere, can't be changed here". */
+.calDay--concertday { opacity: 1; cursor: not-allowed; background: #f97316 !important; border-color: #f97316 !important; color: #fff; font-weight: 800; }
+.calDay--concertday .calDayNum { color: #fff; }
+
+/* Pool table totals — an actual table-footer row, the sum sitting directly
+   under "Ilość biletów" like a spreadsheet column total, checked against
+   the club's fixed capacity. */
+.ucho-pool-totals-foot td { border-top: 2px solid var(--border-color); padding: 3px 5px; font-size: 0.75rem; }
+.ucho-pool-totals-cell strong { font-variant-numeric: tabular-nums; }
+.ucho-pool-totals-foot.over .ucho-pool-totals-cell strong { color: #ef4444; }
+
+
+/* Compact the wizard chrome itself now that it wraps denser screens — ID
+   selectors here to reliably beat admin_theme.css's class-based rules. */
+#ucho-wizard { margin-bottom: 8px; }
+#ucho-wizard .ucho-wizard-steps { margin-bottom: 6px; }
+#ucho-wizard .ucho-wizard-step { padding: 6px 10px; }
+#ucho-wizard-hint { padding: 6px 10px; font-size: 0.72rem; line-height: 1.3; }
+.ucho-wizard-nav { margin: 4px 0 6px; }
+#ucho-wizard-prev, #ucho-wizard-next { padding: 11px 26px; font-size: 0.95rem; font-weight: 700; border-radius: 8px; }
+.inline-group.ucho-compact-inline { margin-bottom: 6px; }
+
+/* Draft vs. publish are opposite-weight decisions — keep them physically
+   apart (one each edge) so a stray click can't hit the wrong one. */
+.submit-row { justify-content: space-between; align-items: center; gap: 12px; }
+.submit-row input[name="_save"] { order: 1; }
+.submit-row input[name="_publish"] { order: 2; margin-left: auto; background: var(--button-bg); }
+
+/* The concert date is set by the calendar below, not typed — hide the native
+   date inputs (and their JS-injected "Dzisiaj | calendar" shortcuts, which
+   Django inserts after page load, so this must be CSS, not a one-time JS
+   pass) for gates_open_at/start_at/end_at. Their time inputs stay visible. */
+#id_gates_open_at_0, #id_start_at_0, #id_end_at_0,
+label[for="id_gates_open_at_0"], label[for="id_start_at_0"], label[for="id_end_at_0"],
+#id_gates_open_at_0 + span.datetimeshortcuts,
+#id_start_at_0 + span.datetimeshortcuts,
+#id_end_at_0 + span.datetimeshortcuts,
+#id_gates_open_at_0 + span.datetimeshortcuts + br,
+#id_start_at_0 + span.datetimeshortcuts + br,
+#id_end_at_0 + span.datetimeshortcuts + br {
+    display: none !important;
+}
+</style>
+{% endif %}
+{% endblock %}
+
 {% block form_top %}
 {{ block.super }}
+<div id="ucho-event-link-box" class="ucho-event-link-box">
+    <span class="ucho-event-link-label">{% if original %}Link do wydarzenia:{% else %}Adres strony (podgląd):{% endif %}</span>
+    <a id="ucho-event-link-href" class="ucho-event-link-href"{% if original %} href="{{ ucho_public_url }}" target="_blank" rel="noopener"{% endif %}>{% if original %}{{ ucho_public_url }}{% else %}—{% endif %}</a>
+    <button type="button" id="ucho-event-link-copy" class="button ucho-event-link-copy">Kopiuj link</button>
+</div>
+<script>
+(function () {
+    const isChange = {{ original|yesno:"true,false" }};
+    const linkEl = document.getElementById("ucho-event-link-href");
+    const copyBtn = document.getElementById("ucho-event-link-copy");
+    function jsSlugify(text) {
+        const map = { "ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n", "ó": "o", "ś": "s", "ź": "z", "ż": "z" };
+        const stripped = (text || "").toLowerCase().split("").map((ch) => map[ch] || ch).join("")
+            .normalize("NFKD");
+        let ascii = "";
+        for (const ch of stripped) {
+            const code = ch.codePointAt(0);
+            if (code < 0x0300 || code > 0x036f) ascii += ch;
+        }
+        return ascii.replace(/[^a-z0-9\s-]/g, "").trim().replace(/[\s_-]+/g, "-")
+            .replace(/^-+|-+$/g, "") || "wydarzenie";
+    }
+    if (!isChange) {
+        // Resolved lazily (not captured up front): the json_script data
+        // element is rendered further down in the page, after this script
+        // tag, so reading it here at parse time would always see an
+        // element that doesn't exist in the DOM yet.
+        function updatePreview() {
+            const tplEl = document.getElementById("ucho-public-url-template-data");
+            const template = tplEl ? JSON.parse(tplEl.textContent) : "";
+            const titleInput = document.getElementById("id_title");
+            const slug = jsSlugify(titleInput ? titleInput.value : "");
+            linkEl.textContent = template.replace("__slug__", slug);
+        }
+        document.addEventListener("DOMContentLoaded", () => {
+            const titleInput = document.getElementById("id_title");
+            if (titleInput) titleInput.addEventListener("input", updatePreview);
+            updatePreview();
+        });
+    }
+    if (copyBtn) {
+        copyBtn.addEventListener("click", async () => {
+            const text = linkEl.href || linkEl.textContent;
+            try {
+                await navigator.clipboard.writeText(text);
+                const original = copyBtn.textContent;
+                copyBtn.textContent = "Skopiowano!";
+                copyBtn.classList.add("copied");
+                setTimeout(() => { copyBtn.textContent = original; copyBtn.classList.remove("copied"); }, 1500);
+            } catch { /* clipboard unavailable — nothing to fall back to */ }
+        });
+    }
+})();
+</script>
+{% if not original %}
+{{ ucho_public_url_template|default:""|json_script:"ucho-public-url-template-data" }}
+{% endif %}
 {% if add %}
 <div id="ucho-wizard" class="ucho-wizard">
     <div class="ucho-wizard-steps">
         <button type="button" class="ucho-wizard-step" data-step="0">1. Podstawy</button>
-        <button type="button" class="ucho-wizard-step" data-step="1">2. Opis i miejsce</button>
-        <button type="button" class="ucho-wizard-step" data-step="2">3. Termin wydarzenia</button>
-        <button type="button" class="ucho-wizard-step" data-step="3">4. Sprzedaż</button>
+        <button type="button" class="ucho-wizard-step" data-step="1">2. Termin wydarzenia</button>
+        <button type="button" class="ucho-wizard-step" data-step="2">3. Sprzedaż</button>
     </div>
     <div id="ucho-wizard-hint" class="ucho-wizard-hint"></div>
 </div>
+{{ ucho_calendar_events|json_script:"ucho-calendar-events-data" }}
+{{ ucho_max_capacity|json_script:"ucho-max-capacity-data" }}
 {% endif %}
 {% endblock %}
 
 {% block after_field_sets %}
 {{ block.super }}
 {% if add %}
+<div id="ucho-cal-conflict" class="ucho-cal-panel" hidden>
+    <label class="calFestivalToggle">
+        <input type="checkbox" id="ucho-festival-toggle">
+        Impreza wielodniowa (festiwal)
+    </label>
+    <div class="calHead">
+        <button type="button" class="button calNavBtn" id="ucho-cal-conflict-prev">&larr;</button>
+        <span class="calTitle" id="ucho-cal-conflict-title"></span>
+        <button type="button" class="button calNavBtn" id="ucho-cal-conflict-next">&rarr;</button>
+    </div>
+    <div class="calWeekdays" id="ucho-cal-conflict-dow"></div>
+    <div class="calGrid" id="ucho-cal-conflict-grid"></div>
+    <div class="calLegend">
+        <span class="calLegendItem"><span class="calLegendSwatch calLegendSwatch--occupied"></span>Zatwierdzone wydarzenie</span>
+        <span class="calLegendItem"><span class="calLegendSwatch calLegendSwatch--selected"></span>Wybrany termin</span>
+    </div>
+    <div id="ucho-cal-conflict-summary"></div>
+</div>
+
+<div id="ucho-step3-gate" class="ucho-cal-panel" hidden>
+    <p>Najpierw ustaw datę koncertu w kroku <strong>2. Termin wydarzenia</strong> — bez niej pula nie ma sensu (nie wiadomo, kiedy sprzedaż musi się skończyć).</p>
+    <button type="button" class="button default" id="ucho-step3-gate-back">&larr; Przejdź do kroku 2</button>
+</div>
+
+<div id="ucho-cal-pools" class="ucho-cal-panel" hidden>
+    <div class="calHead">
+        <button type="button" class="button calNavBtn" id="ucho-cal-pools-prev">&larr;</button>
+        <span class="calTitle" id="ucho-cal-pools-title"></span>
+        <button type="button" class="button calNavBtn" id="ucho-cal-pools-next">&rarr;</button>
+    </div>
+    <div class="calMonths3" id="ucho-cal-pools-months"></div>
+    <div class="calLegend" id="ucho-cal-pools-legend"></div>
+    <div class="calHint">Kliknij „Wybierz zakres” przy puli w tabeli powyżej, potem pierwszy i ostatni dzień sprzedaży na kalendarzu. Zaszrafowane dni = koncert i później — pula nie może tam sięgać. 🎤 = dzień koncertu.</div>
+    <div id="ucho-cal-pools-summary"></div>
+</div>
+
 <div class="ucho-wizard-nav">
     <button type="button" id="ucho-wizard-prev" class="button">&larr; Wstecz</button>
     <button type="button" id="ucho-wizard-next" class="default button">Dalej &rarr;</button>
@@ -26,44 +345,751 @@
 document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("{{ opts.model_name }}_form");
     if (!form) return;
-    const fieldsets = Array.from(form.querySelectorAll("fieldset.module"));
-    if (fieldsets.length < 2) return; // nothing to page through
 
+    // ---------- wizard step paging ----------
     const stepButtons = Array.from(document.querySelectorAll(".ucho-wizard-step"));
+    const stepCount = stepButtons.length; // fixed: 3 conceptual steps
     const hintEl = document.getElementById("ucho-wizard-hint");
     const prevBtn = document.getElementById("ucho-wizard-prev");
     const nextBtn = document.getElementById("ucho-wizard-next");
     const submitRow = form.querySelector(".submit-row");
+    const calConflict = document.getElementById("ucho-cal-conflict");
+    const calPools = document.getElementById("ucho-cal-pools");
+    const step3Gate = document.getElementById("ucho-step3-gate");
+
+    // Django renders 3 fieldsets: Podstawowe/Opis -> step 1, Termin -> step
+    // 2 (its own screen, with the conflict calendar). Step 3 (Sprzedaż) has
+    // no fieldset of its own any more — it's just the pool inline + its
+    // calendar, appended after Termin.
+    const allFieldsets = Array.from(form.querySelectorAll("fieldset.module"))
+        .filter((fs) => !fs.closest(".inline-group"));
+    const inlineGroups = Array.from(form.querySelectorAll(".inline-group"));
+    if (allFieldsets.length < 2) return; // nothing to page through
+
+    const STEP_OF_FIELDSET = [0, 0, 1];
+    const pageOf = (fsIndex) => STEP_OF_FIELDSET[fsIndex] ?? stepCount - 1;
+
+    // Denser row rhythm on the fieldsets that share a screen with a
+    // calendar/table, so everything fits without scrolling.
+    if (allFieldsets[2]) allFieldsets[2].classList.add("ucho-compact");
+    if (inlineGroups[0]) inlineGroups[0].classList.add("ucho-compact-inline");
+
+    // Rename the pool table's "Start sprzedaży puli" header — its button
+    // already shows the whole period (see cal-pool-range-btn), and the now
+    // hidden sales_end_at column made the old two-header split pointless.
+    const salesStartHeader = document.querySelector("th.column-sales_start_at");
+    if (salesStartHeader) salesStartHeader.textContent = "Sprzedaż w okresie";
+
+    // Step 3 reads top-to-bottom as "pools first": the pool table, then the
+    // pools calendar, then nav/Save last. appendChild moves each node to
+    // the end in turn, so listing them in the target order is enough
+    // regardless of where Django originally put them.
+    const stepParent = allFieldsets[2] ? allFieldsets[2].parentNode : null;
+    const wizardNav = document.querySelector(".ucho-wizard-nav");
+    if (stepParent) {
+        [inlineGroups[0], calPools, wizardNav, submitRow]
+            .filter(Boolean)
+            .forEach((node) => stepParent.appendChild(node));
+    }
+
+    // Two clear choices instead of Django's three stacked "Save" variants:
+    // draft (left) or publish immediately (right, runs the same validation
+    // as the "Opublikuj" list action — see EventAdmin.response_add).
+    if (submitRow) {
+        const saveBtn = submitRow.querySelector('input[name="_save"]');
+        if (saveBtn) saveBtn.value = "Zapisz jako robocze";
+        submitRow.querySelectorAll('input[name="_addanother"], input[name="_continue"]')
+            .forEach((el) => { el.style.display = "none"; });
+        if (saveBtn && !submitRow.querySelector('input[name="_publish"]')) {
+            const publishBtn = document.createElement("input");
+            publishBtn.type = "submit";
+            publishBtn.name = "_publish";
+            publishBtn.value = "Opublikuj";
+            publishBtn.className = "default";
+            submitRow.appendChild(publishBtn);
+        }
+    }
+
 
     const HINTS = [
-        "Tytuł widoczny publicznie na stronie wydarzenia. Adres strony (slug) tworzy się sam z tytułu. Status zostaw jako „Szkic” — opublikujesz wydarzenie w ostatnim kroku, gdy wszystko będzie gotowe.",
-        "Opis i miejsce widoczne dla kupujących na stronie wydarzenia — pisz z ich perspektywy.",
-        "To termin samej imprezy (kiedy się odbywa). Termin sprzedaży biletów ustawisz w następnym kroku — to dwie osobne rzeczy.",
-        "Okno sprzedaży to czas, w którym w ogóle można kupować bilety — osobno od terminu imprezy. Po zapisaniu wydarzenia dodasz tu pule biletowe (np. Early Bird, Regular), każda z własną ceną i datą startu. Reguła aktywacji pul: kolejna pula włącza się automatycznie, gdy nadejdzie jej data startu ALBO gdy poprzednia pula się wyprzeda — cokolwiek nastąpi pierwsze.",
+        "Tytuł widoczny publicznie na stronie wydarzenia. Opis pisz z perspektywy kupującego. Adres strony i status („Szkic”) ustawiają się same.",
+        "Wybierz dzień w kalendarzu niżej — start i koniec to ten sam dzień, chyba że zaznaczysz „impreza wielodniowa” (festiwal). Otwarcie bramek i start koncertu wymagają tylko godziny (data pochodzi z kalendarza); koniec podaj, jeśli już wiadomo.",
+        "",
     ];
-
-    // Land on the step with an error (if the form bounced back with one)
-    // instead of silently resetting to step 1 and hiding the problem.
-    let current = fieldsets.findIndex((fs) => fs.querySelector(".errorlist, .errors"));
-    if (current < 0) current = 0;
 
     function show(index) {
         current = index;
-        fieldsets.forEach((fs, i) => { fs.style.display = i === index ? "" : "none"; });
+        // Pools are meaningless without a concert date (the hard "must end
+        // before the concert" rule has nothing to measure against) — lock
+        // step 3 behind step 2 instead of showing a calendar that can't work.
+        const step3Locked = index === 2 && !fieldDate("id_start_at_0");
+        allFieldsets.forEach((fs, i) => {
+            fs.style.display = (pageOf(i) === index && !step3Locked) ? "" : "none";
+        });
+        const isLast = index === stepCount - 1;
+        inlineGroups.forEach((g) => { g.style.display = (isLast && !step3Locked) ? "" : "none"; });
         stepButtons.forEach((btn, i) => {
             btn.classList.toggle("active", i === index);
             btn.classList.toggle("done", i < index);
         });
         hintEl.textContent = HINTS[index] || "";
+        hintEl.hidden = !HINTS[index];
         prevBtn.disabled = index === 0;
-        const isLast = index === fieldsets.length - 1;
         nextBtn.style.display = isLast ? "none" : "";
-        if (submitRow) submitRow.style.display = isLast ? "" : "none";
+        if (submitRow) submitRow.style.display = (isLast && !step3Locked) ? "flex" : "none";
+        if (calConflict) calConflict.hidden = index !== 1;
+        if (calPools) calPools.hidden = !isLast || step3Locked;
+        if (step3Gate) step3Gate.hidden = !step3Locked;
+        if (index === 1) renderDayCalendar();
+        if (isLast && !step3Locked) renderPoolsCalendar();
     }
+
+    // Land on the step with an error (main fieldset or the pools inline)
+    // instead of silently resetting to step 1 and hiding the problem.
+    let current = allFieldsets.findIndex((fs) => fs.querySelector(".errorlist, .errors"));
+    if (current < 0 && inlineGroups.some((g) => g.querySelector(".errorlist, .errors"))) {
+        current = stepCount - 1;
+    }
+    current = current < 0 ? 0 : pageOf(current);
 
     stepButtons.forEach((btn, i) => btn.addEventListener("click", () => show(i)));
     prevBtn.addEventListener("click", () => show(Math.max(0, current - 1)));
-    nextBtn.addEventListener("click", () => show(Math.min(fieldsets.length - 1, current + 1)));
+    nextBtn.addEventListener("click", () => show(Math.min(stepCount - 1, current + 1)));
+    document.getElementById("ucho-step3-gate-back").addEventListener("click", () => show(1));
+
+    // ---------- date helpers (pl locale: DD.MM.RRRR, see DATE_INPUT_FORMATS) ----------
+    const pad2 = (n) => String(n).padStart(2, "0");
+    function parsePlDate(s) {
+        const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec((s || "").trim());
+        if (!m) return null;
+        const d = new Date(+m[3], +m[2] - 1, +m[1]);
+        return Number.isNaN(d.getTime()) ? null : d;
+    }
+    function formatPlDate(d) {
+        return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
+    }
+    function isoOf(d) {
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    }
+    function isoToDate(iso) {
+        const [y, m, d] = iso.split("-").map(Number);
+        return new Date(y, m - 1, d);
+    }
+    // Calendar-field arithmetic, not millisecond math: Poland's DST-end day
+    // (last Sunday of October) has 25 hours, so date.getTime() + 86400000
+    // lands back on the SAME day instead of the next one — an infinite-
+    // looking loop in expandDays() and a wrong boundary in date math.
+    function addDays(d, n) {
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+    }
+    function fieldDate(id) {
+        const el = document.getElementById(id);
+        return el ? parsePlDate(el.value) : null;
+    }
+    function escapeHtml(s) {
+        return String(s == null ? "" : s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+    }
+    const MONTH_NAMES = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
+        "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+    const DOW_LABELS = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Nd"];
+
+    // Monday-first grid, only as many weeks as the month actually needs (5 or
+    // 6) — every row costs real screen space on the merged step-1 screen.
+    function buildMonthCells(year, month) {
+        const first = new Date(year, month, 1);
+        const startOffset = (first.getDay() + 6) % 7; // 0=Mon
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const weeks = Math.ceil((startOffset + daysInMonth) / 7);
+        const gridStart = new Date(year, month, 1 - startOffset);
+        const cells = [];
+        for (let i = 0; i < weeks * 7; i++) {
+            const d = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
+            cells.push({ date: d, otherMonth: d.getMonth() !== month });
+        }
+        return cells;
+    }
+
+    const today = new Date();
+    const todayIso = isoOf(today);
+
+    // Existing published events, for the "occupied" state below.
+    const conflictDataEl = document.getElementById("ucho-calendar-events-data");
+    const conflictEvents = conflictDataEl ? JSON.parse(conflictDataEl.textContent) : [];
+    const maxCapacityEl = document.getElementById("ucho-max-capacity-data");
+    const MAX_CAPACITY = maxCapacityEl ? JSON.parse(maxCapacityEl.textContent) : 500;
+    const conflictByDate = new Map();
+    conflictEvents.forEach(({ date, title }) => {
+        if (!conflictByDate.has(date)) conflictByDate.set(date, []);
+        conflictByDate.get(date).push(title);
+    });
+    const isOccupied = (iso) => conflictByDate.has(iso);
+
+    // ---------- day-selection calendar (step 3) ----------
+    // One click = the event day (start = end). With "festiwal" checked, a
+    // second click extends it into a range (click-click picker). Occupied
+    // days are never blocked — just flagged, since a soft warning is enough
+    // for this domain (unlike the reservation-calendar reference this style
+    // was borrowed from, there is no hard exclusivity to enforce).
+    const festivalToggle = document.getElementById("ucho-festival-toggle");
+    let dayCalYear = today.getFullYear();
+    let dayCalMonth = today.getMonth();
+    let dayStart = null;
+    let dayEnd = null;
+    let dayConflicts = [];
+    let dayMessage = "";
+
+    function lockIconSvg() {
+        return '<svg class="calLockIcon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="9.5" width="11" height="8" rx="1.5"/><path d="M7.5 9.5V7a2.5 2.5 0 015 0v2.5"/></svg>';
+    }
+
+    function expandDays(loIso, hiIso) {
+        const days = [];
+        let cur = loIso;
+        let guard = 0;
+        while (cur <= hiIso && guard < 400) {
+            days.push(cur);
+            cur = isoOf(addDays(isoToDate(cur), 1));
+            guard += 1;
+        }
+        return days;
+    }
+
+    function syncHiddenDateFields() {
+        const gEl = document.getElementById("id_gates_open_at_0");
+        const sEl = document.getElementById("id_start_at_0");
+        const eEl = document.getElementById("id_end_at_0");
+        const eTimeEl = document.getElementById("id_end_at_1");
+        const startStr = dayStart ? formatPlDate(isoToDate(dayStart)) : "";
+        if (gEl) gEl.value = startStr;
+        if (sEl) sEl.value = startStr;
+        if (eEl) {
+            eEl.value = dayEnd && eTimeEl && eTimeEl.value.trim() ? formatPlDate(isoToDate(dayEnd)) : "";
+        }
+        poolCalAnchored = false; // the concert date moved — let the pools calendar re-anchor to it
+        renderPoolsCalendar();
+    }
+
+    function daySummaryHtml() {
+        if (dayMessage) return `<div class="calSummary calSummary--warn">${escapeHtml(dayMessage)}</div>`;
+        if (!dayStart) return "";
+        if (dayStart === dayEnd) {
+            return `<div class="calSummary calSummary--ok">Wybrany dzień: <strong>${formatPlDate(isoToDate(dayStart))}</strong></div>`;
+        }
+        const n = expandDays(dayStart, dayEnd).length;
+        return `<div class="calSummary calSummary--ok">Wybrany termin: <strong>${formatPlDate(isoToDate(dayStart))} – ${formatPlDate(isoToDate(dayEnd))}</strong> (${n} dni)</div>`;
+    }
+
+    function handleDayClick(iso) {
+        dayConflicts = [];
+        dayMessage = "";
+        const festival = festivalToggle.checked;
+        if (!festival || !dayStart) {
+            dayStart = iso; dayEnd = iso;
+        } else if (dayStart === dayEnd) {
+            if (iso === dayStart) {
+                dayStart = null; dayEnd = null;
+            } else {
+                dayStart = iso < dayStart ? iso : dayStart;
+                dayEnd = iso < dayEnd ? dayEnd : iso;
+            }
+        } else {
+            dayStart = iso; dayEnd = iso;
+        }
+        if (dayStart) {
+            const conflicts = expandDays(dayStart, dayEnd).filter(isOccupied);
+            if (conflicts.length) {
+                dayConflicts = conflicts;
+                const names = conflicts.map((d) => conflictByDate.get(d).join(", ")).join("; ");
+                dayMessage = `Uwaga: w wybranym terminie jest już zatwierdzone wydarzenie (${names}).`;
+            }
+        }
+        syncHiddenDateFields();
+        renderDayCalendar();
+    }
+
+    function renderDayCalendar() {
+        document.getElementById("ucho-cal-conflict-title").textContent = `${MONTH_NAMES[dayCalMonth]} ${dayCalYear}`;
+        const dowRow = document.getElementById("ucho-cal-conflict-dow");
+        if (!dowRow.childElementCount) {
+            DOW_LABELS.forEach((label) => {
+                const el = document.createElement("div");
+                el.textContent = label;
+                dowRow.appendChild(el);
+            });
+        }
+        const grid = document.getElementById("ucho-cal-conflict-grid");
+        grid.className = "calGrid";
+        grid.innerHTML = "";
+        buildMonthCells(dayCalYear, dayCalMonth).forEach(({ date, otherMonth }) => {
+            if (otherMonth) {
+                const blank = document.createElement("div");
+                blank.className = "calDay calDay--blank";
+                grid.appendChild(blank);
+                return;
+            }
+            const iso = isoOf(date);
+            const isPast = iso < todayIso;
+            const occupied = isOccupied(iso);
+            const inRange = dayStart && dayEnd && iso >= dayStart && iso <= dayEnd;
+            const isEdge = iso === dayStart || iso === dayEnd;
+            const isConflict = dayConflicts.includes(iso);
+
+            let cls = "calDay ";
+            if (isPast) cls += "calDay--past";
+            else if (occupied) cls += "calDay--occupied";
+            else if (inRange) cls += isEdge ? "calDay--in-range calDay--edge" : "calDay--in-range";
+            else cls += "calDay--available";
+            if (isConflict) cls += " calDay--conflict";
+
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = cls;
+            btn.innerHTML = `<span class="calDayNum">${date.getDate()}</span>${occupied ? lockIconSvg() : ""}`;
+            if (occupied) btn.title = conflictByDate.get(iso).join(", ");
+            if (isPast) btn.disabled = true;
+            else btn.addEventListener("click", () => handleDayClick(iso));
+            grid.appendChild(btn);
+        });
+        document.getElementById("ucho-cal-conflict-summary").innerHTML = daySummaryHtml();
+    }
+
+    festivalToggle.addEventListener("change", () => {
+        if (!festivalToggle.checked && dayStart) dayEnd = dayStart;
+        dayConflicts = [];
+        dayMessage = "";
+        syncHiddenDateFields();
+        renderDayCalendar();
+    });
+    document.getElementById("ucho-cal-conflict-prev").addEventListener("click", () => {
+        dayCalMonth -= 1; if (dayCalMonth < 0) { dayCalMonth = 11; dayCalYear -= 1; }
+        renderDayCalendar();
+    });
+    document.getElementById("ucho-cal-conflict-next").addEventListener("click", () => {
+        dayCalMonth += 1; if (dayCalMonth > 11) { dayCalMonth = 0; dayCalYear += 1; }
+        renderDayCalendar();
+    });
+
+    // ---------- pools calendar (step 3) ----------
+    // Each pool gets its own colored range, set by clicking its first and
+    // last day of sale (always midnight-to-midnight — no time to pick). The
+    // hard rules — must end before the concert, no overlap with another
+    // pool — are enforced here for instant feedback and again server-side
+    // in TicketPoolFormSet.clean() (the actual guarantee).
+    const POOL_COLORS = ["#0891b2", "#f59e0b", "#8b5cf6", "#22c55e", "#ef4444", "#ec4899", "#64748b"];
+    let poolCalYear = today.getFullYear();
+    let poolCalMonth = today.getMonth();
+    let poolCalAnchored = false;
+    let activePoolPrefix = null;
+    let poolMessage = "";
+    const poolRanges = {}; // prefix -> { start: iso, end: iso } (both inclusive)
+
+    function poolRowPrefixes() {
+        return Array.from(document.querySelectorAll('input[id^="id_pools-"][id$="-capacity"]'))
+            .map((el) => el.id.slice(3, -"-capacity".length))
+            .filter((p) => !p.includes("__prefix__"));
+    }
+
+    function poolColorFor(prefix) {
+        const idx = poolRowPrefixes().indexOf(prefix);
+        return POOL_COLORS[idx % POOL_COLORS.length];
+    }
+
+    function poolNameFor(prefix) {
+        const idx = poolRowPrefixes().indexOf(prefix);
+        return document.getElementById("id_" + prefix + "-name")?.value || `Pula ${idx + 1}`;
+    }
+
+    // Pick up ranges already present in the fields (e.g. the form bounced
+    // back with a validation error elsewhere and preserved posted values).
+    function loadPoolRanges() {
+        poolRowPrefixes().forEach((prefix) => {
+            if (poolRanges[prefix]) return;
+            const s = fieldDate("id_" + prefix + "-sales_start_at_0");
+            const e = fieldDate("id_" + prefix + "-sales_end_at_0");
+            if (s && e) {
+                poolRanges[prefix] = { start: isoOf(s), end: isoOf(addDays(e, -1)) };
+            }
+        });
+    }
+
+    // Pools store midnight-to-midnight: sales_end_at is exclusive (the
+    // instant sales stop), so the inclusive last day of sale is end-1.
+    function syncPoolFields(prefix) {
+        const range = poolRanges[prefix];
+        const s0 = document.getElementById("id_" + prefix + "-sales_start_at_0");
+        const s1 = document.getElementById("id_" + prefix + "-sales_start_at_1");
+        const e0 = document.getElementById("id_" + prefix + "-sales_end_at_0");
+        const e1 = document.getElementById("id_" + prefix + "-sales_end_at_1");
+        if (!range) {
+            [s0, s1, e0, e1].forEach((el) => { if (el) el.value = ""; });
+            return;
+        }
+        const endExclusive = isoOf(addDays(isoToDate(range.end), 1));
+        if (s0) s0.value = formatPlDate(isoToDate(range.start));
+        if (s1) s1.value = "00:00";
+        if (e0) e0.value = formatPlDate(isoToDate(endExclusive));
+        if (e1) e1.value = "00:00";
+    }
+
+    // Last inclusive day any pool may reach — the day before the concert.
+    function poolHardLimitIso() {
+        const concertDate = fieldDate("id_start_at_0");
+        return concertDate ? isoOf(addDays(concertDate, -1)) : null;
+    }
+
+    function validatePoolRange(prefix, candidate) {
+        const limit = poolHardLimitIso();
+        if (limit && candidate.end > limit) {
+            const concertDate = fieldDate("id_start_at_0");
+            return {
+                ok: false,
+                message: `Pula musi kończyć się przed dniem koncertu (${formatPlDate(concertDate)}).`,
+            };
+        }
+        for (const other of poolRowPrefixes()) {
+            if (other === prefix) continue;
+            const range = poolRanges[other];
+            if (range && candidate.start <= range.end && range.start <= candidate.end) {
+                return { ok: false, message: `Ten zakres nachodzi na pulę „${poolNameFor(other)}”.` };
+            }
+        }
+        return { ok: true };
+    }
+
+    function handlePoolDayClick(iso) {
+        if (!activePoolPrefix) {
+            poolMessage = "Najpierw kliknij „Wybierz zakres” przy puli w tabeli powyżej.";
+            renderPoolsCalendar();
+            return;
+        }
+        const cur = poolRanges[activePoolPrefix];
+        const candidate = (cur && cur.start === cur.end)
+            ? { start: iso < cur.start ? iso : cur.start, end: iso < cur.start ? cur.start : iso }
+            : { start: iso, end: iso };
+        const result = validatePoolRange(activePoolPrefix, candidate);
+        if (!result.ok) {
+            poolMessage = result.message;
+            renderPoolsCalendar();
+            return;
+        }
+        poolRanges[activePoolPrefix] = candidate;
+        poolMessage = "";
+        syncPoolFields(activePoolPrefix);
+        renderPoolsCalendar();
+    }
+
+    function ensurePoolRow(prefix, idx) {
+        const capacityInput = document.getElementById("id_" + prefix + "-capacity");
+        const row = capacityInput?.closest("tr");
+        if (!row) return;
+
+        // Chronological order label (1., 2., ...) — read-only, computed from
+        // row position, in the otherwise-empty leading "original" cell.
+        const originalCell = row.querySelector("td.original");
+        if (originalCell) {
+            let label = originalCell.querySelector(".ucho-pool-order");
+            if (!label) {
+                label = document.createElement("span");
+                label.className = "ucho-pool-order";
+                originalCell.insertBefore(label, originalCell.firstChild);
+            }
+            label.textContent = `${idx + 1}.`;
+        }
+
+        // Name is optional — say so instead of an input that just looks
+        // mandatory and empty.
+        const nameInput = document.getElementById("id_" + prefix + "-name");
+        if (nameInput && !nameInput.placeholder) nameInput.placeholder = "Nazwa (opcjonalnie)";
+
+        const cell = row.querySelector("td.field-sales_start_at");
+        if (cell) {
+            let btn = cell.querySelector(".cal-pool-range-btn");
+            if (!btn) {
+                btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "cal-pool-range-btn";
+                btn.addEventListener("click", () => {
+                    activePoolPrefix = prefix;
+                    poolMessage = "";
+                    renderPoolsCalendar();
+                });
+                cell.appendChild(btn);
+            }
+            const range = poolRanges[prefix];
+            btn.textContent = range
+                ? `${formatPlDate(isoToDate(range.start))} – ${formatPlDate(isoToDate(range.end))}`
+                : "Wybierz zakres";
+            btn.style.borderColor = poolColorFor(prefix);
+            btn.classList.toggle("active", prefix === activePoolPrefix);
+        }
+    }
+
+    // Sum of "Ilość biletów" across pool rows, as an actual table-footer
+    // row aligned under that column — like an Excel column total — checked
+    // against the club's fixed capacity (there's no per-event field for it
+    // any more; the hard limit is the same for every event).
+    function updatePoolTotals() {
+        const table = document.querySelector(".ucho-compact-inline table");
+        const headerRow = table?.querySelector("tr");
+        if (!table || !headerRow) return;
+        const headerCells = Array.from(headerRow.children);
+        const capacityIdx = headerCells.findIndex((th) => th.classList.contains("column-capacity"));
+        if (capacityIdx < 0) return;
+
+        let tfoot = table.querySelector("tfoot.ucho-pool-totals-foot");
+        if (!tfoot) {
+            tfoot = document.createElement("tfoot");
+            tfoot.className = "ucho-pool-totals-foot";
+            table.appendChild(tfoot);
+        }
+        const total = poolRowPrefixes().reduce((sum, p) => {
+            const deleteBox = document.getElementById("id_" + p + "-DELETE");
+            if (deleteBox && deleteBox.checked) return sum;
+            const input = document.getElementById("id_" + p + "-capacity");
+            return sum + (input ? parseInt(input.value, 10) || 0 : 0);
+        }, 0);
+        tfoot.classList.toggle("over", total > MAX_CAPACITY);
+        tfoot.innerHTML = "";
+        const tr = document.createElement("tr");
+        headerCells.forEach((_, i) => {
+            const td = document.createElement("td");
+            if (i === capacityIdx) {
+                td.className = "ucho-pool-totals-cell";
+                td.innerHTML = `Razem: <strong>${total}</strong>`;
+            }
+            tr.appendChild(td);
+        });
+        tfoot.appendChild(tr);
+    }
+
+    function renderPoolsCalendar() {
+        loadPoolRanges();
+        const concertDate = fieldDate("id_start_at_0");
+        const limit = poolHardLimitIso();
+
+        // With a single pool there's nothing to choose between — clicking
+        // "Wybierz zakres" first would just be busywork, so it's active by
+        // default whenever nothing else is selected. With 2+ pools you pick
+        // explicitly (this only self-heals back to auto once you're down to 1).
+        if (!activePoolPrefix) {
+            const onlyPrefix = poolRowPrefixes();
+            if (onlyPrefix.length === 1) activePoolPrefix = onlyPrefix[0];
+        }
+
+        if (!poolCalAnchored && concertDate) {
+            poolCalYear = concertDate.getFullYear();
+            poolCalMonth = concertDate.getMonth() - 2;
+            if (poolCalMonth < 0) { poolCalMonth += 12; poolCalYear -= 1; }
+            poolCalAnchored = true;
+        }
+
+        document.getElementById("ucho-cal-pools-title").textContent =
+            `${MONTH_NAMES[poolCalMonth]} ${poolCalYear} – ${MONTH_NAMES[(poolCalMonth + 2) % 12]} ${poolCalMonth + 2 > 11 ? poolCalYear + 1 : poolCalYear}`;
+
+        const prefixes = poolRowPrefixes();
+        prefixes.forEach((p, idx) => ensurePoolRow(p, idx));
+
+        const monthsEl = document.getElementById("ucho-cal-pools-months");
+        monthsEl.innerHTML = "";
+        for (let offset = 0; offset < 3; offset++) {
+            const y = poolCalYear + Math.floor((poolCalMonth + offset) / 12);
+            const m = (poolCalMonth + offset) % 12;
+            const wrap = document.createElement("div");
+            const h4 = document.createElement("h4");
+            h4.textContent = `${MONTH_NAMES[m]} ${y}`;
+            wrap.appendChild(h4);
+            const dow = document.createElement("div");
+            dow.className = "calWeekdays";
+            DOW_LABELS.forEach((label) => {
+                const el = document.createElement("div");
+                el.textContent = label;
+                dow.appendChild(el);
+            });
+            wrap.appendChild(dow);
+            const grid = document.createElement("div");
+            grid.className = "calGrid";
+            wrap.appendChild(grid);
+            buildMonthCells(y, m).forEach(({ date, otherMonth }) => {
+                if (otherMonth) {
+                    const blank = document.createElement("div");
+                    blank.className = "calDay calDay--blank";
+                    grid.appendChild(blank);
+                    return;
+                }
+                const iso = isoOf(date);
+                const isPast = iso < todayIso;
+                const isConcertDay = concertDate && isoOf(concertDate) === iso;
+                const isOffLimits = !isConcertDay && limit ? iso > limit : false;
+                const ownerPrefix = prefixes.find((p) => {
+                    const r = poolRanges[p];
+                    return r && iso >= r.start && iso <= r.end;
+                });
+
+                let cls = "calDay ";
+                if (isConcertDay) cls += "calDay--concertday";
+                else if (isPast) cls += "calDay--past";
+                else if (isOffLimits) cls += "calDay--offlimits";
+                else if (ownerPrefix) cls += "calDay--in-range";
+                else cls += "calDay--available";
+
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = cls;
+                btn.innerHTML = `<span class="calDayNum">${date.getDate()}</span>`;
+                if (isConcertDay) {
+                    btn.innerHTML += lockIconSvg();
+                    btn.title = "Dzień koncertu — ustawiony w kroku 2, nie do zmiany tutaj.";
+                } else if (ownerPrefix) {
+                    const color = poolColorFor(ownerPrefix);
+                    btn.style.borderColor = color;
+                    btn.style.background = `${color}33`;
+                    btn.title = poolNameFor(ownerPrefix);
+                }
+                if (isPast || isOffLimits || isConcertDay) btn.disabled = true;
+                else btn.addEventListener("click", () => handlePoolDayClick(iso));
+                grid.appendChild(btn);
+            });
+            monthsEl.appendChild(wrap);
+        }
+
+        const legend = document.getElementById("ucho-cal-pools-legend");
+        legend.innerHTML = "";
+        if (concertDate) {
+            const concertItem = document.createElement("span");
+            concertItem.className = "calLegendItem";
+            const concertSwatch = document.createElement("span");
+            concertSwatch.className = "calLegendSwatch";
+            concertSwatch.style.background = "#f97316";
+            concertSwatch.style.borderColor = "#f97316";
+            concertItem.append(concertSwatch, document.createTextNode("Dzień koncertu"));
+            legend.appendChild(concertItem);
+        }
+        prefixes.forEach((p) => {
+            const item = document.createElement("span");
+            item.className = "calLegendItem";
+            const swatch = document.createElement("span");
+            swatch.className = "calLegendSwatch" + (p === activePoolPrefix ? " calLegendSwatch--active" : "");
+            swatch.style.borderColor = poolColorFor(p);
+            swatch.style.background = `${poolColorFor(p)}55`;
+            item.appendChild(swatch);
+            const range = poolRanges[p];
+            const label = range
+                ? `${poolNameFor(p)}: ${formatPlDate(isoToDate(range.start))}–${formatPlDate(isoToDate(range.end))}`
+                : `${poolNameFor(p)}: brak zakresu`;
+            item.appendChild(document.createTextNode(label));
+            legend.appendChild(item);
+        });
+
+        const summaryEl = document.getElementById("ucho-cal-pools-summary");
+        if (poolMessage) {
+            summaryEl.innerHTML = `<div class="calSummary calSummary--warn">${escapeHtml(poolMessage)}</div>`;
+        } else if (activePoolPrefix) {
+            summaryEl.innerHTML = `<div class="calSummary calSummary--ok">Edytujesz zakres: <strong>${escapeHtml(poolNameFor(activePoolPrefix))}</strong></div>`;
+        } else {
+            summaryEl.innerHTML = "";
+        }
+        updatePoolTotals();
+    }
+    document.getElementById("ucho-cal-pools-prev").addEventListener("click", () => {
+        poolCalMonth -= 1; if (poolCalMonth < 0) { poolCalMonth = 11; poolCalYear -= 1; }
+        renderPoolsCalendar();
+    });
+    document.getElementById("ucho-cal-pools-next").addEventListener("click", () => {
+        poolCalMonth += 1; if (poolCalMonth > 11) { poolCalMonth = 0; poolCalYear += 1; }
+        renderPoolsCalendar();
+    });
+
+    // Re-render on pool name edits (legend/button labels) and end_at's time
+    // (day-picker calendar, step 2 — re-syncs its own hidden date field).
+    form.addEventListener("change", (evt) => {
+        if (evt.target.id === "id_end_at_1") syncHiddenDateFields();
+        if (evt.target.matches('input[id*="-name"], input[id*="-DELETE"]')) renderPoolsCalendar();
+    });
+    // The capacity totals footer updates live as you type, without the
+    // heavier full calendar re-render (name changes above still get that,
+    // since they also relabel the calendar's legend/buttons).
+    form.addEventListener("input", (evt) => {
+        if (evt.target.matches('input[id*="-capacity"]')) updatePoolTotals();
+    });
+    document.addEventListener("formset:added", (evt) => {
+        if (!evt.detail || evt.detail.formsetName !== "pools") return;
+        const prefixes = poolRowPrefixes();
+        activePoolPrefix = prefixes[prefixes.length - 1] || null;
+        poolMessage = "";
+        renderPoolsCalendar();
+    });
+    document.addEventListener("formset:removed", (evt) => {
+        if (!evt.detail || evt.detail.formsetName !== "pools") return;
+        if (activePoolPrefix && !poolRowPrefixes().includes(activePoolPrefix)) {
+            delete poolRanges[activePoolPrefix];
+            activePoolPrefix = poolRowPrefixes()[0] || null;
+        }
+        renderPoolsCalendar();
+    });
+
+    // ---------- unsaved-draft safety net ----------
+    // Browser-local only (no server round-trip, no DB row) — leaving after
+    // typing just a title shouldn't lose it. Scoped to title/description:
+    // the calendar-driven dates and pool ranges are derived, stateful UI,
+    // not safe to silently replay from stored raw values.
+    const DRAFT_KEY = "ucho_event_draft_v1";
+    const titleInput = document.getElementById("id_title");
+    const descInput = document.getElementById("id_description");
+
+    function saveDraftSnapshot() {
+        if (!titleInput) return;
+        const title = titleInput.value.trim();
+        const description = descInput ? descInput.value.trim() : "";
+        if (!title && !description) {
+            clearDraftSnapshot();
+            return;
+        }
+        try {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, description, savedAt: Date.now() }));
+        } catch { /* storage unavailable/full — this is only a safety net */ }
+    }
+    function clearDraftSnapshot() {
+        try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+    }
+
+    (function offerDraftRestore() {
+        if (!titleInput || titleInput.value.trim()) return; // only on a genuinely fresh add form
+        let saved;
+        try { saved = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch { saved = null; }
+        if (!saved || !saved.title) return;
+        const when = new Date(saved.savedAt);
+        const banner = document.createElement("div");
+        banner.className = "ucho-cal-panel";
+        banner.style.cssText = "margin-bottom:8px; display:flex; align-items:center; gap:10px; justify-content:space-between;";
+        const text = document.createElement("span");
+        text.textContent = `Niezapisany szkic „${saved.title}” z ${pad2(when.getDate())}.${pad2(when.getMonth() + 1)} ${pad2(when.getHours())}:${pad2(when.getMinutes())} — przywrócić?`;
+        const actions = document.createElement("span");
+        const restoreBtn = document.createElement("button");
+        restoreBtn.type = "button";
+        restoreBtn.className = "button default";
+        restoreBtn.textContent = "Przywróć";
+        const dismissBtn = document.createElement("button");
+        dismissBtn.type = "button";
+        dismissBtn.className = "button";
+        dismissBtn.style.marginLeft = "6px";
+        dismissBtn.textContent = "Odrzuć";
+        restoreBtn.addEventListener("click", () => {
+            titleInput.value = saved.title;
+            if (descInput) descInput.value = saved.description || "";
+            banner.remove();
+        });
+        dismissBtn.addEventListener("click", () => { clearDraftSnapshot(); banner.remove(); });
+        actions.append(restoreBtn, dismissBtn);
+        banner.append(text, actions);
+        form.parentNode.insertBefore(banner, form);
+    })();
+
+    let draftSaveTimer = null;
+    form.addEventListener("input", () => {
+        clearTimeout(draftSaveTimer);
+        draftSaveTimer = setTimeout(saveDraftSnapshot, 800);
+    });
+    form.addEventListener("submit", clearDraftSnapshot);
 
     show(current);
 });

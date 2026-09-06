@@ -183,7 +183,7 @@ def pool_sales_report(
     """Per-pool sales summary, mirroring event_sales_report but grouped by TicketPool."""
     rows = []
     pools = TicketPool.objects.select_related("event").order_by(
-        "event__start_at", "priority"
+        "event__start_at", "sales_start_at"
     )
     if event is not None:
         pools = pools.filter(event=event)

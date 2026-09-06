@@ -1,8 +1,11 @@
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
+from django.utils import timezone
 
 from apps.auditlog.models import AuditLog
+from apps.events.models import Event, EventStatus
 from apps.orders.models import Order, OrderStatus
 from tests.factories import make_event, make_order, make_pool, make_ticket
 
@@ -33,11 +36,11 @@ def paid_order_via_purchase_flow(client, event=None, quantity=1, email="k@exampl
 
 
 class TestEventAdminAddVsChange:
-    def test_add_form_hides_pools_and_live_stats(self, admin_client_logged_in):
+    def test_add_form_shows_pools_but_hides_live_stats(self, admin_client_logged_in):
         body = admin_client_logged_in.get("/admin/events/event/add/").content.decode()
-        assert "pools-TOTAL_FORMS" not in body  # no ticket-pool inline yet
+        assert "pools-TOTAL_FORMS" in body  # first pool created together with the event
         assert "Aktualizowane automatycznie na podstawie zamówień" not in body
-        assert "Okno sprzedaży i limity" in body  # base fieldsets still present
+        assert 'id="id_max_tickets_per_order"' in body  # moved into the top fieldset
 
     def test_change_form_shows_pools_and_live_stats(self, admin_client_logged_in):
         event = make_event()
@@ -52,10 +55,9 @@ class TestEventAdminAddVsChange:
         body = admin_client_logged_in.get("/admin/events/event/add/").content.decode()
         assert 'id="ucho-wizard"' in body
         assert "1. Podstawy" in body
-        assert "2. Opis i miejsce" in body
-        assert "3. Termin wydarzenia" in body
-        assert "4. Sprzedaż" in body
-        assert "Reguła aktywacji pul" in body  # step-4 hint text present in the JS payload
+        assert "2. Termin wydarzenia" in body
+        assert "3. Sprzedaż" in body
+        assert "Pule biletowe" in body  # pools fieldset now renders on add too
 
     def test_change_form_has_no_wizard(self, admin_client_logged_in):
         event = make_event()
@@ -64,13 +66,153 @@ class TestEventAdminAddVsChange:
         ).content.decode()
         assert 'id="ucho-wizard"' not in body
 
-    def test_pool_fieldset_explains_activation_rule(self, admin_client_logged_in):
-        event = make_event()
-        body = admin_client_logged_in.get(
-            f"/admin/events/event/{event.pk}/change/"
-        ).content.decode()
-        assert "Reguła aktywacji" in body
-        assert "się wyprzeda" in body
+
+def _event_add_payload(**overrides):
+    now = timezone.now()
+
+    def dt(offset_days, hour=20):
+        d = now + timedelta(days=offset_days)
+        return (d.strftime("%d.%m.%Y"), f"{hour}:00")
+
+    gates_date, gates_time = dt(7, hour=19)
+    start_date, start_time = dt(7, hour=20)
+    data = {
+        "title": "Nowy koncert",
+        "description": "",
+        "gates_open_at_0": gates_date,
+        "gates_open_at_1": gates_time,
+        "start_at_0": start_date,
+        "start_at_1": start_time,
+        "end_at_0": "",
+        "end_at_1": "",
+        "max_tickets_per_order": "10",
+        "pools-TOTAL_FORMS": "1",
+        "pools-INITIAL_FORMS": "0",
+        "pools-MIN_NUM_FORMS": "0",
+        "pools-MAX_NUM_FORMS": "1000",
+        "pools-0-id": "",
+        "pools-0-event": "",
+        "pools-0-name": "Pula 1",
+        "pools-0-price_gross": "50.00",
+        "pools-0-capacity": "100",
+        "pools-0-sales_start_at_0": "",
+        "pools-0-sales_start_at_1": "",
+        "pools-0-sales_end_at_0": "",
+        "pools-0-sales_end_at_1": "",
+        "pools-0-on_sellout": "ACTIVATE_NEXT",
+    }
+    data.update(overrides)
+    return data
+
+
+class TestEventAdminCreateWithPool:
+    """OBS-08 follow-up: the first pool is created together with the event."""
+
+    def test_create_event_with_pool_success(self, admin_client_logged_in):
+        resp = admin_client_logged_in.post(
+            "/admin/events/event/add/", _event_add_payload(), follow=True
+        )
+        assert resp.status_code == 200
+        event = Event.objects.get(title="Nowy koncert")
+        assert event.pools.count() == 1
+        pool = event.pools.get()
+        assert pool.name == "Pula 1"
+        assert pool.capacity == 100
+        assert pool.price_gross == Decimal("50.00")
+
+    def test_publish_button_publishes_when_valid(self, admin_client_logged_in):
+        now = timezone.now()
+        resp = admin_client_logged_in.post(
+            "/admin/events/event/add/",
+            _event_add_payload(
+                **{
+                    "pools-0-sales_start_at_0": (now - timedelta(days=1)).strftime("%d.%m.%Y"),
+                    "pools-0-sales_start_at_1": "00:00",
+                    "pools-0-sales_end_at_0": now.strftime("%d.%m.%Y"),
+                    "pools-0-sales_end_at_1": "00:00",
+                    "_publish": "1",
+                }
+            ),
+            follow=True,
+        )
+        assert resp.status_code == 200
+        event = Event.objects.get(title="Nowy koncert")
+        assert event.status == EventStatus.PUBLISHED
+
+    def test_publish_button_falls_back_to_draft_when_invalid(self, admin_client_logged_in):
+        # Pool has no sales window of its own, so the derived event-level
+        # sales_start_at == sales_end_at (both default to start_at) — invalid.
+        resp = admin_client_logged_in.post(
+            "/admin/events/event/add/",
+            _event_add_payload(**{"_publish": "1"}),
+            follow=True,
+        )
+        assert resp.status_code == 200
+        event = Event.objects.get(title="Nowy koncert")
+        assert event.status == EventStatus.DRAFT
+        assert "nie udało się opublikować" in resp.content.decode()
+
+    def test_pool_capacity_sum_over_club_max_rejected(self, admin_client_logged_in):
+        # There's no per-event capacity field any more (OBS-08 follow-up) —
+        # the only ceiling is the club's fixed capacity.
+        resp = admin_client_logged_in.post(
+            "/admin/events/event/add/",
+            _event_add_payload(**{"pools-0-capacity": "600"}),
+        )
+        assert resp.status_code == 200  # re-renders the form with an error
+        assert "Suma biletów w pulach" in resp.content.decode()
+        assert not Event.objects.filter(title="Nowy koncert").exists()
+
+    def test_pool_ending_on_or_after_concert_rejected(self, admin_client_logged_in):
+        now = timezone.now()
+        resp = admin_client_logged_in.post(
+            "/admin/events/event/add/",
+            _event_add_payload(
+                **{
+                    "pools-0-sales_start_at_0": (now + timedelta(days=5)).strftime("%d.%m.%Y"),
+                    "pools-0-sales_start_at_1": "00:00",
+                    # start_at is now+7 days — an end past that is the concert day itself.
+                    "pools-0-sales_end_at_0": (now + timedelta(days=8)).strftime("%d.%m.%Y"),
+                    "pools-0-sales_end_at_1": "00:00",
+                }
+            ),
+        )
+        assert resp.status_code == 200
+        assert "musi kończyć się przed dniem koncertu" in resp.content.decode()
+        assert not Event.objects.filter(title="Nowy koncert").exists()
+
+    def test_overlapping_pools_rejected(self, admin_client_logged_in):
+        now = timezone.now()
+
+        def d(offset):
+            return (now + timedelta(days=offset)).strftime("%d.%m.%Y")
+
+        resp = admin_client_logged_in.post(
+            "/admin/events/event/add/",
+            _event_add_payload(
+                **{
+                    "pools-TOTAL_FORMS": "2",
+                    "pools-0-capacity": "50",
+                    "pools-0-sales_start_at_0": d(1),
+                    "pools-0-sales_start_at_1": "00:00",
+                    "pools-0-sales_end_at_0": d(3),
+                    "pools-0-sales_end_at_1": "00:00",
+                    "pools-1-id": "",
+                    "pools-1-event": "",
+                    "pools-1-name": "Pula 2",
+                    "pools-1-price_gross": "80.00",
+                    "pools-1-capacity": "10",
+                    "pools-1-sales_start_at_0": d(2),
+                    "pools-1-sales_start_at_1": "00:00",
+                    "pools-1-sales_end_at_0": d(4),
+                    "pools-1-sales_end_at_1": "00:00",
+                    "pools-1-on_sellout": "ACTIVATE_NEXT",
+                }
+            ),
+        )
+        assert resp.status_code == 200
+        assert "nachodzą na siebie" in resp.content.decode()
+        assert not Event.objects.filter(title="Nowy koncert").exists()
 
 
 class TestTicketPoolAdminHiddenFromAppList:
@@ -98,7 +240,7 @@ class TestTicketPoolAdminHiddenFromAppList:
 class TestAdminNavigation:
     def test_staff_nav_present_on_index(self, admin_client_logged_in):
         body = admin_client_logged_in.get("/admin/").content.decode()
-        labels = ["Pulpit", "Wydarzenia", "Zamówienia", "Bilety", "Odprawa", "Raporty", "Dziennik"]
+        labels = ["Start", "Wydarzenia", "Zamówienia", "Bilety", "Odprawa", "Raporty", "Dziennik"]
         for label in labels:
             assert label in body
 
@@ -152,12 +294,23 @@ class TestStatusBadges:
 class TestOpsDashboard:
     """OBS-01: admin landing page becomes an operations dashboard."""
 
-    def test_shows_nearest_event_with_fill_bar(self, admin_client_logged_in):
-        event = make_event(title="Nadchodzący koncert", capacity_total=100, sold_total=25)
+    def test_events_overview_shows_published_and_draft_by_default(self, admin_client_logged_in):
+        published = make_event(title="Nadchodzący koncert", capacity_total=100, sold_total=25)
+        draft = make_event(title="Szkic wydarzenia", status=EventStatus.DRAFT)
+        finished = make_event(title="Dawny koncert", status=EventStatus.FINISHED)
         body = admin_client_logged_in.get("/admin/").content.decode()
-        assert "Najbliższe wydarzenie" in body
-        assert event.title in body
-        assert "25 / 100 miejsc" in body
+        assert "Wydarzenia" in body
+        assert published.title in body
+        assert "25 / 100" in body
+        assert draft.title in body
+        assert finished.title not in body
+
+    def test_events_overview_finished_filter_shows_only_finished(self, admin_client_logged_in):
+        published = make_event(title="Nadchodzący koncert")
+        finished = make_event(title="Dawny koncert", status=EventStatus.FINISHED)
+        body = admin_client_logged_in.get("/admin/?wydarzenia=zakonczone").content.decode()
+        assert finished.title in body
+        assert published.title not in body
 
     def test_fill_bar_width_uses_dot_decimals_not_locale_commas(self, admin_client_logged_in):
         # A bug: Polish locale renders {{ fill_pct }} with a comma ("0,2%"),
@@ -167,6 +320,11 @@ class TestOpsDashboard:
         body = admin_client_logged_in.get("/admin/").content.decode()
         assert 'style="width:0.2%"' in body
         assert 'style="width:0,2%"' not in body
+
+    def test_recent_actions_sidebar_removed(self, admin_client_logged_in):
+        make_event()
+        body = admin_client_logged_in.get("/admin/").content.decode()
+        assert "Ostatnie działania" not in body and "Recent actions" not in body
 
     def test_sales_tiles_removed_from_dashboard(self, admin_client_logged_in):
         make_event()

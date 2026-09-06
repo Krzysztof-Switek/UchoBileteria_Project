@@ -1,6 +1,8 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+from django.utils.text import slugify
 
 
 class EventStatus(models.TextChoices):
@@ -27,10 +29,19 @@ class Event(models.Model):
     title = models.CharField("tytuł", max_length=200)
     slug = models.SlugField(unique=True)
     description = models.TextField("opis", blank=True)
-    venue_name = models.CharField("nazwa miejsca", max_length=200, default="Klub UCHO")
-    venue_address = models.CharField("adres", max_length=300, blank=True)
-    start_at = models.DateTimeField("początek")
-    end_at = models.DateTimeField("koniec")
+    # Fixed real-world venue — this club runs one room, so the value is a
+    # default rather than a per-event admin field (see EventAdmin.get_fieldsets).
+    venue_name = models.CharField(
+        "nazwa miejsca", max_length=200, default="Podwórko.art / Scena UCHO"
+    )
+    venue_address = models.CharField(
+        "adres", max_length=300, blank=True, default="ul. Świętego Piotra 2, 81-347 Gdynia"
+    )
+    # null=True keeps this optional at the DB level for rows saved before the
+    # field existed; blank=False still makes it required in the admin form.
+    gates_open_at = models.DateTimeField("otwarcie bramek", null=True)
+    start_at = models.DateTimeField("start koncertu")
+    end_at = models.DateTimeField("koniec (jeśli znany)", null=True, blank=True)
     sales_start_at = models.DateTimeField("start sprzedaży")
     sales_end_at = models.DateTimeField("koniec sprzedaży")
     capacity_total = models.PositiveIntegerField("pojemność")
@@ -72,6 +83,31 @@ class Event(models.Model):
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = self._make_unique_slug()
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        if self.capacity_total and self.capacity_total > settings.CLUB_MAX_CAPACITY:
+            raise ValidationError(
+                {
+                    "capacity_total": (
+                        f"Klub mieści maksymalnie {settings.CLUB_MAX_CAPACITY} osób."
+                    )
+                }
+            )
+
+    def _make_unique_slug(self) -> str:
+        base = slugify(self.title) or "wydarzenie"
+        slug = base
+        suffix = 2
+        while Event.objects.exclude(pk=self.pk).filter(slug=slug).exists():
+            slug = f"{base}-{suffix}"
+            suffix += 1
+        return slug
 
     @property
     def is_sold_out(self) -> bool:
@@ -129,6 +165,11 @@ class PoolManualStatus(models.TextChoices):
     FORCED_CLOSED = "FORCED_CLOSED", "Wymuszona zamknięta"
 
 
+class PoolSelloutAction(models.TextChoices):
+    ACTIVATE_NEXT = "ACTIVATE_NEXT", "Uruchom kolejną pulę"
+    PAUSE = "PAUSE", "Wstrzymaj sprzedaż"
+
+
 class PoolStatus:
     """Computed pool statuses (not stored)."""
 
@@ -140,16 +181,24 @@ class PoolStatus:
 
 class TicketPool(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="pools")
-    name = models.CharField("nazwa", max_length=100)
-    priority = models.PositiveSmallIntegerField("priorytet")
+    name = models.CharField("nazwa", max_length=100, blank=True)
     price_gross = models.DecimalField("cena brutto", max_digits=8, decimal_places=2)
     currency = models.CharField(max_length=8, default="PLN")
-    capacity = models.PositiveIntegerField("pojemność puli")
+    capacity = models.PositiveIntegerField("ilość biletów")
     sold_count = models.PositiveIntegerField("sprzedane", default=0)
     sales_start_at = models.DateTimeField("start sprzedaży puli", null=True, blank=True)
     sales_end_at = models.DateTimeField("koniec sprzedaży puli", null=True, blank=True)
     manual_status = models.CharField(
         max_length=20, choices=PoolManualStatus.choices, default=PoolManualStatus.AUTO
+    )
+    # What happens to the *next* pool (by sales_start_at) when this one
+    # sells out early: cascade to it immediately, or leave sales paused
+    # until that pool's own scheduled date arrives.
+    on_sellout = models.CharField(
+        "gdy się wyczerpie",
+        max_length=20,
+        choices=PoolSelloutAction.choices,
+        default=PoolSelloutAction.ACTIVATE_NEXT,
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -157,19 +206,18 @@ class TicketPool(models.Model):
     class Meta:
         verbose_name = "pula biletów"
         verbose_name_plural = "pule biletów"
-        ordering = ["event", "priority"]
+        # There's no separate priority field — chronological sales_start_at
+        # order IS the activation order (see services.pools_with_status).
+        ordering = ["event", "sales_start_at"]
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(sold_count__lte=models.F("capacity")),
                 name="pool_sold_within_capacity",
             ),
-            models.UniqueConstraint(
-                fields=["event", "priority"], name="pool_priority_unique_per_event"
-            ),
         ]
 
     def __str__(self):
-        return f"{self.event} – {self.name}"
+        return f"{self.event} – {self.name or 'pula bez nazwy'}"
 
     @property
     def is_sold_out(self) -> bool:

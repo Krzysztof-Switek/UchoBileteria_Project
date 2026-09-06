@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Bileteria UCHO{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'dist/tailwind.css' %}">
+    {% include "partials/theme_toggle_script.html" %}
 </head>
 <body class="min-h-screen">
     {% if payment_demo_mode %}
@@ -16,7 +17,7 @@
     <header class="border-b-theme">
         <div class="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
             <a href="{% url 'events:list' %}" class="text-lg font-bold tracking-tight">{{ club_name }}</a>
-            <div class="text-xs whitespace-nowrap">
+            <div class="flex items-center gap-3 text-xs whitespace-nowrap">
                 {% if user.is_authenticated and user.is_staff %}
                 <a href="{% url 'admin:index' %}" class="link-quiet">Panel administracyjny ({{ user.email|default:user.get_username }})</a>
                 {% elif user.is_authenticated %}
@@ -24,6 +25,7 @@
                 {% else %}
                 <a href="{% url 'admin:index' %}" class="link-quiet">Zaloguj (obsługa)</a>
                 {% endif %}
+                <button type="button" id="themeToggle" class="theme-toggle-btn" aria-label="Przełącz motyw">☀️</button>
             </div>
         </div>
     </header>

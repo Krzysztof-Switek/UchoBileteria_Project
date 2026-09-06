@@ -1,0 +1,32 @@
+<div class="ucho-dash-card">
+    <div class="ucho-dash-events-head">
+        <div class="ucho-dash-label" style="margin-bottom:0;">Wydarzenia</div>
+        <div class="ucho-dash-events-filter">
+            <a href="?" class="{% if not show_finished %}active{% endif %}">Aktywne</a>
+            <a href="?wydarzenia=zakonczone" class="{% if show_finished %}active{% endif %}">Zakończone</a>
+        </div>
+    </div>
+    {% if rows %}
+    <table class="ucho-dash-events-table">
+        {% for row in rows %}
+        <tr>
+            <td class="ucho-dash-events-title">
+                <a href="{% url 'admin:events_event_change' row.event.pk %}">{{ row.event.title }}</a>
+                <span class="ucho-dash-muted">{{ row.event.start_at|date:"j E Y, H:i" }}</span>
+            </td>
+            <td class="ucho-dash-events-fill">
+                {% if row.fill_pct is not None %}
+                <div class="ucho-fill-track"><div class="ucho-fill-bar" style="width:{{ row.fill_pct_str }}%"></div></div>
+                <span class="ucho-dash-muted">{{ row.event.sold_total }} / {{ row.event.capacity_total }}</span>
+                {% endif %}
+            </td>
+            <td class="ucho-dash-events-badge">{{ row.badge }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <div class="ucho-dash-muted">
+        {% if show_finished %}Brak zakończonych wydarzeń.{% else %}Brak wydarzeń w sprzedaży ani roboczych.{% endif %}
+    </div>
+    {% endif %}
+</div>

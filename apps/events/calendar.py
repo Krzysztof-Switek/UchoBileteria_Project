@@ -7,6 +7,7 @@ therefore never block ticket sales or event publication.
 """
 
 import logging
+from datetime import timedelta
 
 from django.conf import settings
 from django.utils import timezone
@@ -45,7 +46,9 @@ class GoogleCalendarClient:
             "location": f"{event.venue_name}, {event.venue_address}".strip(", "),
             "description": f"{event.description[:500]}\n\nBilety: {url}",
             "start": {"dateTime": event.start_at.isoformat()},
-            "end": {"dateTime": event.end_at.isoformat()},
+            # end_at is optional (may not be known yet) — Calendar requires an
+            # end time regardless, so estimate one instead of leaving it out.
+            "end": {"dateTime": (event.end_at or event.start_at + timedelta(hours=4)).isoformat()},
         }
 
     def upsert_event(self, event: Event) -> str:

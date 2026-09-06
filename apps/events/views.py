@@ -1,5 +1,6 @@
 from datetime import UTC
 
+from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -11,8 +12,10 @@ from .models import Event, EventStatus
 
 def event_list(request):
     now = timezone.now()
+    # end_at is optional — fall back to start_at when unset.
     events = Event.objects.filter(
-        status=EventStatus.PUBLISHED, end_at__gte=now
+        Q(end_at__gte=now) | Q(end_at__isnull=True, start_at__gte=now),
+        status=EventStatus.PUBLISHED,
     ).order_by("start_at")
     return render(request, "events/list.html", {"events": events})
 

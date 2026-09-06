@@ -1,57 +1,62 @@
 /* Bileteria UCHO — admin theme.
    Re-skins Django's built-in admin (kept, per team decision, instead of a
-   bespoke UI) with the same hi-tech system used on the public pages: deep
-   neutrals + a signal cyan accent, in both a light and a dark variant. Django's
-   own light/dark toggle (top-right) switches between them. */
+   bespoke UI) with the same design system used on the public pages: a
+   dark-first navy palette + a signal blue accent (matching the club's
+   reservation-calendar tool), in both a light and a dark variant. Django's
+   own light/dark toggle (top-right) switches between them — that native
+   mechanism already does exactly what a bespoke toggle would, so it stays;
+   only the palette and component look changed here. */
 
 :root,
 html[data-theme="light"] {
     --primary: #ffffff;
-    --secondary: #e2e8f0;
-    --accent: #0891b2;
-    --primary-fg: #0f172a;
+    --secondary: #f2f4f8;
+    --accent: #2f6fed;
+    --accent-hover: color-mix(in srgb, var(--accent) 85%, black);
+    --primary-fg: #0c1220;
+    --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
 
-    --body-fg: #0f172a;
-    --body-bg: #f8fafc;
-    --body-quiet-color: #475569;
-    --body-medium-color: #334155;
-    --body-loud-color: #0f172a;
+    --body-fg: #0c1220;
+    --body-bg: #f6f7fb;
+    --body-quiet-color: rgba(12, 18, 32, 0.65);
+    --body-medium-color: rgba(12, 18, 32, 0.80);
+    --body-loud-color: #0c1220;
 
-    --header-color: #0f172a;
-    --header-branding-color: #0891b2;
+    --header-color: #0c1220;
+    --header-branding-color: #2f6fed;
     --header-bg: #ffffff;
-    --header-link-color: #0f172a;
+    --header-link-color: #0c1220;
 
-    --breadcrumbs-fg: #475569;
-    --breadcrumbs-link-fg: #0f172a;
-    --breadcrumbs-bg: #f8fafc;
+    --breadcrumbs-fg: rgba(12, 18, 32, 0.65);
+    --breadcrumbs-link-fg: #0c1220;
+    --breadcrumbs-bg: #f6f7fb;
 
-    --link-fg: #0891b2;
-    --link-hover-color: #0e7490;
-    --link-selected-fg: #0891b2;
+    --link-fg: #2f6fed;
+    --link-hover-color: color-mix(in srgb, #2f6fed 85%, black);
+    --link-selected-fg: #2f6fed;
 
-    --hairline-color: #e2e8f0;
-    --border-color: #e2e8f0;
+    --hairline-color: rgba(12, 18, 32, 0.12);
+    --border-color: rgba(12, 18, 32, 0.12);
 
-    --error-fg: #dc2626;
+    --error-fg: #d92d20;
 
-    --message-success-bg: #d1fae5;
+    --message-success-bg: rgba(3, 152, 85, 0.10);
     --message-warning-bg: #fef3c7;
-    --message-error-bg: #fee2e2;
-    --message-info-bg: #dbeafe;
+    --message-error-bg: rgba(217, 45, 32, 0.10);
+    --message-info-bg: color-mix(in srgb, #2f6fed 10%, transparent);
 
     --darkened-bg: #ffffff;
-    --selected-bg: #f1f5f9;
-    --selected-row: #ecfeff;
+    --selected-bg: #f2f4f8;
+    --selected-row: color-mix(in srgb, #2f6fed 8%, transparent);
 
     --button-fg: #ffffff;
-    --button-bg: #0891b2;
-    --button-hover-bg: #0e7490;
-    --default-button-bg: #0891b2;
-    --default-button-hover-bg: #0e7490;
+    --button-bg: #2f6fed;
+    --button-hover-bg: color-mix(in srgb, #2f6fed 85%, black);
+    --default-button-bg: #2f6fed;
+    --default-button-hover-bg: color-mix(in srgb, #2f6fed 85%, black);
     --close-button-bg: #64748b;
     --close-button-hover-bg: #475569;
-    --delete-button-bg: #dc2626;
+    --delete-button-bg: #d92d20;
     --delete-button-hover-bg: #b91c1c;
 
     --object-tools-fg: #ffffff;
@@ -63,55 +68,57 @@ html[data-theme="light"] {
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --primary: #18181b;
-        --secondary: #27272a;
-        --accent: #22d3ee;
-        --primary-fg: #f4f4f5;
+        --primary: #101828;
+        --secondary: #0f172a;
+        --accent: #8ab4ff;
+        --accent-hover: color-mix(in srgb, var(--accent) 80%, white);
+        --primary-fg: #e6e8ee;
+        --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
 
-        --body-fg: #e4e4e7;
-        --body-bg: #09090b;
-        --body-quiet-color: #a1a1aa;
-        --body-medium-color: #d4d4d8;
+        --body-fg: #e6e8ee;
+        --body-bg: #0b0f17;
+        --body-quiet-color: rgba(230, 232, 238, 0.70);
+        --body-medium-color: rgba(230, 232, 238, 0.85);
         --body-loud-color: #f4f4f5;
 
-        --header-color: #f4f4f5;
-        --header-branding-color: #22d3ee;
-        --header-bg: #18181b;
-        --header-link-color: #f4f4f5;
+        --header-color: #e6e8ee;
+        --header-branding-color: #8ab4ff;
+        --header-bg: #101828;
+        --header-link-color: #e6e8ee;
 
-        --breadcrumbs-fg: #a1a1aa;
-        --breadcrumbs-link-fg: #e4e4e7;
-        --breadcrumbs-bg: #09090b;
+        --breadcrumbs-fg: rgba(230, 232, 238, 0.70);
+        --breadcrumbs-link-fg: #e6e8ee;
+        --breadcrumbs-bg: #0b0f17;
 
-        --link-fg: #22d3ee;
-        --link-hover-color: #67e8f9;
-        --link-selected-fg: #22d3ee;
+        --link-fg: #8ab4ff;
+        --link-hover-color: color-mix(in srgb, #8ab4ff 80%, white);
+        --link-selected-fg: #8ab4ff;
 
-        --hairline-color: #27272a;
-        --border-color: #27272a;
+        --hairline-color: rgba(230, 232, 238, 0.12);
+        --border-color: rgba(230, 232, 238, 0.12);
 
-        --error-fg: #f87171;
+        --error-fg: #ff6b6b;
 
-        --message-success-bg: #052e21;
+        --message-success-bg: rgba(74, 222, 128, 0.14);
         --message-warning-bg: #451a03;
-        --message-error-bg: #450a0a;
-        --message-info-bg: #172554;
+        --message-error-bg: rgba(255, 107, 107, 0.14);
+        --message-info-bg: rgba(138, 180, 255, 0.14);
 
-        --darkened-bg: #18181b;
-        --selected-bg: #27272a;
-        --selected-row: #052e21;
+        --darkened-bg: #101828;
+        --selected-bg: #0f172a;
+        --selected-row: rgba(74, 222, 128, 0.10);
 
-        --button-fg: #09090b;
-        --button-bg: #22d3ee;
-        --button-hover-bg: #67e8f9;
-        --default-button-bg: #22d3ee;
-        --default-button-hover-bg: #67e8f9;
+        --button-fg: #0b0f17;
+        --button-bg: #8ab4ff;
+        --button-hover-bg: color-mix(in srgb, #8ab4ff 80%, white);
+        --default-button-bg: #8ab4ff;
+        --default-button-hover-bg: color-mix(in srgb, #8ab4ff 80%, white);
         --close-button-bg: #3f3f46;
         --close-button-hover-bg: #52525b;
-        --delete-button-bg: #dc2626;
-        --delete-button-hover-bg: #b91c1c;
+        --delete-button-bg: #ff6b6b;
+        --delete-button-hover-bg: #f87171;
 
-        --object-tools-fg: #09090b;
+        --object-tools-fg: #0b0f17;
         --object-tools-bg: #27272a;
         --object-tools-hover-bg: #3f3f46;
 
@@ -120,59 +127,68 @@ html[data-theme="light"] {
 }
 
 html[data-theme="dark"] {
-    --primary: #18181b;
-    --secondary: #27272a;
-    --accent: #22d3ee;
-    --primary-fg: #f4f4f5;
+    --primary: #101828;
+    --secondary: #0f172a;
+    --accent: #8ab4ff;
+    --accent-hover: color-mix(in srgb, var(--accent) 80%, white);
+    --primary-fg: #e6e8ee;
+    --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
 
-    --body-fg: #e4e4e7;
-    --body-bg: #09090b;
-    --body-quiet-color: #a1a1aa;
-    --body-medium-color: #d4d4d8;
+    --body-fg: #e6e8ee;
+    --body-bg: #0b0f17;
+    --body-quiet-color: rgba(230, 232, 238, 0.70);
+    --body-medium-color: rgba(230, 232, 238, 0.85);
     --body-loud-color: #f4f4f5;
 
-    --header-color: #f4f4f5;
-    --header-branding-color: #22d3ee;
-    --header-bg: #18181b;
-    --header-link-color: #f4f4f5;
+    --header-color: #e6e8ee;
+    --header-branding-color: #8ab4ff;
+    --header-bg: #101828;
+    --header-link-color: #e6e8ee;
 
-    --breadcrumbs-fg: #a1a1aa;
-    --breadcrumbs-link-fg: #e4e4e7;
-    --breadcrumbs-bg: #09090b;
+    --breadcrumbs-fg: rgba(230, 232, 238, 0.70);
+    --breadcrumbs-link-fg: #e6e8ee;
+    --breadcrumbs-bg: #0b0f17;
 
-    --link-fg: #22d3ee;
-    --link-hover-color: #67e8f9;
-    --link-selected-fg: #22d3ee;
+    --link-fg: #8ab4ff;
+    --link-hover-color: color-mix(in srgb, #8ab4ff 80%, white);
+    --link-selected-fg: #8ab4ff;
 
-    --hairline-color: #27272a;
-    --border-color: #27272a;
+    --hairline-color: rgba(230, 232, 238, 0.12);
+    --border-color: rgba(230, 232, 238, 0.12);
 
-    --error-fg: #f87171;
+    --error-fg: #ff6b6b;
 
-    --message-success-bg: #052e21;
+    --message-success-bg: rgba(74, 222, 128, 0.14);
     --message-warning-bg: #451a03;
-    --message-error-bg: #450a0a;
-    --message-info-bg: #172554;
+    --message-error-bg: rgba(255, 107, 107, 0.14);
+    --message-info-bg: rgba(138, 180, 255, 0.14);
 
-    --darkened-bg: #18181b;
-    --selected-bg: #27272a;
-    --selected-row: #052e21;
+    --darkened-bg: #101828;
+    --selected-bg: #0f172a;
+    --selected-row: rgba(74, 222, 128, 0.10);
 
-    --button-fg: #09090b;
-    --button-bg: #22d3ee;
-    --button-hover-bg: #67e8f9;
-    --default-button-bg: #22d3ee;
-    --default-button-hover-bg: #67e8f9;
+    --button-fg: #0b0f17;
+    --button-bg: #8ab4ff;
+    --button-hover-bg: color-mix(in srgb, #8ab4ff 80%, white);
+    --default-button-bg: #8ab4ff;
+    --default-button-hover-bg: color-mix(in srgb, #8ab4ff 80%, white);
     --close-button-bg: #3f3f46;
     --close-button-hover-bg: #52525b;
-    --delete-button-bg: #dc2626;
-    --delete-button-hover-bg: #b91c1c;
+    --delete-button-bg: #ff6b6b;
+    --delete-button-hover-bg: #f87171;
 
-    --object-tools-fg: #09090b;
+    --object-tools-fg: #0b0f17;
     --object-tools-bg: #27272a;
     --object-tools-hover-bg: #3f3f46;
 
     color-scheme: dark;
+}
+
+body {
+    background:
+        radial-gradient(1200px 700px at 20% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 55%),
+        radial-gradient(900px 600px at 90% 10%, color-mix(in srgb, #4ade80 5%, transparent), transparent 60%),
+        var(--body-bg);
 }
 
 #header {
@@ -198,13 +214,17 @@ html[data-theme="dark"] {
 }
 
 .ucho-nav a {
-    padding: 8px 10px;
+    padding: 8px 12px;
+    margin: 4px 0;
+    border-radius: 999px;
     color: var(--body-quiet-color);
     white-space: nowrap;
+    transition: background-color 120ms ease, color 120ms ease;
 }
 
 .ucho-nav a:hover {
     color: var(--link-fg);
+    background: var(--selected-bg);
 }
 
 .ucho-nav-spacer {
@@ -264,11 +284,13 @@ div.breadcrumbs {
 }
 
 /* Fieldsets read as clean, well-spaced cards instead of Django's default
-   solid-color header bar. */
+   solid-color header bar — border + a very subtle gradient overlay, the
+   same "uniesiona powierzchnia" formula used for every card/tile/badge in
+   the design system, so a new component matches automatically. */
 .module {
-    background: var(--darkened-bg);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--body-fg) 4%, var(--darkened-bg)), var(--darkened-bg));
     border: 1px solid var(--hairline-color);
-    border-radius: 12px;
+    border-radius: 14px;
     overflow: hidden;
     margin-bottom: 20px;
 }
@@ -329,7 +351,22 @@ a:link, a:visited {
 }
 
 .button, input[type="submit"], input[type="button"], .submit-row input, a.button {
-    border-radius: 8px;
+    border-radius: 10px;
+    transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.button:hover, input[type="submit"]:hover, input[type="button"]:hover, .submit-row input:hover, a.button:hover {
+    transform: translateY(-1px);
+}
+
+.button:active, input[type="submit"]:active, input[type="button"]:active, .submit-row input:active, a.button:active {
+    transform: translateY(0);
+}
+
+.button:focus-visible, input[type="submit"]:focus-visible, input[type="button"]:focus-visible, a.button:focus-visible,
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: none;
+    box-shadow: var(--ring);
 }
 
 .ucho-callout {
@@ -342,9 +379,9 @@ a:link, a:visited {
 
 /* OBS-01: operations dashboard on the admin landing page. */
 .ucho-dash-card {
-    background: var(--darkened-bg);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--body-fg) 4%, var(--darkened-bg)), var(--darkened-bg));
     border: 1px solid var(--hairline-color);
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 16px;
     margin-bottom: 14px;
 }
@@ -415,6 +452,94 @@ a:link, a:visited {
     font-size: 0.85rem;
 }
 
+/* Home page "Wydarzenia" overview — on sale + draft by default, a filter
+   toggle for finished ones (sales/reporting has its own dedicated view). */
+.ucho-dash-events-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.ucho-dash-events-filter {
+    display: flex;
+    gap: 4px;
+}
+
+.ucho-dash-events-filter a,
+.ucho-dash-events-filter a:link,
+.ucho-dash-events-filter a:visited {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--body-quiet-color);
+}
+
+.ucho-dash-events-filter a:hover {
+    background: var(--selected-bg);
+}
+
+.ucho-dash-events-filter a.active,
+.ucho-dash-events-filter a.active:link,
+.ucho-dash-events-filter a.active:visited {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.ucho-dash-events-table { width: 100%; border-collapse: collapse; }
+
+.ucho-dash-events-table tr + tr td { border-top: 1px solid var(--hairline-color); }
+
+.ucho-dash-events-table td { padding: 8px 4px; vertical-align: middle; }
+
+.ucho-dash-events-title a { font-weight: 600; }
+
+.ucho-dash-events-title .ucho-dash-muted { display: block; font-size: 0.78rem; margin-top: 1px; }
+
+.ucho-dash-events-fill { width: 160px; }
+
+.ucho-dash-events-fill .ucho-fill-track { margin-top: 0; }
+
+.ucho-dash-events-fill .ucho-dash-muted { font-size: 0.75rem; white-space: nowrap; }
+
+.ucho-dash-events-badge { text-align: right; white-space: nowrap; }
+
+/* Home-page quick-action tiles (currently just one — "Raporty sprzedaży" —
+   more will land here later; grid/tile classes are shared so a new one
+   just drops in). */
+.ucho-tile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.ucho-tile,
+.ucho-tile:link,
+.ucho-tile:visited {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid var(--hairline-color);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--body-fg) 4%, var(--darkened-bg)), var(--darkened-bg));
+    color: var(--body-fg);
+    text-decoration: none !important;
+    transition: border-color 120ms ease, transform 120ms ease;
+}
+
+.ucho-tile:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+}
+
+.ucho-tile-title { font-weight: 700; font-size: 0.92rem; }
+
+.ucho-tile-desc { font-size: 0.78rem; color: var(--body-quiet-color); line-height: 1.35; }
+
 /* Standalone quick-action row above the dashboard cards (e.g. "Otwórz
    odprawę") — a shortcut to a daily task, not a status card itself. */
 .ucho-quick-links {
@@ -438,7 +563,7 @@ a:link, a:visited {
 .ucho-wizard-step {
     flex: 1 1 auto;
     padding: 10px 14px;
-    border-radius: 10px;
+    border-radius: 999px;
     border: 1px solid var(--hairline-color);
     background: var(--darkened-bg);
     color: var(--body-quiet-color);
@@ -447,6 +572,7 @@ a:link, a:visited {
     cursor: pointer;
     text-align: center;
     white-space: nowrap;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
 .ucho-wizard-step.active {

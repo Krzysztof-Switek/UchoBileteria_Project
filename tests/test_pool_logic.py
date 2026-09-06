@@ -76,6 +76,23 @@ class TestPoolActivation:
         early.save()
         assert services.get_active_pool(event, NOW) == regular
 
+    def test_sellout_pause_blocks_next_pool_until_its_own_date(self):
+        from apps.events.models import PoolSelloutAction
+
+        event = make_event()
+        early, regular, _ = make_three_pools(event)
+        early.on_sellout = PoolSelloutAction.PAUSE
+        early.sold_count = early.capacity
+        early.save()
+        # Early sold out but chose PAUSE — Regular waits for its own date
+        # (in 5 days), it does not cascade in early like the default case.
+        assert services.get_active_pool(event, NOW) is None
+        statuses = dict(
+            (pool.name, status) for pool, status in services.pools_with_status(event, NOW)
+        )
+        assert statuses["Early Bird"] == PoolStatus.SOLD_OUT
+        assert statuses["Regular"] == PoolStatus.DRAFT
+
     def test_lowest_priority_wins_when_multiple_match(self):
         event = make_event()
         a = make_pool(event, name="A", priority=1, sales_start_at=NOW - timedelta(days=2))
@@ -215,6 +232,27 @@ class TestPublishCancel:
         event = make_event(status=EventStatus.DRAFT)
         with pytest.raises(ValidationError):
             services.publish_event(event)
+
+    def test_publish_requires_gates_open_at(self):
+        event = make_event(status=EventStatus.DRAFT, gates_open_at=None)
+        make_pool(event)
+        with pytest.raises(ValidationError):
+            services.publish_event(event)
+
+    def test_publish_rejects_gates_open_after_start(self):
+        event = make_event(status=EventStatus.DRAFT)
+        event.gates_open_at = event.start_at + timedelta(hours=1)
+        event.save()
+        make_pool(event)
+        with pytest.raises(ValidationError):
+            services.publish_event(event)
+
+    def test_publish_allows_unset_end_at(self):
+        event = make_event(status=EventStatus.DRAFT, end_at=None)
+        make_pool(event)
+        services.publish_event(event)
+        event.refresh_from_db()
+        assert event.status == EventStatus.PUBLISHED
 
     def test_publish_rejects_non_draft(self):
         event = make_event(status=EventStatus.PUBLISHED)

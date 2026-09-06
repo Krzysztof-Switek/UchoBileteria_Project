@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Bileteria UCHO — panel{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'dist/tailwind.css' %}">
+    {% include "partials/theme_toggle_script.html" %}
 </head>
 <body class="min-h-screen">
     {% include "partials/staff_nav.html" %}
