@@ -164,6 +164,21 @@ def offline_manifest(request, event_id):
 
 @login_required
 @can_scan
+def emergency_list_print(request, event_id):
+    """Printable door-desk fallback: only active (sold, unused) tickets,
+    sorted by e-mail — the CSV export below covers every ticket status for
+    record-keeping, this one is specifically the "who do we let in" list."""
+    event = get_object_or_404(Event, pk=event_id)
+    tickets = services.active_tickets_for_door_list(event)
+    return render(
+        request,
+        "checkin/emergency_list_print.html",
+        {"event": event, "tickets": tickets},
+    )
+
+
+@login_required
+@can_scan
 def emergency_list(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
     response = HttpResponse(content_type="text/csv; charset=utf-8")

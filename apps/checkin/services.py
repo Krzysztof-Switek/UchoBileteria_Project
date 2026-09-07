@@ -118,6 +118,18 @@ def offline_manifest_tickets(event: Event) -> list[dict]:
     ]
 
 
+def active_tickets_for_door_list(event: Event):
+    """Printed fallback list for the gate when the scanner is down: only
+    tickets a guest could still be admitted on (sold and not yet used,
+    refunded, cancelled or invalidated) — sorted by e-mail so staff can
+    find the person standing in front of them by asking for it."""
+    return (
+        Ticket.objects.filter(event=event, status=TicketStatus.ISSUED)
+        .select_related("pool")
+        .order_by("buyer_email", "short_code")
+    )
+
+
 def write_emergency_list(event: Event, file_obj, actor=None) -> int:
     """Spec section 16: CSV with everything needed for offline entrance."""
     writer = csv.writer(file_obj)

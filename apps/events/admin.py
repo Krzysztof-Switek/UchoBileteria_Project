@@ -94,7 +94,10 @@ class TicketPoolInline(admin.TabularInline):
     exclude = ["currency", "manual_status"]
 
     def get_fields(self, request, obj=None):
-        fields = ["name", "price_gross", "capacity", "sales_start_at", "sales_end_at", "on_sellout"]
+        # Sales window last — it's the calendar-driven button on the add
+        # wizard, visually the "heaviest" field, and reads best as the final
+        # thing you set once name/price/capacity/sellout policy are in.
+        fields = ["name", "price_gross", "capacity", "on_sellout", "sales_start_at", "sales_end_at"]
         if obj is not None:
             # Meaningless while the event is still being created (always
             # zero) — sales figures belong in reports/the dashboard, not
@@ -195,11 +198,7 @@ class EventAdmin(admin.ModelAdmin):
             (
                 "Termin wydarzenia",
                 {
-                    "description": (
-                        "Kalendarz poniżej zaznacza już zatwierdzone wydarzenia — "
-                        "sprawdź kolizje przed wyborem daty. Koniec podaj tylko, jeśli "
-                        "już wiadomo."
-                    ),
+                    "description": "",
                     "fields": ["gates_open_at", "start_at", "end_at"],
                 },
             ),

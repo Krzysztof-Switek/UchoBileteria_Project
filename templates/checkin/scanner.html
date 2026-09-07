@@ -35,6 +35,11 @@
     <button class="min-h-[56px] px-4 bg-zinc-800 border border-zinc-700 rounded-lg">Szukaj ręcznie</button>
 </form>
 
+<a href="{% url 'checkin:emergency_list_print' event.id %}"
+   class="mt-3 block text-center min-h-[44px] leading-[44px] px-4 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-300">
+    Skaner nie działa? Otwórz listę awaryjną (druk)
+</a>
+
 <h2 class="mt-8 text-sm font-semibold text-zinc-500 uppercase tracking-wide">Ostatnie skany</h2>
 <ul id="scan-history" class="mt-2 space-y-2">
     <li class="text-zinc-600 text-sm" data-placeholder>Jeszcze nic nie zeskanowano.</li>

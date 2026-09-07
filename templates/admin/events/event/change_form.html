@@ -1,11 +1,17 @@
 {% extends "admin/change_form.html" %}
 
+{# The wizard needs every pixel of vertical room it can get; the page's own
+   "Dodaj wydarzenie" <h1> (from admin/base.html) doesn't earn its keep once
+   the step tabs right below it already say the same thing. Change view keeps
+   its title as normal. #}
+{% block content_title %}{% if not add %}{{ block.super }}{% endif %}{% endblock %}
+
 {% block extrastyle %}
 {{ block.super }}
 <style>
 /* Event link box — shown on both add and change, so it's always in view
    while working on the event, not just on one step. */
-.ucho-event-link-box { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; padding: 7px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--body-bg); flex-wrap: wrap; }
+.ucho-event-link-box { display: flex; align-items: center; gap: 8px; margin: 10px 0; padding: 7px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--body-bg); flex-wrap: wrap; }
 .ucho-event-link-label { font-size: 0.75rem; font-weight: 700; color: var(--body-quiet-color); white-space: nowrap; }
 .ucho-event-link-href { font-size: 0.78rem; color: var(--link-fg); word-break: break-all; margin-right: auto; }
 .ucho-event-link-copy { padding: 3px 12px; font-size: 0.72rem; }
@@ -80,24 +86,30 @@
 {% if add %}
 <style>
 .ucho-cal-panel { margin: 6px 0; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--body-bg); }
-#ucho-cal-conflict.ucho-cal-panel { max-width: 480px; }
+#ucho-cal-conflict.ucho-cal-panel { max-width: 720px; margin-left: auto; margin-right: auto; }
 
 /* Day-selection calendar ("Termin wydarzenia") — visual language adapted from
    a reservation-calendar reference; interaction logic is our own (soft
    conflict warnings, no hard blocking, single-day by default). */
 .calFestivalToggle { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--body-fg); margin-bottom: 6px; cursor: pointer; }
-.calTitle { font-size: 0.8rem; font-weight: 800; text-transform: capitalize; color: var(--body-fg); }
-.calNavBtn { padding: 1px 8px; font-size: 0.75rem; }
-.calWeekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; font-size: 9.5px; font-weight: 700; color: var(--body-quiet-color); text-align: center; margin-bottom: 3px; }
+.calTitle { font-size: 0.9rem; font-weight: 800; text-transform: capitalize; color: var(--body-fg); }
+/* Outline style, not Django's filled .button look — that fills with
+   var(--button-bg), which IS var(--accent) in dark mode, so an accent-
+   colored icon on top of it just disappears until :hover changes the
+   background. A neutral background keeps the icon visible at all times. */
+.calNavBtn { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; padding: 0; background: var(--darkened-bg); border-width: 2px; border-color: var(--accent); color: var(--accent); }
+.calNavBtn svg { display: block; }
+.calNavBtn:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+.calWeekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; font-size: 10.5px; font-weight: 700; color: var(--body-quiet-color); text-align: center; margin-bottom: 3px; }
 .calGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
-.calDay { height: 28px; min-width: 0; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 2px; border-radius: 6px; border: 1px solid var(--border-color); background: color-mix(in srgb, var(--body-fg) 4%, transparent); color: var(--body-fg); font-size: 11px; font-family: inherit; cursor: pointer; padding: 0; transition: border-color .15s, background .15s; }
+.calDay { height: 38px; min-width: 0; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 2px; border-radius: 7px; border: 1px solid var(--border-color); background: color-mix(in srgb, var(--body-fg) 4%, transparent); color: var(--body-fg); font-size: 13px; font-family: inherit; cursor: pointer; padding: 0; transition: border-color .15s, background .15s; }
 .calDay--blank { visibility: hidden; border: none; background: transparent; cursor: default; }
 .calDay--past { opacity: 0.35; cursor: not-allowed; background: transparent; }
 .calDay--available:hover { border-color: var(--accent); background: color-mix(in srgb, var(--body-fg) 8%, transparent); }
 .calDay--occupied { border-color: #f59e0b; background: rgba(245, 158, 11, 0.14); color: #f59e0b; }
 .calDay--occupied:hover { background: rgba(245, 158, 11, 0.22); }
 .calDay--occupied .calDayNum { color: var(--body-fg); }
-.calLockIcon { width: 11px; height: 11px; }
+.calLockIcon { width: 12px; height: 12px; }
 .calDay--conflict { border-color: #ef4444 !important; box-shadow: 0 0 0 1px #ef4444; }
 .calDay--in-range { border-color: #22c55e; background: rgba(34, 197, 94, 0.16); font-weight: 700; }
 .calDay--edge { background: rgba(34, 197, 94, 0.32); }
@@ -107,10 +119,10 @@
 .calLegendSwatch { width: 11px; height: 11px; border-radius: 3px; border: 2px solid transparent; background: color-mix(in srgb, var(--body-fg) 4%, transparent); }
 .calLegendSwatch--occupied { border-color: #f59e0b; }
 .calLegendSwatch--selected { border-color: #22c55e; }
-.calHint { font-size: 10px; color: var(--body-quiet-color); font-style: italic; margin-top: 5px; }
 .calSummary { font-size: 11px; color: var(--body-quiet-color); margin-top: 4px; }
 .calSummary--ok { color: var(--body-fg); }
 .calSummary--warn { color: #f87171; font-weight: 600; }
+#ucho-gates-warning { padding: 8px 20px 14px; font-size: 0.78rem; margin: 0; }
 
 /* Each step is its own one-screen-no-scroll view — fieldsets 2-4 (Termin,
    Sprzedaż, Pule biletowe) get a denser row rhythm than Django's default so
@@ -131,18 +143,47 @@
 .ucho-compact p.datetime br, .ucho-compact-inline p.datetime br { display: none; }
 .ucho-compact p.datetime label:last-of-type, .ucho-compact-inline p.datetime label:last-of-type { margin-left: 10px; }
 
-/* Pool inline table: same denser rhythm. */
-.ucho-compact-inline .inline-heading { font-size: 0.78rem; padding: 3px 10px; }
-.ucho-compact-inline table th, .ucho-compact-inline table td { padding: 2px 5px; font-size: 0.75rem; }
-.ucho-compact-inline input, .ucho-compact-inline select { font-size: 0.75rem; padding: 1px 3px; }
-.ucho-compact-inline .add-row a { padding: 3px 10px; font-size: 0.75rem; }
+/* Pool inline table: same denser rhythm. Heading text ("Pule biletów") is
+   redundant here — the step tab and table itself already say what this is. */
+.ucho-compact-inline .inline-heading { display: none; }
+.ucho-compact-inline table th, .ucho-compact-inline table td { padding: 6px 8px; font-size: 0.75rem; }
+.ucho-compact-inline input, .ucho-compact-inline select { font-size: 0.75rem; padding: 4px 6px; width: 100%; box-sizing: border-box; }
+/* Explicit widths (not the browser's shrink-to-content default, which left
+   uneven gaps between columns and squeezed "Pula 1" onto two lines) — sums
+   to 100%, sized by what each column actually needs. */
+.ucho-compact-inline table { table-layout: fixed; width: 100%; }
+/* Django's own forms.css sets `.inline-group .tabular td/th.original { width:
+   0 }` at higher specificity (3 classes) than a plain ".ucho-compact-inline
+   td.original" (2 classes) can beat — matching its exact class chain plus
+   ours is what actually wins, no !important needed. */
+.inline-group.ucho-compact-inline .tabular tr th.original,
+.inline-group.ucho-compact-inline .tabular tr td.original { width: 7%; }
+.ucho-compact-inline th.column-name, .ucho-compact-inline td.field-name { width: 25%; }
+.ucho-compact-inline th.column-price_gross, .ucho-compact-inline td.field-price_gross { width: 11%; }
+.ucho-compact-inline th.column-capacity, .ucho-compact-inline td.field-capacity { width: 11%; }
+.ucho-compact-inline th.column-on_sellout, .ucho-compact-inline td.field-on_sellout { width: 17%; }
+.ucho-compact-inline th.column-sales_start_at, .ucho-compact-inline td.field-sales_start_at { width: 23%; }
+.ucho-compact-inline th:last-child, .ucho-compact-inline td.delete { width: 6%; }
+.ucho-pool-order { white-space: nowrap; }
 /* Django's own "Add another Pula biletów" label ships every Polish
    grammatical case at once (it can't know which applies) — replace the
    text via CSS, not JS: the row itself is built by Django's inlines.js on
    window "load", after this script's DOMContentLoaded already ran, so a
-   one-time JS rewrite loses the race and gets overwritten. */
-.ucho-compact-inline .tabular tr.add-row td a.addlink { font-size: 0; }
-.ucho-compact-inline .tabular tr.add-row td a.addlink::before { content: "Dodaj pulę"; font-size: 0.75rem; }
+   one-time JS rewrite loses the race and gets overwritten. Styled as an
+   obvious, centered call-to-action button, not a quiet text link. */
+.ucho-compact-inline .add-row td { text-align: center; padding: 8px 0; }
+.ucho-compact-inline .tabular tr.add-row td a.addlink {
+    display: inline-block;
+    font-size: 0;
+    padding: 10px 26px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--button-fg);
+    font-weight: 800;
+    border: none;
+}
+.ucho-compact-inline .tabular tr.add-row td a.addlink::before { content: "+ Dodaj pulę"; font-size: 0.85rem; }
+.ucho-compact-inline .tabular tr.add-row td a.addlink:hover { background: var(--accent-hover); }
 
 /* A pool's sales window is set on the calendar below, not typed — hide the
    native date/time widgets for sales_start_at on every pool row and show a
@@ -164,8 +205,8 @@
 .cal-pool-range-btn.active { border-style: solid; font-weight: 700; }
 .cal-pool-range-btn:hover { border-color: var(--accent); }
 
-/* Read-only "1., 2., ..." sequence label in the otherwise-empty first
-   column — order is chronological (sales_start_at), not editable here. */
+/* Read-only "Pula 1", "Pula 2", ... sequence label in the otherwise-empty
+   first column — order is chronological (sales_start_at), not editable here. */
 .ucho-pool-order { font-weight: 700; color: var(--body-quiet-color); }
 
 /* "3. Sprzedaż" pools calendar — 3 months forced onto one row, per pool a
@@ -227,6 +268,21 @@ label[for="id_gates_open_at_0"], label[for="id_start_at_0"], label[for="id_end_a
 
 {% block form_top %}
 {{ block.super }}
+{% if add %}
+<div id="ucho-wizard" class="ucho-wizard">
+    <div class="ucho-wizard-steps">
+        <button type="button" class="ucho-wizard-step" data-step="0">1. Podstawy</button>
+        <button type="button" class="ucho-wizard-step" data-step="1">2. Termin wydarzenia</button>
+        <button type="button" class="ucho-wizard-step" data-step="2">3. Sprzedaż</button>
+    </div>
+    <div id="ucho-wizard-hint" class="ucho-wizard-hint"></div>
+</div>
+{{ ucho_calendar_events|json_script:"ucho-calendar-events-data" }}
+{{ ucho_max_capacity|json_script:"ucho-max-capacity-data" }}
+{% endif %}
+<!-- Below the step tabs, not above them — otherwise the tabs read as
+     attached straight to whatever's below (the pool table on step 3), with
+     no visual break. -->
 <div id="ucho-event-link-box" class="ucho-event-link-box">
     <span class="ucho-event-link-label">{% if original %}Link do wydarzenia:{% else %}Adres strony (podgląd):{% endif %}</span>
     <a id="ucho-event-link-href" class="ucho-event-link-href"{% if original %} href="{{ ucho_public_url }}" target="_blank" rel="noopener"{% endif %}>{% if original %}{{ ucho_public_url }}{% else %}—{% endif %}</a>
@@ -284,18 +340,6 @@ label[for="id_gates_open_at_0"], label[for="id_start_at_0"], label[for="id_end_a
 {% if not original %}
 {{ ucho_public_url_template|default:""|json_script:"ucho-public-url-template-data" }}
 {% endif %}
-{% if add %}
-<div id="ucho-wizard" class="ucho-wizard">
-    <div class="ucho-wizard-steps">
-        <button type="button" class="ucho-wizard-step" data-step="0">1. Podstawy</button>
-        <button type="button" class="ucho-wizard-step" data-step="1">2. Termin wydarzenia</button>
-        <button type="button" class="ucho-wizard-step" data-step="2">3. Sprzedaż</button>
-    </div>
-    <div id="ucho-wizard-hint" class="ucho-wizard-hint"></div>
-</div>
-{{ ucho_calendar_events|json_script:"ucho-calendar-events-data" }}
-{{ ucho_max_capacity|json_script:"ucho-max-capacity-data" }}
-{% endif %}
 {% endblock %}
 
 {% block after_field_sets %}
@@ -307,9 +351,9 @@ label[for="id_gates_open_at_0"], label[for="id_start_at_0"], label[for="id_end_a
         Impreza wielodniowa (festiwal)
     </label>
     <div class="calHead">
-        <button type="button" class="button calNavBtn" id="ucho-cal-conflict-prev">&larr;</button>
+        <button type="button" class="button calNavBtn" id="ucho-cal-conflict-prev" aria-label="Poprzedni miesiąc"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 4.5l-6 5.5 6 5.5"/></svg></button>
         <span class="calTitle" id="ucho-cal-conflict-title"></span>
-        <button type="button" class="button calNavBtn" id="ucho-cal-conflict-next">&rarr;</button>
+        <button type="button" class="button calNavBtn" id="ucho-cal-conflict-next" aria-label="Następny miesiąc"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 4.5l6 5.5-6 5.5"/></svg></button>
     </div>
     <div class="calWeekdays" id="ucho-cal-conflict-dow"></div>
     <div class="calGrid" id="ucho-cal-conflict-grid"></div>
@@ -327,13 +371,12 @@ label[for="id_gates_open_at_0"], label[for="id_start_at_0"], label[for="id_end_a
 
 <div id="ucho-cal-pools" class="ucho-cal-panel" hidden>
     <div class="calHead">
-        <button type="button" class="button calNavBtn" id="ucho-cal-pools-prev">&larr;</button>
+        <button type="button" class="button calNavBtn" id="ucho-cal-pools-prev" aria-label="Poprzedni miesiąc"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 4.5l-6 5.5 6 5.5"/></svg></button>
         <span class="calTitle" id="ucho-cal-pools-title"></span>
-        <button type="button" class="button calNavBtn" id="ucho-cal-pools-next">&rarr;</button>
+        <button type="button" class="button calNavBtn" id="ucho-cal-pools-next" aria-label="Następny miesiąc"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 4.5l6 5.5-6 5.5"/></svg></button>
     </div>
     <div class="calMonths3" id="ucho-cal-pools-months"></div>
     <div class="calLegend" id="ucho-cal-pools-legend"></div>
-    <div class="calHint">Kliknij „Wybierz zakres” przy puli w tabeli powyżej, potem pierwszy i ostatni dzień sprzedaży na kalendarzu. Zaszrafowane dni = koncert i później — pula nie może tam sięgać. 🎤 = dzień koncertu.</div>
     <div id="ucho-cal-pools-summary"></div>
 </div>
 
@@ -380,6 +423,34 @@ document.addEventListener("DOMContentLoaded", () => {
     const salesStartHeader = document.querySelector("th.column-sales_start_at");
     if (salesStartHeader) salesStartHeader.textContent = "Sprzedaż w okresie";
 
+    // Gates open on the same day as the concert (both dates come from the
+    // step-2 calendar) — only the two times can conflict. The server is the
+    // real guarantee (rejected at publish), this is just early feedback
+    // instead of a surprise later.
+    const gatesWarnEl = document.createElement("div");
+    gatesWarnEl.id = "ucho-gates-warning";
+    gatesWarnEl.className = "calSummary calSummary--warn";
+    gatesWarnEl.hidden = true;
+    if (allFieldsets[2]) allFieldsets[2].appendChild(gatesWarnEl);
+
+    function checkGatesVsStart() {
+        const gatesTime = (document.getElementById("id_gates_open_at_1")?.value || "").trim();
+        const startTime = (document.getElementById("id_start_at_1")?.value || "").trim();
+        const isValidTime = (t) => /^\d{2}:\d{2}$/.test(t);
+        if (isValidTime(gatesTime) && isValidTime(startTime) && gatesTime > startTime) {
+            gatesWarnEl.textContent =
+                "Otwarcie bramek jest po starcie koncertu — popraw godzinę (bramki muszą " +
+                "otworzyć się wcześniej lub w tym samym momencie).";
+            gatesWarnEl.hidden = false;
+        } else {
+            gatesWarnEl.hidden = true;
+        }
+    }
+    ["id_gates_open_at_1", "id_start_at_1"].forEach((id) => {
+        document.getElementById(id)?.addEventListener("input", checkGatesVsStart);
+    });
+    checkGatesVsStart();
+
     // Step 3 reads top-to-bottom as "pools first": the pool table, then the
     // pools calendar, then nav/Save last. appendChild moves each node to
     // the end in turn, so listing them in the target order is enough
@@ -411,11 +482,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    const HINTS = [
-        "Tytuł widoczny publicznie na stronie wydarzenia. Opis pisz z perspektywy kupującego. Adres strony i status („Szkic”) ustawiają się same.",
-        "Wybierz dzień w kalendarzu niżej — start i koniec to ten sam dzień, chyba że zaznaczysz „impreza wielodniowa” (festiwal). Otwarcie bramek i start koncertu wymagają tylko godziny (data pochodzi z kalendarza); koniec podaj, jeśli już wiadomo.",
-        "",
-    ];
+    const HINTS = ["", "", ""];
 
     function show(index) {
         current = index;
@@ -540,6 +607,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function lockIconSvg() {
         return '<svg class="calLockIcon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="9.5" width="11" height="8" rx="1.5"/><path d="M7.5 9.5V7a2.5 2.5 0 015 0v2.5"/></svg>';
+    }
+
+    // Concert day, in the pools calendar — a microphone instead of the lock
+    // used elsewhere, since here it's not "locked" so much as "this is the
+    // show itself".
+    function micIconSvg() {
+        return '<svg class="calLockIcon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7.5" y="2.5" width="5" height="9" rx="2.5"/><path d="M5 9.5a5 5 0 0010 0"/><path d="M10 14.5v3"/><path d="M7.5 17.5h5"/></svg>';
     }
 
     function expandDays(loIso, hiIso) {
@@ -758,7 +832,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function handlePoolDayClick(iso) {
         if (!activePoolPrefix) {
-            poolMessage = "Najpierw kliknij „Wybierz zakres” przy puli w tabeli powyżej.";
+            poolMessage = "Najpierw kliknij „Wybierz na kalendarzu” przy puli w tabeli powyżej.";
             renderPoolsCalendar();
             return;
         }
@@ -783,7 +857,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const row = capacityInput?.closest("tr");
         if (!row) return;
 
-        // Chronological order label (1., 2., ...) — read-only, computed from
+        // Chronological order label ("Pula 1", "Pula 2", ...) — read-only, computed from
         // row position, in the otherwise-empty leading "original" cell.
         const originalCell = row.querySelector("td.original");
         if (originalCell) {
@@ -793,7 +867,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 label.className = "ucho-pool-order";
                 originalCell.insertBefore(label, originalCell.firstChild);
             }
-            label.textContent = `${idx + 1}.`;
+            label.textContent = `Pula ${idx + 1}`;
         }
 
         // Name is optional — say so instead of an input that just looks
@@ -818,7 +892,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const range = poolRanges[prefix];
             btn.textContent = range
                 ? `${formatPlDate(isoToDate(range.start))} – ${formatPlDate(isoToDate(range.end))}`
-                : "Wybierz zakres";
+                : "Wybierz na kalendarzu";
             btn.style.borderColor = poolColorFor(prefix);
             btn.classList.toggle("active", prefix === activePoolPrefix);
         }
@@ -868,7 +942,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const limit = poolHardLimitIso();
 
         // With a single pool there's nothing to choose between — clicking
-        // "Wybierz zakres" first would just be busywork, so it's active by
+        // "Wybierz na kalendarzu" first would just be busywork, so it's active by
         // default whenever nothing else is selected. With 2+ pools you pick
         // explicitly (this only self-heals back to auto once you're down to 1).
         if (!activePoolPrefix) {
@@ -937,7 +1011,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 btn.className = cls;
                 btn.innerHTML = `<span class="calDayNum">${date.getDate()}</span>`;
                 if (isConcertDay) {
-                    btn.innerHTML += lockIconSvg();
+                    btn.innerHTML += micIconSvg();
                     btn.title = "Dzień koncertu — ustawiony w kroku 2, nie do zmiany tutaj.";
                 } else if (ownerPrefix) {
                     const color = poolColorFor(ownerPrefix);

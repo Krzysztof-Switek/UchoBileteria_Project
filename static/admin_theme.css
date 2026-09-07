@@ -587,6 +587,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 .ucho-wizard-step.done::before {
     content: "✓ ";
+    color: #22c55e;
+    font-weight: 800;
 }
 
 .ucho-wizard-hint {

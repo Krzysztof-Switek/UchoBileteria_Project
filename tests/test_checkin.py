@@ -284,6 +284,53 @@ class TestEmergencyList:
         assert len(files) == 1
 
 
+class TestEmergencyListPrint:
+    """The gate's paper fallback — only tickets a guest could still be let in
+    on, sorted by e-mail so staff can find the person in front of them."""
+
+    def test_requires_login(self, client):
+        event, *_ = ticket_with_token()
+        response = client.get(f"/wejscie/{event.id}/lista-awaryjna/")
+        assert response.status_code == 302
+
+    def test_only_issued_tickets_listed(self, client, django_user_model):
+        staff_user(django_user_model)
+        client.login(username="bramkarz", password="x")
+        event = make_event()
+        pool = make_pool(event)
+        issued = make_ticket(
+            make_order(event, pool, buyer_email="b@example.com"), status=TicketStatus.ISSUED
+        )
+        checked_in = make_ticket(
+            make_order(event, pool, buyer_email="c@example.com"), status=TicketStatus.CHECKED_IN
+        )
+        refunded = make_ticket(
+            make_order(event, pool, buyer_email="d@example.com"), status=TicketStatus.REFUNDED
+        )
+        cancelled = make_ticket(
+            make_order(event, pool, buyer_email="e@example.com"), status=TicketStatus.CANCELLED
+        )
+        invalidated = make_ticket(
+            make_order(event, pool, buyer_email="f@example.com"), status=TicketStatus.INVALIDATED
+        )
+        response = client.get(f"/wejscie/{event.id}/lista-awaryjna/")
+        body = response.content.decode()
+        assert issued.short_code in body
+        for excluded in (checked_in, refunded, cancelled, invalidated):
+            assert excluded.short_code not in body
+
+    def test_sorted_by_email(self, client, django_user_model):
+        staff_user(django_user_model)
+        client.login(username="bramkarz", password="x")
+        event = make_event()
+        pool = make_pool(event)
+        make_ticket(make_order(event, pool, buyer_email="zzz@example.com"))
+        make_ticket(make_order(event, pool, buyer_email="aaa@example.com"))
+        response = client.get(f"/wejscie/{event.id}/lista-awaryjna/")
+        body = response.content.decode()
+        assert body.index("aaa@example.com") < body.index("zzz@example.com")
+
+
 class TestOfflineManifest:
     """OBS-07: the scanner's offline fallback data — short code, e-mail,
     status, and the QR token HASH (never the raw token)."""

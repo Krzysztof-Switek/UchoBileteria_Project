@@ -18,8 +18,10 @@
                class="bg-cyan-400 text-zinc-950 font-bold rounded-lg px-4 py-2">Skaner</a>
             <a href="{% url 'checkin:search' event.id %}"
                class="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2">Szukaj</a>
+            <a href="{% url 'checkin:emergency_list_print' event.id %}"
+               class="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2">Lista awaryjna (druk)</a>
             <a href="{% url 'checkin:emergency_list' event.id %}"
-               class="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2">Lista awaryjna (CSV)</a>
+               class="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2">Eksport CSV (pełny)</a>
         </div>
     </li>
     {% empty %}
