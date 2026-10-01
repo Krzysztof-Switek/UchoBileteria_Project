@@ -21,16 +21,32 @@ admin/base_site.html so behaviour is unchanged; only extrastyle is new.
 {% block nav-global %}
 <nav class="ucho-nav">
     <a href="{% url 'admin:index' %}">Start</a>
+    {% if perms.events.view_event %}
     <a href="{% url 'admin:events_event_changelist' %}">Wydarzenia</a>
+    {% endif %}
+    {% if perms.orders.view_order %}
     <a href="{% url 'admin:orders_order_changelist' %}">Zamówienia</a>
+    {% endif %}
+    {% if perms.tickets.view_ticket %}
     <a href="{% url 'admin:tickets_ticket_changelist' %}">Bilety</a>
+    {% endif %}
+    {% if perms.tickets.checkin_ticket %}
     <a href="{% url 'checkin:event_select' %}">Odprawa</a>
-    <a href="{% url 'reports:dashboard' %}">Raporty</a>
+    {% endif %}
+    {% if perms.orders.view_order %}
+    <a href="{% url 'admin:orders_by_event' %}">Raporty</a>
+    {% endif %}
+    {% if perms.auditlog.view_auditlog %}
     <a href="{% url 'admin:auditlog_auditlog_changelist' %}">Dziennik</a>
+    {% endif %}
+    {% if perms.orders.view_order %}
     <form method="get" action="{% url 'reports:global_search' %}" class="ucho-nav-search ucho-nav-spacer">
         <input type="search" name="q" id="global-search-input"
                placeholder="Szukaj: kod, e-mail, ID, wydarzenie… (/)">
     </form>
+    {% else %}
+    <span class="ucho-nav-spacer"></span>
+    {% endif %}
     {% if payment_demo_mode %}
     <span class="ucho-badge ucho-badge-demo">DEMO</span>
     {% else %}
@@ -42,10 +58,28 @@ admin/base_site.html so behaviour is unchanged; only extrastyle is new.
         if (event.key !== "/") return;
         const tag = (document.activeElement && document.activeElement.tagName) || "";
         if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement.isContentEditable) return;
+        const search = document.getElementById("global-search-input");
+        if (!search) return;  // role without search access
         event.preventDefault();
-        document.getElementById("global-search-input").focus();
+        search.focus();
     });
 </script>
+{% endblock %}
+
+{% block footer %}
+{{ block.super }}
+{% include "partials/dev_login_accounts.html" %}
+{% endblock %}
+
+{% block nav-breadcrumbs %}
+{# Back + home on every admin screen, in front of Django's path (breadcrumbs). #}
+<div class="ucho-crumbbar">
+    <a href="{% url 'admin:index' %}" class="ucho-crumb-btn" data-nav-back=".ucho-crumbbar .breadcrumbs a"
+       title="Wróć do poprzedniego ekranu">{% include "admin/ucho_icon.html" with name="back" size=16 %}<span>Wstecz</span></a>
+    <a href="{% url 'admin:index' %}" class="ucho-crumb-btn" title="Pulpit">{% include "admin/ucho_icon.html" with name="home" size=16 %}<span>Start</span></a>
+    <div class="ucho-crumbbar-path">{{ block.super }}</div>
+</div>
+{% include "partials/back_button_script.html" %}
 {% endblock %}
 
 {% block extrastyle %}

@@ -31,30 +31,37 @@ TICKET_TRANSITIONS = {
 
 
 class Ticket(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    event = models.ForeignKey("events.Event", on_delete=models.PROTECT, related_name="tickets")
-    pool = models.ForeignKey(
-        "events.TicketPool", on_delete=models.PROTECT, related_name="tickets"
+    id = models.UUIDField(verbose_name="ID", primary_key=True, default=uuid.uuid4, editable=False)
+    event = models.ForeignKey(
+        "events.Event", verbose_name="wydarzenie", on_delete=models.PROTECT, related_name="tickets",
     )
-    order = models.ForeignKey("orders.Order", on_delete=models.PROTECT, related_name="tickets")
-    buyer_email = models.EmailField()
+    pool = models.ForeignKey(
+        "events.TicketPool", verbose_name="pula", on_delete=models.PROTECT, related_name="tickets"
+    )
+    order = models.ForeignKey(
+        "orders.Order", verbose_name="zamówienie", on_delete=models.PROTECT, related_name="tickets",
+    )
+    buyer_email = models.EmailField(verbose_name="e-mail kupującego", )
     short_code = models.CharField("kod biletu", max_length=12, unique=True)
-    qr_token_hash = models.CharField(max_length=64, unique=True, editable=False)
+    qr_token_hash = models.CharField(
+        verbose_name="skrót tokenu QR",
+        max_length=64, unique=True, editable=False,
+    )
     status = models.CharField(
         max_length=20, choices=TicketStatus.choices, default=TicketStatus.ISSUED
     )
-    is_demo = models.BooleanField(editable=False)
-    issued_at = models.DateTimeField(auto_now_add=True)
-    checked_in_at = models.DateTimeField(null=True, blank=True)
+    is_demo = models.BooleanField(verbose_name="demo", editable=False)
+    issued_at = models.DateTimeField(verbose_name="wydano", auto_now_add=True)
+    checked_in_at = models.DateTimeField(verbose_name="wejście", null=True, blank=True)
     checked_in_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        settings.AUTH_USER_MODEL, verbose_name="wpuścił(a)",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
         related_name="tickets_checked_in",
     )
-    refunded_at = models.DateTimeField(null=True, blank=True)
-    cancelled_at = models.DateTimeField(null=True, blank=True)
+    refunded_at = models.DateTimeField(verbose_name="zwrócono", null=True, blank=True)
+    cancelled_at = models.DateTimeField(verbose_name="anulowano", null=True, blank=True)
 
     class Meta:
         verbose_name = "bilet"
@@ -86,20 +93,25 @@ class EmailStatus(models.TextChoices):
 class EmailOutbox(models.Model):
     """Outbox queue: e-mails are persisted first, then sent with retries by cron."""
 
-    to_email = models.EmailField()
-    subject = models.CharField(max_length=300)
-    body_text = models.TextField(blank=True)
-    body_html = models.TextField(blank=True)
+    to_email = models.EmailField(verbose_name="adresat", )
+    subject = models.CharField(verbose_name="temat", max_length=300)
+    body_text = models.TextField(verbose_name="treść (tekst)", blank=True)
+    body_html = models.TextField(verbose_name="treść (HTML)", blank=True)
     order = models.ForeignKey(
-        "orders.Order", null=True, blank=True, on_delete=models.SET_NULL, related_name="emails"
+        "orders.Order",
+        verbose_name="zamówienie",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="emails",
     )
     status = models.CharField(
         max_length=10, choices=EmailStatus.choices, default=EmailStatus.PENDING
     )
-    attempts = models.PositiveSmallIntegerField(default=0)
-    last_error = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    sent_at = models.DateTimeField(null=True, blank=True)
+    attempts = models.PositiveSmallIntegerField(verbose_name="próby", default=0)
+    last_error = models.TextField(verbose_name="ostatni błąd", blank=True)
+    created_at = models.DateTimeField(verbose_name="utworzono", auto_now_add=True)
+    sent_at = models.DateTimeField(verbose_name="wysłano", null=True, blank=True)
 
     class Meta:
         verbose_name = "e-mail (kolejka)"

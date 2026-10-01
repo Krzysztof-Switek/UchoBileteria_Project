@@ -1,0 +1,16 @@
+{% comment %}
+One action tile: {% include "admin/ucho_tile.html" with url=... icon="gate" title="..." desc="..." %}
+Without `url` (e.g. gate closed) it renders as a muted, non-clickable tile
+and `desc` explains why (active tiles: title only). `new_tab` opens print views/reports in a new tab.
+{% endcomment %}
+{% if url %}
+<a href="{{ url }}" class="ucho-tile"{% if new_tab %} target="_blank" rel="noopener"{% endif %}>
+{% else %}
+<div class="ucho-tile is-disabled" aria-disabled="true">
+{% endif %}
+    <span class="ucho-tile-icon">{% include "admin/ucho_icon.html" with name=icon %}</span>
+    <span class="ucho-tile-body">
+        <span class="ucho-tile-title">{{ title }}</span>
+        {% if desc %}<span class="ucho-tile-desc">{{ desc }}</span>{% endif %}
+    </span>
+{% if url %}</a>{% else %}</div>{% endif %}

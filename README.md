@@ -22,11 +22,16 @@ python -m venv .venv && .venv/Scripts/pip install -r requirements-dev.txt
 npm install && npm run build:css   # kompiluje static/dist/tailwind.css lokalnie (bez CDN)
 cp .env.example .env          # DEBUG=True wystarczy na start
 python manage.py migrate
-python manage.py setup_roles  # grupy: ADMIN, EVENT_MANAGER, SALES_MANAGER, DOOR_STAFF, READ_ONLY
+python manage.py setup_roles  # grupy: ADMIN, MANAGER, DOOR_STAFF (opis: docs/RUNBOOK.md §2)
 python manage.py createsuperuser
 python manage.py seed_demo    # przykładowe wydarzenie z 3 pulami
 python manage.py runserver
 ```
+
+Konta demo do testów (tylko `DEBUG=True` + tryb DEMO): `python manage.py load_dev_users`
+zakłada po jednym koncie na rolę (plus superużytkownika `admin`) z losowymi hasłami
+zapisanymi w `dev_credentials.json` (gitignored). Strony logowania pokazują wtedy
+przyciski „zaloguj jednym kliknięciem”. `--regenerate` losuje nowe hasła.
 
 Style (`static/src/input.css`) trzeba przebudować po każdej zmianie klas w
 szablonach: `npm run build:css` (jednorazowo) albo `npm run watch:css`

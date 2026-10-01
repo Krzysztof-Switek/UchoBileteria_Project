@@ -1,0 +1,16 @@
+{% extends "admin/change_list.html" %}
+{% comment %}
+Per-event lists (orders, tickets, e-mails, payment log, audit log —
+PerEventChangelistMixin): the path goes through the event picker and the
+event, so each level is one click away.
+{% endcomment %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">Strona główna</a>
+&rsaquo; <a href="{% url 'admin:orders_by_event' %}">Wybierz wydarzenie</a>
+{% if ucho_event %}
+&rsaquo; <a href="{% url 'admin:events_event_change' ucho_event.pk %}">{{ ucho_event.title }}</a>
+{% endif %}
+&rsaquo; {{ ucho_list_label|default:cl.opts.verbose_name_plural|capfirst }}
+</div>
+{% endblock %}

@@ -2,17 +2,33 @@
 <nav class="border-b-theme" style="background: var(--surface);">
     <div class="max-w-6xl mx-auto px-4 flex items-center gap-1 overflow-x-auto text-sm">
         <a href="{% url 'admin:index' %}" class="link-quiet px-3 py-1.5 my-1.5 whitespace-nowrap rounded-full hover:bg-[var(--surface-2)] transition-colors">Start</a>
+        {% if perms.events.view_event %}
         <a href="{% url 'admin:events_event_changelist' %}" class="link-quiet px-3 py-1.5 my-1.5 whitespace-nowrap rounded-full hover:bg-[var(--surface-2)] transition-colors">Wydarzenia</a>
+        {% endif %}
+        {% if perms.orders.view_order %}
         <a href="{% url 'admin:orders_order_changelist' %}" class="link-quiet px-3 py-1.5 my-1.5 whitespace-nowrap rounded-full hover:bg-[var(--surface-2)] transition-colors">Zamówienia</a>
+        {% endif %}
+        {% if perms.tickets.view_ticket %}
         <a href="{% url 'admin:tickets_ticket_changelist' %}" class="link-quiet px-3 py-1.5 my-1.5 whitespace-nowrap rounded-full hover:bg-[var(--surface-2)] transition-colors">Bilety</a>
+        {% endif %}
+        {% if perms.tickets.checkin_ticket %}
         <a href="{% url 'checkin:event_select' %}" class="link-quiet px-3 py-1.5 my-1.5 whitespace-nowrap rounded-full hover:bg-[var(--surface-2)] transition-colors">Odprawa</a>
-        <a href="{% url 'reports:dashboard' %}" class="link-quiet px-3 py-1.5 my-1.5 whitespace-nowrap rounded-full hover:bg-[var(--surface-2)] transition-colors">Raporty</a>
+        {% endif %}
+        {% if perms.orders.view_order %}
+        <a href="{% url 'admin:orders_by_event' %}" class="link-quiet px-3 py-1.5 my-1.5 whitespace-nowrap rounded-full hover:bg-[var(--surface-2)] transition-colors">Raporty</a>
+        {% endif %}
+        {% if perms.auditlog.view_auditlog %}
         <a href="{% url 'admin:auditlog_auditlog_changelist' %}" class="link-quiet px-3 py-1.5 my-1.5 whitespace-nowrap rounded-full hover:bg-[var(--surface-2)] transition-colors">Dziennik</a>
+        {% endif %}
+        {% if perms.orders.view_order %}
         <form method="get" action="{% url 'reports:global_search' %}" class="ml-auto flex items-center py-2">
             <input type="search" name="q" id="global-search-input"
                    placeholder="Szukaj: kod, e-mail, ID, wydarzenie… (/)"
                    class="input-theme w-40 sm:w-64 px-3 py-1.5 rounded-lg text-xs">
         </form>
+        {% else %}
+        <span class="ml-auto"></span>
+        {% endif %}
         <div class="flex items-center gap-3 py-2 pl-3 whitespace-nowrap">
             {% if payment_demo_mode %}
             <span class="text-xs font-bold px-2 py-1 rounded-full bg-amber-500 text-black">DEMO</span>
@@ -31,7 +47,9 @@
         if (event.key !== "/") return;
         const tag = (document.activeElement && document.activeElement.tagName) || "";
         if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement.isContentEditable) return;
+        const search = document.getElementById("global-search-input");
+        if (!search) return;  // role without search access
         event.preventDefault();
-        document.getElementById("global-search-input").focus();
+        search.focus();
     });
 </script>

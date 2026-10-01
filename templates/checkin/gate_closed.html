@@ -1,0 +1,21 @@
+{% extends "base_terminal.html" %}
+
+{% block title %}Bramka zamknięta — {{ event.title }}{% endblock %}
+
+{% block crumbs %} &rsaquo; <span>{{ event.title }}</span> &rsaquo; <span class="text-zinc-300">Bramka zamknięta</span>{% endblock %}
+
+{% block content %}
+<div class="bg-zinc-900 rounded-xl p-6 text-center">
+    <div class="text-5xl" aria-hidden="true">🔒</div>
+    <h1 class="text-2xl font-bold mt-3">Bramka zamknięta</h1>
+    <p class="text-zinc-300 mt-2">{{ event.title }} — {{ event.start_at|date:"j E Y, H:i" }}</p>
+    <p class="text-amber-400 mt-4">{{ gate.reason }}</p>
+    <p class="text-zinc-500 text-sm mt-2">Listę awaryjną możesz wydrukować wcześniej — jest dostępna zawsze.</p>
+    <div class="flex gap-2 justify-center flex-wrap mt-6">
+        <a href="{% url 'checkin:event_select' %}"
+           class="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3">&larr; Lista wydarzeń</a>
+        <a href="{% url 'checkin:emergency_list_print' event.id %}"
+           class="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3">Lista awaryjna (druk)</a>
+    </div>
+</div>
+{% endblock %}

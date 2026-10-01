@@ -1,0 +1,47 @@
+{% comment %}
+Dev-only one-click logins (apps/accounts/dev_credentials.py). `dev_accounts` is
+non-empty only with DEBUG=True + DEMO payments and a local dev_credentials.json.
+Shared by /logowanie/ (Tailwind) and /admin/login/ (Django admin CSS), so it
+styles itself inline instead of relying on either stylesheet. Amber = the same
+fixed "demo" signal colour as the DEMO badge (state colours aren't themed).
+{% endcomment %}
+{% if dev_accounts %}
+<div id="dev-login-accounts"
+     style="margin:1.25rem auto 0;max-width:24rem;border:1px dashed #f59e0b;border-radius:.75rem;padding:.75rem 1rem;font-size:.85rem;">
+    <div style="font-weight:700;color:#f59e0b;margin-bottom:.5rem;">
+        Konta demo — szybkie logowanie (tylko DEBUG)
+    </div>
+    {% for account in dev_accounts %}
+    <button type="button" class="dev-login-btn" data-login="{{ account.login }}"
+            data-password="{{ account.password }}" data-login-url="{{ account.login_url }}"
+            style="display:flex;justify-content:space-between;gap:.75rem;width:100%;margin:.25rem 0;padding:.4rem .6rem;border:1px solid rgba(245,158,11,.4);border-radius:.5rem;background:transparent;color:inherit;font:inherit;cursor:pointer;text-align:left;">
+        <span>{{ account.label }}</span>
+        <span style="font-family:ui-monospace,monospace;opacity:.75;">{{ account.login }}</span>
+    </button>
+    {% endfor %}
+</div>
+<script>
+    document.querySelectorAll(".dev-login-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            let form = document.querySelector("input[name=password]").form;
+            const target = btn.dataset.loginUrl;
+            if (target && target !== location.pathname) {
+                // Door staff can't use /admin/login/ — post to the door login page
+                // instead, reusing this page's CSRF token (same cookie).
+                const csrf = form.querySelector("input[name=csrfmiddlewaretoken]").value;
+                form = document.createElement("form");
+                form.method = "post";
+                form.action = target;
+                form.innerHTML = '<input name="username"><input name="password">' +
+                    '<input name="next" value=""><input name="csrfmiddlewaretoken">';
+                form.querySelector("input[name=csrfmiddlewaretoken]").value = csrf;
+                form.style.display = "none";
+                document.body.appendChild(form);
+            }
+            form.querySelector("input[name=username]").value = btn.dataset.login;
+            form.querySelector("input[name=password]").value = btn.dataset.password;
+            form.submit();
+        });
+    });
+</script>
+{% endif %}

@@ -1,0 +1,41 @@
+{% comment %}
+Inline line icons: {% include "admin/ucho_icon.html" with name="gate" %} (optional size=18).
+Stroke = currentColor, so colour comes from the theme (.ucho-tile-icon sets the
+accent). Inline SVG on purpose — no icon font / CDN on the admin pages.
+{% endcomment %}
+<svg class="ucho-icon" width="{{ size|default:28 }}" height="{{ size|default:28 }}" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == "gate" %}
+    <path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/>
+    <path d="M10 12v.01"/><path d="M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.561Z"/>
+{% elif name == "lock" %}
+    <rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+{% elif name == "chart" %}
+    <path d="M3 3v18h18"/><path d="M8 17v-5"/><path d="M13 17V8"/><path d="M18 17v-9"/>
+{% elif name == "printer" %}
+    <path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/>
+{% elif name == "download" %}
+    <path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>
+{% elif name == "report" %}
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>
+    <path d="M9 13h6"/><path d="M9 17h6"/>
+{% elif name == "plus" %}
+    <path d="M12 5v14"/><path d="M5 12h14"/>
+{% elif name == "receipt" %}
+    <path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 8h6"/><path d="M9 12h6"/><path d="M9 16h4"/>
+{% elif name == "log" %}
+    <path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>
+{% elif name == "ticket" %}
+    <path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M13 6v2"/><path d="M13 11v2"/><path d="M13 16v2"/>
+{% elif name == "mail" %}
+    <rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>
+{% elif name == "history" %}
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>
+{% elif name == "back" %}
+    <path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>
+{% elif name == "home" %}
+    <path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>
+{% elif name == "search" %}
+    <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+{% endif %}
+</svg>

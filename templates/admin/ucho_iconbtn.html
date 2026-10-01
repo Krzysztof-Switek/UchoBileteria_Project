@@ -1,0 +1,14 @@
+{% comment %}
+Compact icon button with the label underneath (event page actions):
+{% include "admin/ucho_iconbtn.html" with url=... icon="gate" label="..." %}
+Without `url` it renders muted and non-clickable; `reason` becomes the hover
+tooltip explaining why. `new_tab` for print views/reports.
+{% endcomment %}
+{% if url %}
+<a href="{{ url }}" class="ucho-iconbtn"{% if new_tab %} target="_blank" rel="noopener"{% endif %}>
+{% else %}
+<span class="ucho-iconbtn is-disabled" aria-disabled="true"{% if reason %} title="{{ reason }}"{% endif %}>
+{% endif %}
+    <span class="ucho-iconbtn-icon">{% include "admin/ucho_icon.html" with name=icon %}</span>
+    <span class="ucho-iconbtn-label">{{ label }}</span>
+{% if url %}</a>{% else %}</span>{% endif %}

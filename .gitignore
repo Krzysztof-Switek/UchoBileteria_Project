@@ -11,3 +11,5 @@ __pycache__/
 /.test_media/
 .pytest_cache/
 .ruff_cache/
+/project_context/
+/dev_credentials.json

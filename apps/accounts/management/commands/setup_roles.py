@@ -4,7 +4,7 @@ from apps.accounts.roles import setup_roles
 
 
 class Command(BaseCommand):
-    help = "Create or refresh the role groups (ADMIN, EVENT_MANAGER, ...). Idempotent."
+    help = "Create or refresh the role groups (ADMIN, MANAGER, DOOR_STAFF). Idempotent."
 
     def handle(self, *args, **options):
         roles = setup_roles()

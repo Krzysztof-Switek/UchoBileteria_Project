@@ -2,20 +2,44 @@
 {% load dashboard_tags %}
 
 {% block content %}
-<div class="ucho-quick-links">
-    <a href="{% url 'checkin:event_select' %}" class="ucho-dash-shortcut">Otwórz odprawę &rarr;</a>
+{% url 'checkin:event_select' as gate_url %}
+{% url 'admin:events_event_add' as add_event_url %}
+{% url 'admin:orders_by_event' as orders_url %}
+<div class="ucho-tile-grid">
+    {% if perms.tickets.checkin_ticket %}
+    {% include "admin/ucho_tile.html" with url=gate_url icon="gate" title="Otwórz bramkę" %}
+    {% endif %}
+    {% if perms.orders.view_order %}
+    {% include "admin/ucho_tile.html" with url=orders_url icon="chart" title="Raporty sprzedaży" %}
+    {% endif %}
+    {% if perms.events.add_event %}
+    {% include "admin/ucho_tile.html" with url=add_event_url icon="plus" title="Dodaj wydarzenie" %}
+    {% endif %}
+    {% if perms.orders.view_order %}
+    {% include "admin/ucho_tile.html" with url=orders_url icon="receipt" title="Zamówienia i płatności" %}
+    {% endif %}
+    {% if perms.tickets.view_ticket %}
+    {% include "admin/ucho_tile.html" with url=orders_url icon="ticket" title="Bilety" %}
+    {% endif %}
+    {% if perms.tickets.view_emailoutbox %}
+    {% include "admin/ucho_tile.html" with url=orders_url icon="mail" title="E-maile (kolejka)" %}
+    {% endif %}
+    {% if perms.auditlog.view_auditlog %}
+    {% include "admin/ucho_tile.html" with url=orders_url icon="history" title="Dziennik zdarzeń" %}
+    {% endif %}
 </div>
 {% if perms.orders.view_order %}
 {% render_events_overview %}
-<div class="ucho-tile-grid">
-    <a href="{% url 'reports:dashboard' %}" class="ucho-tile">
-        <span class="ucho-tile-title">Raporty sprzedaży</span>
-        <span class="ucho-tile-desc">Okresy, wykres, sprzedaż per wydarzenie/pula</span>
-    </a>
-</div>
 {% render_attention_card %}
 {% endif %}
-{{ block.super }}
+{# Our apps are all tiles above now; what's left here is e.g. users/groups (superuser). #}
+{% with rest=app_list|without_apps:"events,orders,tickets,auditlog" %}
+{% if rest %}
+<div id="content-main" class="app-list">
+  {% include "admin/app_list.html" with app_list=rest show_changelinks=True %}
+</div>
+{% endif %}
+{% endwith %}
 {% endblock %}
 
 {% block sidebar %}{% endblock %}

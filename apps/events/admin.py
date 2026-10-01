@@ -7,11 +7,14 @@ from django.forms.models import BaseInlineFormSet
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import format_html_join
+from django.utils.safestring import mark_safe
 
 from apps.admin_badges import choice_badge
+from apps.admin_format import dt_column, short_dt
 
 from . import services
-from .models import Event, EventStatus, PoolManualStatus, TicketPool
+from .models import Event, EventStatus, PoolManualStatus, TicketPool, online_sales_cutoff
 
 SALES_STATE_LABELS = {
     "NOT_STARTED": "Nie rozpoczęta",
@@ -113,14 +116,14 @@ class TicketPoolInline(admin.TabularInline):
 class EventAdmin(admin.ModelAdmin):
     list_display = [
         "title",
-        "start_at",
+        "start_short",
         "status",
         "sales_state",
-        "capacity_total",
+        "pools_summary",
         "sold_total",
         "revenue_paid",
-        "sales_start_at",
-        "sales_end_at",
+        "sales_start_short",
+        "sales_end_short",
     ]
     list_filter = ["status"]
     search_fields = ["title", "slug"]
@@ -234,7 +237,47 @@ class EventAdmin(admin.ModelAdmin):
             extra_context["ucho_public_url"] = request.build_absolute_uri(
                 reverse("events:detail", args=[event.slug])
             )
+            # Event-page tiles: gate (event day only in LIVE), lists, report.
+            from apps.checkin.services import gate_status
+
+            extra_context["ucho_gate"] = gate_status(event)
         return super().change_view(request, object_id, form_url, extra_context)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("pools")
+
+    @admin.display(description="start koncertu", ordering="start_at")
+    def start_short(self, obj):
+        return short_dt(obj.start_at)
+
+    @admin.display(description="start sprzedaży", ordering="sales_start_at")
+    def sales_start_short(self, obj):
+        return short_dt(obj.sales_start_at)
+
+    @admin.display(description="koniec sprzedaży", ordering="sales_end_at")
+    def sales_end_short(self, obj):
+        return short_dt(obj.sales_end_at)
+
+    @admin.display(description="pule biletów")
+    def pools_summary(self, obj):
+        """One line per pool: name, sold/capacity, when its sales end (a pool
+        without its own end date sells until the event's online cutoff)."""
+        pools = list(obj.pools.all())
+        if not pools:
+            return "—"
+        return format_html_join(
+            mark_safe("<br>"),
+            '<span style="white-space:nowrap">{}: {}/{} · do {}</span>',
+            (
+                (
+                    pool.name or f"Pula {i}",
+                    pool.sold_count,
+                    pool.capacity,
+                    short_dt(pool.sales_end_at or obj.sales_end_at),
+                )
+                for i, pool in enumerate(pools, start=1)
+            ),
+        )
 
     @admin.display(description="stan sprzedaży")
     def sales_state(self, obj):
@@ -248,7 +291,13 @@ class EventAdmin(admin.ModelAdmin):
         is_demo = PaymentConfig.is_demo_mode()
         return event_revenue_summary(obj, is_demo=is_demo)["paid"]
 
-    @admin.action(description="Opublikuj wybrane wydarzenia")
+    # Actions without `permissions=` are offered to anyone who can merely view
+    # the changelist — every action here must name the permission it needs.
+    def has_refund_permission(self, request):
+        """Cancelling with refunds moves money: same gate as refunding an order."""
+        return request.user.has_perm("orders.change_order")
+
+    @admin.action(description="Opublikuj wybrane wydarzenia", permissions=["change"])
     def publish_events(self, request, queryset):
         for event in queryset:
             try:
@@ -257,7 +306,7 @@ class EventAdmin(admin.ModelAdmin):
             except ValidationError as exc:
                 messages.error(request, f"{event}: {'; '.join(exc.messages)}")
 
-    @admin.action(description="Odwołaj wybrane wydarzenia")
+    @admin.action(description="Odwołaj wybrane wydarzenia", permissions=["change"])
     def cancel_events(self, request, queryset):
         for event in queryset:
             try:
@@ -266,7 +315,8 @@ class EventAdmin(admin.ModelAdmin):
             except ValidationError as exc:
                 messages.error(request, f"{event}: {'; '.join(exc.messages)}")
 
-    @admin.action(description="Odwołaj i zwróć wszystkie opłacone zamówienia")
+    @admin.action(description="Odwołaj i zwróć wszystkie opłacone zamówienia",
+                  permissions=["refund"])
     def cancel_events_with_refunds(self, request, queryset):
         from apps.orders.refunds import cancel_event_with_refunds
 
@@ -307,11 +357,13 @@ class EventAdmin(admin.ModelAdmin):
         pools = list(event.pools.all())
         update_fields = []
         starts = [p.sales_start_at for p in pools if p.sales_start_at]
-        ends = [p.sales_end_at for p in pools if p.sales_end_at]
-        if starts and ends:
+        if starts:
             event.sales_start_at = min(starts)
-            event.sales_end_at = max(ends)
-            update_fields += ["sales_start_at", "sales_end_at"]
+            update_fields.append("sales_start_at")
+        # Online sales always stop at midnight before the concert day,
+        # regardless of where the last pool's window ends.
+        event.sales_end_at = online_sales_cutoff(event.start_at)
+        update_fields.append("sales_end_at")
         if pools:
             event.capacity_total = sum(p.capacity for p in pools)
             update_fields.append("capacity_total")
@@ -341,11 +393,13 @@ class EventAdmin(admin.ModelAdmin):
 
 @admin.register(TicketPool)
 class TicketPoolAdmin(admin.ModelAdmin):
+    sales_start_short = dt_column("sales_start_at", "start sprzedaży puli")
+    sales_end_short = dt_column("sales_end_at", "koniec sprzedaży puli")
     list_display = [
         "name",
         "event",
-        "sales_start_at",
-        "sales_end_at",
+        "sales_start_short",
+        "sales_end_short",
         "price_gross",
         "capacity",
         "sold_count",
@@ -380,14 +434,14 @@ class TicketPoolAdmin(admin.ModelAdmin):
             services.set_pool_manual_status(pool, manual_status, actor=request.user)
         messages.success(request, f"Zmieniono {queryset.count()} pul na {manual_status}.")
 
-    @admin.action(description="Wymuś otwarcie puli")
+    @admin.action(description="Wymuś otwarcie puli", permissions=["change"])
     def force_open(self, request, queryset):
         self._set_manual(request, queryset, PoolManualStatus.FORCED_OPEN)
 
-    @admin.action(description="Wymuś zamknięcie puli")
+    @admin.action(description="Wymuś zamknięcie puli", permissions=["change"])
     def force_close(self, request, queryset):
         self._set_manual(request, queryset, PoolManualStatus.FORCED_CLOSED)
 
-    @admin.action(description="Przywróć tryb automatyczny")
+    @admin.action(description="Przywróć tryb automatyczny", permissions=["change"])
     def set_auto(self, request, queryset):
         self._set_manual(request, queryset, PoolManualStatus.AUTO)

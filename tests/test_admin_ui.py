@@ -250,10 +250,11 @@ class TestAdminNavigation:
         assert "(/)" in body
 
     def test_app_sections_ordered_by_workflow_not_alphabet(self, admin_client_logged_in):
-        body = admin_client_logged_in.get("/admin/").content.decode()
-        # Skip the staff nav bar first — it also links to "Wydarzenia"/"Bilety",
-        # which would otherwise match before the actual app-list section headers.
-        content = body.split("</nav>", 1)[1]
+        # Checked in the admin sidebar (same get_app_list ordering): the
+        # dashboard itself no longer lists "Wydarzenia" — that section became
+        # the "Dodaj wydarzenie" tile.
+        body = admin_client_logged_in.get("/admin/orders/order/?wszystkie=1").content.decode()
+        content = body.split('id="nav-sidebar"', 1)[1]
         # UX-05: events -> orders -> tickets -> auditlog, not alphabetical
         # (which would put Bilety before Wydarzenia and Dziennik before Wydarzenia).
         markers = ["Wydarzenia</a>", "Zamówienia i płatności", "Bilety</a>", "Dziennik zdarzeń"]
@@ -270,7 +271,7 @@ class TestStatusBadges:
         order = make_order(
             event, pool, status=OrderStatus.REFUNDED, amount_gross=Decimal("60.00")
         )
-        body = admin_client_logged_in.get("/admin/orders/order/").content.decode()
+        body = admin_client_logged_in.get("/admin/orders/order/?wszystkie=1").content.decode()
         assert str(order.short_id) in body
         assert "Zwrócone</span>" in body
         assert "background:#dc2626" in body  # danger tone for a refund
@@ -280,7 +281,7 @@ class TestStatusBadges:
         pool = make_pool(event)
         order = make_order(event, pool, status=OrderStatus.PAID)
         ticket = make_ticket(order)
-        body = admin_client_logged_in.get("/admin/tickets/ticket/").content.decode()
+        body = admin_client_logged_in.get("/admin/tickets/ticket/?wszystkie=1").content.decode()
         assert ticket.short_code in body
         assert "Wydany</span>" in body
         assert "background:#059669" in body  # success tone for an issued ticket
@@ -369,11 +370,46 @@ class TestOpsDashboard:
         body = admin_client_logged_in.get("/admin/").content.decode()
         assert body.index("Raporty sprzedaży") < body.index("Wymaga uwagi")
 
-    def test_checkin_shortcut_is_standalone_not_inside_attention_card(self, admin_client_logged_in):
-        # Moved out of "Wymaga uwagi": it's a daily shortcut, not a problem
-        # to fix, and must show even when nothing needs attention.
+    def test_add_event_tile_replaces_events_section(self, admin_client_logged_in):
         body = admin_client_logged_in.get("/admin/").content.decode()
-        assert "Otwórz odprawę" in body
+        assert "Dodaj wydarzenie" in body
+        assert 'href="/admin/events/event/add/" class="ucho-tile"' in body
+        assert "app-events" not in body  # the model-list section is gone
+
+    def test_tickets_emails_and_audit_tiles_replace_sections(self, admin_client_logged_in):
+        body = admin_client_logged_in.get("/admin/").content.decode()
+        # reports, orders, tickets, e-mails and the audit log go through the event picker
+        assert body.count('href="/admin/orders/order/wydarzenia/" class="ucho-tile"') == 5
+        assert "app-tickets" not in body
+        assert "app-auditlog" not in body
+
+    def test_no_misleading_no_permission_message_for_manager(self, client, django_user_model):
+        # With every app turned into a tile, Django's empty app list would say
+        # "you don't have permission to view or edit anything" — not shown.
+        from django.contrib.auth.models import Group
+
+        from apps.accounts.roles import setup_roles
+
+        setup_roles()
+        user = django_user_model.objects.create_user("mgr", password="x", is_staff=True)
+        user.groups.add(Group.objects.get(name="MANAGER"))
+        client.login(username="mgr", password="x")
+        body = client.get("/admin/").content.decode()
+        assert "Nie masz uprawnień" not in body
+        assert "Dodaj wydarzenie" in body
+
+    def test_orders_tile_replaces_orders_section(self, admin_client_logged_in):
+        body = admin_client_logged_in.get("/admin/").content.decode()
+        assert 'href="/admin/orders/order/wydarzenia/" class="ucho-tile"' in body
+        assert "app-orders" not in body
+
+    def test_gate_and_reports_tiles_shown_not_inside_attention_card(self, admin_client_logged_in):
+        # Daily shortcuts as tiles, not problems to fix — shown even when
+        # nothing needs attention.
+        body = admin_client_logged_in.get("/admin/").content.decode()
+        assert "Otwórz bramkę" in body
+        assert "Raporty sprzedaży" in body
+        assert body.count('class="ucho-tile-icon"') >= 2
         assert "Wymaga uwagi" not in body  # sanity: attention card absent here
 
 

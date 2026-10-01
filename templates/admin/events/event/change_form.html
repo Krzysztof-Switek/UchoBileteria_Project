@@ -340,9 +340,65 @@ label[for="id_gates_open_at_0"], label[for="id_start_at_0"], label[for="id_end_a
 {% if not original %}
 {{ ucho_public_url_template|default:""|json_script:"ucho-public-url-template-data" }}
 {% endif %}
+{% if original %}
+{% comment %}
+Everything for this one event in one place: gate, door lists, report.
+Rendered here, moved by the script in after_field_sets into the
+"Maks. biletów na zamówienie" row of "Podstawowe informacje".
+{% endcomment %}
+<div id="ucho-event-actions" class="ucho-iconbtn-row">
+    {% if perms.tickets.checkin_ticket %}
+    {% if ucho_gate %}
+    {% url 'checkin:scanner' original.pk as gate_url %}
+    {% include "admin/ucho_iconbtn.html" with url=gate_url icon="gate" label="Otwórz bramkę" new_tab=True %}
+    {% else %}
+    {% include "admin/ucho_iconbtn.html" with icon="lock" label="Bramka zamknięta" reason=ucho_gate.reason %}
+    {% endif %}
+    {% url 'checkin:emergency_list_print' original.pk as print_url %}
+    {% include "admin/ucho_iconbtn.html" with url=print_url icon="printer" label="Lista awaryjna" new_tab=True %}
+    {% url 'checkin:emergency_list' original.pk as csv_url %}
+    {% include "admin/ucho_iconbtn.html" with url=csv_url icon="download" label="Eksport CSV" %}
+    {% endif %}
+    {% if perms.orders.view_order %}
+    {% url 'admin:orders_order_changelist' as orders_list_url %}
+    {% url 'admin:orders_paymentevent_changelist' as log_list_url %}
+    {% with event_pk=original.pk|stringformat:"s" %}
+    {% include "admin/ucho_iconbtn.html" with url=orders_list_url|add:"?event__id__exact="|add:event_pk icon="receipt" label="Zamówienia" %}
+    {% if perms.tickets.view_ticket %}
+    {% url 'admin:tickets_ticket_changelist' as tickets_list_url %}
+    {% include "admin/ucho_iconbtn.html" with url=tickets_list_url|add:"?event__id__exact="|add:event_pk icon="ticket" label="Bilety" %}
+    {% endif %}
+    {% if perms.tickets.view_emailoutbox %}
+    {% url 'admin:tickets_emailoutbox_changelist' as emails_list_url %}
+    {% include "admin/ucho_iconbtn.html" with url=emails_list_url|add:"?order__event__id__exact="|add:event_pk icon="mail" label="E-maile" %}
+    {% endif %}
+    {% include "admin/ucho_iconbtn.html" with url=log_list_url|add:"?order__event__id__exact="|add:event_pk icon="log" label="Dziennik płatności" %}
+    {% if perms.auditlog.view_auditlog %}
+    {% url 'admin:auditlog_auditlog_changelist' as audit_list_url %}
+    {% include "admin/ucho_iconbtn.html" with url=audit_list_url|add:"?event__id__exact="|add:event_pk icon="history" label="Dziennik zdarzeń" %}
+    {% endif %}
+    {% endwith %}
+    {% url 'reports:event_report' original.pk as report_url %}
+    {% include "admin/ucho_iconbtn.html" with url=report_url icon="report" label="Raport" new_tab=True %}
+    {% endif %}
+</div>
+{% endif %}
 {% endblock %}
 
 {% block after_field_sets %}
+{% if original %}
+<script>
+// Fieldsets are already parsed here, so the move happens before first paint.
+(function () {
+    const row = document.querySelector(".field-max_tickets_per_order");
+    const actions = document.getElementById("ucho-event-actions");
+    if (row && actions) {
+        row.classList.add("ucho-row-with-actions");
+        row.appendChild(actions);
+    }
+})();
+</script>
+{% endif %}
 {{ block.super }}
 {% if add %}
 <div id="ucho-cal-conflict" class="ucho-cal-panel" hidden>

@@ -14,6 +14,16 @@ like base_public/base_app do.
 {% endcomment %}
 <body class="min-h-screen bg-zinc-950 text-zinc-100">
     <main class="px-4 py-6">
+        {# Back + home + path, phone-sized targets; children add levels via {% block crumbs %}. #}
+        <div class="flex items-center gap-2 flex-wrap mb-5 text-sm print:hidden">
+            <a href="{{ nav_home_url }}" data-nav-back=".ucho-crumbs a" title="Wróć do poprzedniego ekranu"
+               class="inline-flex items-center gap-1.5 min-h-[44px] rounded-lg px-3 bg-zinc-800 border border-zinc-700 font-semibold">{% include "admin/ucho_icon.html" with name="back" size=18 %}Wstecz</a>
+            <a href="{{ nav_home_url }}" title="Start"
+               class="inline-flex items-center gap-1.5 min-h-[44px] rounded-lg px-3 bg-zinc-800 border border-zinc-700 font-semibold">{% include "admin/ucho_icon.html" with name="home" size=18 %}{{ nav_home_label }}</a>
+            <nav class="ucho-crumbs text-zinc-500 ml-1" aria-label="Ścieżka">
+                {% if nav_is_staff %}<a href="{{ nav_home_url }}" class="hover:text-zinc-200 underline-offset-2 hover:underline">Start</a> &rsaquo; {% endif %}<a href="{% url 'checkin:event_select' %}" class="hover:text-zinc-200 underline-offset-2 hover:underline">Bramka</a>{% block crumbs %}{% endblock %}
+            </nav>
+        </div>
         {% if messages %}
         <div class="mb-6 space-y-2">
             {% for message in messages %}
@@ -25,5 +35,6 @@ like base_public/base_app do.
         {% endif %}
         {% block content %}{% endblock %}
     </main>
+    {% include "partials/back_button_script.html" %}
 </body>
 </html>

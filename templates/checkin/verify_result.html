@@ -2,6 +2,8 @@
 
 {% block title %}Wynik weryfikacji{% endblock %}
 
+{% block crumbs %} &rsaquo; <a href="{% url 'checkin:scanner' event.id %}" class="hover:text-zinc-200 hover:underline">{{ event.title }}</a> &rsaquo; <span class="text-zinc-300">Wynik weryfikacji</span>{% endblock %}
+
 {% block content %}
 <div class="rounded-2xl p-10 text-center text-white {% if ok %}bg-emerald-600{% else %}bg-red-700{% endif %}">
     <div class="text-3xl font-extrabold">{{ message }}</div>

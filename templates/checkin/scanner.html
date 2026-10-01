@@ -2,6 +2,8 @@
 
 {% block title %}Skaner — {{ event.title }}{% endblock %}
 
+{% block crumbs %} &rsaquo; <span>{{ event.title }}</span> &rsaquo; <span class="text-zinc-300">Skaner</span>{% endblock %}
+
 {% block content %}
 <div class="flex items-center justify-between flex-wrap gap-2">
     <div>
@@ -17,7 +19,7 @@
     </div>
 </div>
 
-<div id="offline-indicator" class="hidden mt-3 inline-flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-full bg-amber-500 text-black">
+<div id="offline-indicator" class="hidden mt-3 items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-full bg-amber-500 text-black">
     <span id="offline-indicator-text">offline · 0 w kolejce</span>
 </div>
 
@@ -116,14 +118,20 @@ function saveQueue() {
 function updateOfflineIndicator() {
     const indicator = document.getElementById("offline-indicator");
     const text = document.getElementById("offline-indicator-text");
+    // "hidden" and "inline-flex" both set display — never keep both on the
+    // element (which one wins depends on CSS build order), swap them instead.
+    const show = (on) => {
+        indicator.classList.toggle("hidden", !on);
+        indicator.classList.toggle("inline-flex", on);
+    };
     if (!navigator.onLine) {
-        indicator.classList.remove("hidden");
+        show(true);
         text.textContent = `offline · ${offlineQueue.length} w kolejce`;
     } else if (offlineQueue.length > 0) {
-        indicator.classList.remove("hidden");
+        show(true);
         text.textContent = `wysyłanie zaległych skanów… (${offlineQueue.length})`;
     } else {
-        indicator.classList.add("hidden");
+        show(false);
     }
 }
 

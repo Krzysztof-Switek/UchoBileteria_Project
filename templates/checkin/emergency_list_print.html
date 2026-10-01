@@ -2,6 +2,8 @@
 
 {% block title %}Lista awaryjna (druk) — {{ event.title }}{% endblock %}
 
+{% block crumbs %} &rsaquo; <a href="{% url 'checkin:event_select' %}" class="link-quiet">Bramka</a> &rsaquo; {% if nav_is_staff %}<a href="{% url 'admin:events_event_change' event.pk %}" class="link-quiet">{{ event.title }}</a>{% else %}<span>{{ event.title }}</span>{% endif %} &rsaquo; <span>Lista awaryjna</span>{% endblock %}
+
 {% block content %}
 <style>
     /* Print-specific density: the screen view can afford Tailwind's normal

@@ -158,3 +158,51 @@ def write_emergency_list(event: Event, file_obj, actor=None) -> int:
         count += 1
     log_action("emergency_list.exported", event, actor=actor, metadata={"tickets": count})
     return count
+
+
+# --- Gate opening window ------------------------------------------------------
+
+# How long after the start the gate stays open when the event has no end time.
+GATE_FALLBACK_HOURS = 12
+
+
+class GateStatus:
+    """Whether staff may open the gate (scanner, manual check-in) for an event.
+
+    LIVE: only on the event day — from local midnight of the start date until
+    the event ends (or start + GATE_FALLBACK_HOURS), so a concert running past
+    midnight keeps its gate open. DEMO: any date, so the flow can be tested
+    without waiting for a real event day. Emergency lists stay available any
+    time — printing them in advance is the whole point.
+    """
+
+    def __init__(self, is_open: bool, reason: str = ""):
+        self.is_open = is_open
+        self.reason = reason
+
+    def __bool__(self):
+        return self.is_open
+
+
+def gate_status(event, now=None) -> GateStatus:
+    from datetime import datetime, time, timedelta
+
+    from apps.events.models import EventStatus
+    from apps.orders.models import PaymentConfig
+
+    if event.status not in (EventStatus.PUBLISHED, EventStatus.FINISHED):
+        return GateStatus(False, f"Wydarzenie ma status „{event.get_status_display()}”.")
+    if PaymentConfig.is_demo_mode():
+        return GateStatus(True)
+
+    now = now or timezone.now()
+    tz = timezone.get_current_timezone()
+    event_day = timezone.localtime(event.start_at, tz).date()
+    opens_at = datetime.combine(event_day, time.min, tzinfo=tz)
+    closes_at = event.end_at or event.start_at + timedelta(hours=GATE_FALLBACK_HOURS)
+    day_label = f"{event_day.day}.{event_day.month:02d}.{event_day.year}"
+    if now < opens_at:
+        return GateStatus(False, f"Bramkę można otworzyć w dniu wydarzenia ({day_label}).")
+    if now > closes_at:
+        return GateStatus(False, "Wydarzenie już się zakończyło.")
+    return GateStatus(True)

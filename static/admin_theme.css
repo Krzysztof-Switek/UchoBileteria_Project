@@ -275,6 +275,39 @@ div.breadcrumbs {
     padding: 10px 40px;
 }
 
+/* Back / home buttons in front of the path on every admin screen
+   (base_site.html, nav-breadcrumbs block). The path keeps Django's markup. */
+.ucho-crumbbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 40px;
+    background: var(--body-bg);
+    border-bottom: 1px solid var(--hairline-color);
+}
+
+.ucho-crumbbar-path { flex: 1; min-width: 0; }
+
+.ucho-crumbbar div.breadcrumbs { padding: 4px 0 4px 6px; border: 0; background: none; }
+
+.ucho-crumb-btn,
+.ucho-crumb-btn:link,
+.ucho-crumb-btn:visited {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border: 1px solid var(--hairline-color);
+    border-radius: 8px;
+    color: var(--body-fg);
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+    text-decoration: none !important;
+}
+
+.ucho-crumb-btn:hover { border-color: var(--accent); color: var(--accent); }
+
 /* Django's stock base.css pins the admin index page ("dashboard" bodyclass)
    to a fixed 600px — sized for the original bare app-link list. Our own
    ops-dashboard cards (below) need real room to breathe; widen it without
@@ -436,22 +469,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
     font-weight: 600;
 }
 
-.ucho-dash-shortcut,
-.ucho-dash-shortcut:link,
-.ucho-dash-shortcut:visited {
-    display: inline-flex;
-    align-items: center;
-    background: var(--button-bg);
-    color: var(--button-fg);
-    font-weight: 700;
-    border-radius: 10px;
-    padding: 8px 16px;
-    /* base.css's a:not(...) underline rule outranks class selectors via an
-       ID selector inside :not() — !important is the only reliable way out. */
-    text-decoration: none !important;
-    font-size: 0.85rem;
-}
-
 /* Home page "Wydarzenia" overview — on sale + draft by default, a filter
    toggle for finished ones (sales/reporting has its own dedicated view). */
 .ucho-dash-events-head {
@@ -506,12 +523,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 .ucho-dash-events-badge { text-align: right; white-space: nowrap; }
 
-/* Home-page quick-action tiles (currently just one — "Raporty sprzedaży" —
-   more will land here later; grid/tile classes are shared so a new one
-   just drops in). */
+/* Action tiles — dashboard ("Otwórz bramkę", "Raporty sprzedaży"). Markup lives in
+   templates/admin/ucho_tile.html; icons in admin/ucho_icon.html. */
 .ucho-tile-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 10px;
     margin-bottom: 16px;
 }
@@ -520,8 +536,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .ucho-tile:link,
 .ucho-tile:visited {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    align-items: center;
+    gap: 14px;
     padding: 16px;
     border-radius: 14px;
     border: 1px solid var(--hairline-color);
@@ -536,15 +552,75 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
     transform: translateY(-1px);
 }
 
+.ucho-tile-icon {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.ucho-tile-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
 .ucho-tile-title { font-weight: 700; font-size: 0.92rem; }
 
 .ucho-tile-desc { font-size: 0.78rem; color: var(--body-quiet-color); line-height: 1.35; }
 
-/* Standalone quick-action row above the dashboard cards (e.g. "Otwórz
-   odprawę") — a shortcut to a daily task, not a status card itself. */
-.ucho-quick-links {
-    margin-bottom: 16px;
+/* Gate closed etc. — visible (so the reason is readable) but not a link. */
+.ucho-tile.is-disabled { cursor: not-allowed; opacity: 0.6; }
+.ucho-tile.is-disabled:hover { border-color: var(--hairline-color); transform: none; }
+.ucho-tile.is-disabled .ucho-tile-icon { color: var(--body-quiet-color); background: var(--selected-bg); }
+
+/* Event page: compact icon buttons (label under the icon) sitting at the right
+   end of the "Maks. biletów na zamówienie" row (moved there by JS in the
+   event change_form). Markup: templates/admin/ucho_iconbtn.html. */
+.ucho-row-with-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
 }
+
+.ucho-iconbtn-row { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 14px; }
+
+.ucho-iconbtn,
+.ucho-iconbtn:link,
+.ucho-iconbtn:visited {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    min-width: 64px;
+    color: var(--body-fg);
+    text-decoration: none !important;
+}
+
+.ucho-iconbtn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    border: 1px solid var(--hairline-color);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    transition: border-color 120ms ease, transform 120ms ease;
+}
+
+.ucho-iconbtn-icon .ucho-icon { width: 22px; height: 22px; }
+
+.ucho-iconbtn:hover .ucho-iconbtn-icon { border-color: var(--accent); transform: translateY(-1px); }
+
+.ucho-iconbtn-label { font-size: 0.7rem; font-weight: 600; text-align: center; line-height: 1.2; white-space: nowrap; }
+
+.ucho-iconbtn.is-disabled { cursor: not-allowed; opacity: 0.6; }
+.ucho-iconbtn.is-disabled .ucho-iconbtn-icon { color: var(--body-quiet-color); background: var(--selected-bg); }
 
 /* OBS-08: step-by-step wizard shell wrapped around the "add event" form —
    same fieldsets Django already renders, just paged one at a time with a
@@ -606,3 +682,22 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
     gap: 10px;
     margin: 4px 0 16px;
 }
+
+/* "Zamówienia i płatności" entry point — event picker (orders/order/by_event.html). */
+.ucho-by-event { max-width: 1500px; }
+.ucho-by-event-table td:nth-child(2) { white-space: nowrap; }
+.ucho-by-event-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
+.ucho-by-event-filters input[type="search"] { min-width: 240px; }
+.ucho-by-event-check { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--body-quiet-color); }
+.ucho-by-event-reset { font-size: 0.8rem; }
+.ucho-by-event-alert { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--error-fg); margin-bottom: 14px; font-size: 0.85rem; }
+.ucho-by-event-alert a,
+.ucho-by-event-alert a:link,
+.ucho-by-event-alert a:visited { color: var(--error-fg); font-weight: 700; }
+.ucho-by-event-table { width: 100%; }
+.ucho-by-event-table th.num,
+.ucho-by-event-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.ucho-by-event-links { text-align: right; white-space: nowrap; }
+.ucho-by-event-links a + a { margin-left: 14px; }
+.ucho-by-event-failed { color: var(--error-fg); font-weight: 600; }
+.ucho-by-event-all { margin-top: 12px; font-size: 0.8rem; color: var(--body-quiet-color); }

@@ -11,6 +11,16 @@
 <body class="min-h-screen">
     {% include "partials/staff_nav.html" %}
     <main class="max-w-6xl mx-auto px-4 py-8">
+        {# Back + home + path on every staff page; children add levels via {% block crumbs %}. #}
+        <div class="no-print flex items-center gap-2 flex-wrap mb-6 text-sm">
+            <a href="{{ nav_home_url }}" data-nav-back=".ucho-crumbs a" title="Wróć do poprzedniego ekranu"
+               class="input-theme inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold">{% include "admin/ucho_icon.html" with name="back" size=16 %}Wstecz</a>
+            <a href="{{ nav_home_url }}" title="Pulpit"
+               class="input-theme inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold">{% include "admin/ucho_icon.html" with name="home" size=16 %}{{ nav_home_label }}</a>
+            <nav class="ucho-crumbs text-muted ml-1" aria-label="Ścieżka">
+                <a href="{{ nav_home_url }}" class="link-quiet">{{ nav_home_label }}</a>{% block crumbs %}{% endblock %}
+            </nav>
+        </div>
         {% if messages %}
         <div class="mb-6 space-y-2">
             {% for message in messages %}
@@ -22,5 +32,6 @@
         {% endif %}
         {% block content %}{% endblock %}
     </main>
+    {% include "partials/back_button_script.html" %}
 </body>
 </html>

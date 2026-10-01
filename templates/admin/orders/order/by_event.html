@@ -1,0 +1,94 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Strona główna</a> &rsaquo; Wybierz wydarzenie
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main" class="ucho-by-event">
+    <form method="get" class="ucho-by-event-filters">
+        <input type="search" name="q" value="{{ params.q }}" placeholder="Nazwa wydarzenia…" autofocus>
+        <select name="rok" aria-label="Rok">
+            <option value="">Rok</option>
+            {% for y in years %}<option value="{{ y }}"{% if params.rok == y|stringformat:"s" %} selected{% endif %}>{{ y }}</option>{% endfor %}
+        </select>
+        <select name="kwartal" aria-label="Kwartał">
+            <option value="">Kwartał</option>
+            {% for k in quarters %}<option value="{{ k }}"{% if params.kwartal == k|stringformat:"s" %} selected{% endif %}>Q{{ k }}</option>{% endfor %}
+        </select>
+        <select name="miesiac" aria-label="Miesiąc">
+            <option value="">Miesiąc</option>
+            {% for num, name in months %}<option value="{{ num }}"{% if params.miesiac == num|stringformat:"s" %} selected{% endif %}>{{ name }}</option>{% endfor %}
+        </select>
+        <input type="date" name="data" value="{{ params.data }}" aria-label="Dzień wydarzenia">
+        <label class="ucho-by-event-check">
+            <input type="checkbox" name="puste" value="1"{% if show_empty %} checked{% endif %}> także bez aktywności
+        </label>
+        <button type="submit" class="button default">Szukaj</button>
+        <a href="{% url 'admin:orders_by_event' %}" class="ucho-by-event-reset">Wyczyść</a>
+    </form>
+
+    {% if unassigned_log %}
+    <p class="ucho-by-event-alert">
+        <a href="{% url 'admin:orders_paymentevent_changelist' %}?order__isnull=True">{{ unassigned_log }} wpis(y) dziennika płatności bez zamówienia</a>
+        — wpłaty, których system nie dopasował do żadnego wydarzenia; sprawdź ręcznie.
+    </p>
+    {% endif %}
+
+    <div class="module">
+        <table class="ucho-by-event-table">
+            <thead>
+                <tr>
+                    <th>Wydarzenie</th>
+                    <th>Start</th>
+                    <th class="num">Zamówienia</th>
+                    <th class="num">Opłacone ({% if is_demo %}DEMO{% else %}PLN{% endif %})</th>
+                    <th class="num">Bilety (wejścia)</th>
+                    <th class="num">E-maile</th>
+                    <th class="num">Dziennik płatności</th>
+                    <th class="num">Dziennik zdarzeń</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td><a href="{% url 'admin:events_event_change' row.event.pk %}">{{ row.event.title }}</a></td>
+                    <td>{{ row.start }}</td>
+                    <td class="num">{{ row.orders }}</td>
+                    <td class="num">{{ row.paid }}</td>
+                    <td class="num">{{ row.tickets }} ({{ row.checked_in }})</td>
+                    <td class="num">{{ row.emails }}{% if row.emails_failed %} <span class="ucho-by-event-failed">({{ row.emails_failed }} z błędem)</span>{% endif %}</td>
+                    <td class="num">{{ row.log }}</td>
+                    <td class="num">{{ row.audit }}</td>
+                    <td class="ucho-by-event-links">
+                        <a href="{% url 'admin:orders_order_changelist' %}?event__id__exact={{ row.event.pk }}">Zamówienia</a>
+                        <a href="{% url 'admin:tickets_ticket_changelist' %}?event__id__exact={{ row.event.pk }}">Bilety</a>
+                        <a href="{% url 'admin:tickets_emailoutbox_changelist' %}?order__event__id__exact={{ row.event.pk }}">E-maile</a>
+                        <a href="{% url 'admin:orders_paymentevent_changelist' %}?order__event__id__exact={{ row.event.pk }}">Dziennik płatności</a>
+                        <a href="{% url 'admin:auditlog_auditlog_changelist' %}?event__id__exact={{ row.event.pk }}">Dziennik zdarzeń</a>
+                        <a href="{% url 'reports:event_report' row.event.pk %}?tryb={% if is_demo %}demo{% else %}live{% endif %}">Raport</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="9" class="ucho-dash-muted">Brak wydarzeń{% if not show_empty %} z aktywnością{% endif %} dla tych kryteriów.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <p class="ucho-by-event-all">
+        Pełne listy zbiorcze (na życzenie):
+        <a href="{% url 'admin:orders_order_changelist' %}?wszystkie=1">wszystkie zamówienia</a> ·
+        <a href="{% url 'admin:tickets_ticket_changelist' %}?wszystkie=1">wszystkie bilety</a> ·
+        <a href="{% url 'admin:tickets_emailoutbox_changelist' %}?wszystkie=1">wszystkie e-maile</a>{% if unassigned_emails %} ·
+        <a href="{% url 'admin:tickets_emailoutbox_changelist' %}?order__isnull=True">e-maile bez zamówienia ({{ unassigned_emails }})</a>{% endif %} ·
+        <a href="{% url 'admin:orders_paymentevent_changelist' %}?wszystkie=1">cały dziennik płatności</a> ·
+        <a href="{% url 'admin:auditlog_auditlog_changelist' %}?wszystkie=1">cały dziennik zdarzeń</a>{% if unassigned_audit %} ·
+        <a href="{% url 'admin:auditlog_auditlog_changelist' %}?event__isnull=True">zdarzenia niezwiązane z wydarzeniem ({{ unassigned_audit }})</a>{% endif %}.
+        Raporty zbiorcze (miesiące, kwartały, lata): <a href="{% url 'reports:dashboard' %}">raporty okresowe</a>.
+    </p>
+</div>
+{% endblock %}

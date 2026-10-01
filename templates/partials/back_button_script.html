@@ -1,0 +1,31 @@
+{% comment %}
+"Wstecz" button behaviour, shared by every staff shell (admin, base_app,
+base_terminal). Came from another page of the app → history.back(), so you
+land exactly where you were (filters, scroll). Opened directly / in a new tab
+→ follow the link, which is set to the last link of the path (one level up).
+The button's data-nav-back holds the CSS selector of the path links.
+{% endcomment %}
+<script>
+(function () {
+    function cameFromThisApp() {
+        try {
+            return document.referrer && new URL(document.referrer).origin === location.origin;
+        } catch (e) {
+            return false;
+        }
+    }
+    document.addEventListener("click", function (event) {
+        const btn = event.target.closest("[data-nav-back]");
+        if (btn && cameFromThisApp() && history.length > 1) {
+            event.preventDefault();
+            history.back();
+        }
+    });
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll("[data-nav-back]").forEach(function (btn) {
+            const links = document.querySelectorAll(btn.dataset.navBack);
+            if (links.length) btn.href = links[links.length - 1].href;
+        });
+    });
+})();
+</script>

@@ -1,0 +1,18 @@
+{% extends "admin/change_form.html" %}
+{% comment %}
+A record from a per-event list: Start › Wybierz wydarzenie › event › that
+event's list › record. Records without an event keep Django's own path.
+{% endcomment %}
+{% block breadcrumbs %}
+{% if ucho_event %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">Strona główna</a>
+&rsaquo; <a href="{% url 'admin:orders_by_event' %}">Wybierz wydarzenie</a>
+&rsaquo; <a href="{% url 'admin:events_event_change' ucho_event.pk %}">{{ ucho_event.title }}</a>
+&rsaquo; <a href="{{ ucho_event_list_url }}">{{ ucho_list_label }}</a>
+&rsaquo; {{ original|truncatewords:"18" }}
+</div>
+{% else %}
+{{ block.super }}
+{% endif %}
+{% endblock %}

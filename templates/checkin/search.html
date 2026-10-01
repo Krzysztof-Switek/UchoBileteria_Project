@@ -2,6 +2,8 @@
 
 {% block title %}Szukaj biletu — {{ event.title }}{% endblock %}
 
+{% block crumbs %} &rsaquo; <a href="{% url 'checkin:scanner' event.id %}" class="hover:text-zinc-200 hover:underline">{{ event.title }}</a> &rsaquo; <span class="text-zinc-300">Szukaj</span>{% endblock %}
+
 {% block content %}
 <h1 class="text-xl font-bold">{{ event.title }} — wyszukiwanie biletów</h1>
 

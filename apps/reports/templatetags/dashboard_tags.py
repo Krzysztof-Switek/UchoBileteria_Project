@@ -72,3 +72,13 @@ def render_attention_card():
         "attention": attention,
         "has_attention": any(attention.values()),
     }
+
+
+
+@register.filter
+def without_apps(app_list, labels):
+    """Drop apps (comma-separated labels) from the admin index app list —
+    used where a section is replaced by a dashboard tile (e.g. "events"
+    became the "Dodaj wydarzenie" tile)."""
+    skip = {label.strip() for label in labels.split(",")}
+    return [app for app in app_list if app["app_label"] not in skip]

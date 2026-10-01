@@ -2,9 +2,13 @@
 
 {% block title %}{{ event.title }} — raport{% endblock %}
 
+{% block crumbs %} &rsaquo; <a href="{% url 'admin:orders_by_event' %}" class="link-quiet">Wybierz wydarzenie</a> &rsaquo; <a href="{% url 'admin:events_event_change' event.pk %}" class="link-quiet">{{ event.title }}</a> &rsaquo; <span>Raport</span>{% endblock %}
+
 {% block content %}
-<a href="{% url 'reports:dashboard' %}?tryb={% if is_demo %}demo{% else %}live{% endif %}"
-   class="link-quiet text-sm no-print">&larr; Wszystkie raporty</a>
+<div class="flex gap-4 text-sm no-print">
+    <a href="{% url 'reports:dashboard' %}?tryb={% if is_demo %}demo{% else %}live{% endif %}"
+       class="link-quiet">Raporty okresowe</a>
+</div>
 
 <div class="mt-1 flex items-center justify-between flex-wrap gap-3">
     <div>

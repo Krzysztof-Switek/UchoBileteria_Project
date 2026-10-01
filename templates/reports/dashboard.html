@@ -2,6 +2,8 @@
 
 {% block title %}Raporty — Klub UCHO{% endblock %}
 
+{% block crumbs %} &rsaquo; <a href="{% url 'admin:orders_by_event' %}" class="link-quiet">Wybierz wydarzenie</a> &rsaquo; <span>Raporty okresowe</span>{% endblock %}
+
 {% block content %}
 <div class="flex items-center justify-between flex-wrap gap-3">
     <h1 class="text-2xl font-bold">Raporty sprzedaży</h1>

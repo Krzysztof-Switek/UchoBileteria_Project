@@ -13,11 +13,15 @@
             <div class="font-semibold">{{ event.title }}</div>
             <div class="text-sm text-zinc-500">{{ event.start_at|date:"j E Y, H:i" }}</div>
         </div>
-        <div class="flex gap-2">
+        <div class="flex gap-2 flex-wrap items-center">
+            {% if event.gate %}
             <a href="{% url 'checkin:scanner' event.id %}"
-               class="bg-cyan-400 text-zinc-950 font-bold rounded-lg px-4 py-2">Skaner</a>
+               class="bg-cyan-400 text-zinc-950 font-bold rounded-lg px-4 py-2">Otwórz bramkę</a>
             <a href="{% url 'checkin:search' event.id %}"
                class="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2">Szukaj</a>
+            {% else %}
+            <span class="text-amber-400 text-sm px-2" title="{{ event.gate.reason }}">🔒 {{ event.gate.reason }}</span>
+            {% endif %}
             <a href="{% url 'checkin:emergency_list_print' event.id %}"
                class="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2">Lista awaryjna (druk)</a>
             <a href="{% url 'checkin:emergency_list' event.id %}"

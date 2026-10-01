@@ -5,6 +5,16 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 
+def online_sales_cutoff(start_at):
+    """The instant online sales must stop: local midnight that begins the
+    concert day (i.e. the end of the day before). Box office on the night is
+    outside this system, so nothing sells online on the concert day itself."""
+    from datetime import datetime, time
+
+    tz = timezone.get_current_timezone()
+    return datetime.combine(timezone.localtime(start_at, tz).date(), time.min, tzinfo=tz)
+
+
 class EventStatus(models.TextChoices):
     """Stored statuses. SOLD_OUT and SALES_CLOSED are computed at read time."""
 
@@ -27,7 +37,7 @@ class EffectiveEventStatus:
 
 class Event(models.Model):
     title = models.CharField("tytuł", max_length=200)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(verbose_name="adres (slug)", unique=True)
     description = models.TextField("opis", blank=True)
     # Fixed real-world venue — this club runs one room, so the value is a
     # default rather than a per-event admin field (see EventAdmin.get_fieldsets).
@@ -52,18 +62,21 @@ class Event(models.Model):
     max_tickets_per_order = models.PositiveSmallIntegerField(
         "maks. biletów na zamówienie", default=10
     )
-    calendar_event_id = models.CharField(max_length=200, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    calendar_event_id = models.CharField(
+        verbose_name="ID w Kalendarzu Google",
+        max_length=200, blank=True,
+    )
+    created_at = models.DateTimeField(verbose_name="utworzono", auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name="zmieniono", auto_now=True)
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        settings.AUTH_USER_MODEL, verbose_name="utworzył(a)",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
         related_name="events_created",
     )
     updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        settings.AUTH_USER_MODEL, verbose_name="zmienił(a)",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -87,6 +100,10 @@ class Event(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = self._make_unique_slug()
+        # Hard rule enforced here (not just in the admin form) so no path —
+        # seed data, scripts, an automated manager — can sell past it.
+        if self.start_at and self.sales_end_at:
+            self.sales_end_at = min(self.sales_end_at, online_sales_cutoff(self.start_at))
         super().save(*args, **kwargs)
 
     def clean(self):
@@ -142,13 +159,15 @@ class CalendarOutbox(models.Model):
         DONE = "DONE", "Wykonane"
         FAILED = "FAILED", "Błąd"
 
-    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="calendar_tasks")
-    action = models.CharField(max_length=10, choices=CalendarAction.choices)
+    event = models.ForeignKey(
+        Event, verbose_name="wydarzenie", on_delete=models.CASCADE, related_name="calendar_tasks",
+    )
+    action = models.CharField(verbose_name="akcja", max_length=10, choices=CalendarAction.choices)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
-    attempts = models.PositiveSmallIntegerField(default=0)
-    last_error = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    processed_at = models.DateTimeField(null=True, blank=True)
+    attempts = models.PositiveSmallIntegerField(verbose_name="próby", default=0)
+    last_error = models.TextField(verbose_name="ostatni błąd", blank=True)
+    created_at = models.DateTimeField(verbose_name="utworzono", auto_now_add=True)
+    processed_at = models.DateTimeField(verbose_name="przetworzono", null=True, blank=True)
 
     class Meta:
         verbose_name = "zadanie kalendarza"
@@ -180,15 +199,18 @@ class PoolStatus:
 
 
 class TicketPool(models.Model):
-    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="pools")
+    event = models.ForeignKey(
+        Event, verbose_name="wydarzenie", on_delete=models.CASCADE, related_name="pools",
+    )
     name = models.CharField("nazwa", max_length=100, blank=True)
     price_gross = models.DecimalField("cena brutto", max_digits=8, decimal_places=2)
-    currency = models.CharField(max_length=8, default="PLN")
+    currency = models.CharField(verbose_name="waluta", max_length=8, default="PLN")
     capacity = models.PositiveIntegerField("ilość biletów")
     sold_count = models.PositiveIntegerField("sprzedane", default=0)
     sales_start_at = models.DateTimeField("start sprzedaży puli", null=True, blank=True)
     sales_end_at = models.DateTimeField("koniec sprzedaży puli", null=True, blank=True)
     manual_status = models.CharField(
+        verbose_name="tryb ręczny",
         max_length=20, choices=PoolManualStatus.choices, default=PoolManualStatus.AUTO
     )
     # What happens to the *next* pool (by sales_start_at) when this one
@@ -200,8 +222,8 @@ class TicketPool(models.Model):
         choices=PoolSelloutAction.choices,
         default=PoolSelloutAction.ACTIVATE_NEXT,
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(verbose_name="utworzono", auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name="zmieniono", auto_now=True)
 
     class Meta:
         verbose_name = "pula biletów"
@@ -218,6 +240,13 @@ class TicketPool(models.Model):
 
     def __str__(self):
         return f"{self.event} – {self.name or 'pula bez nazwy'}"
+
+    def save(self, *args, **kwargs):
+        # Same online-sales cutoff as the event: a pool never sells into the
+        # concert day (the admin formset reports it; this guarantees it).
+        if self.sales_end_at and self.event_id and self.event.start_at:
+            self.sales_end_at = min(self.sales_end_at, online_sales_cutoff(self.event.start_at))
+        super().save(*args, **kwargs)
 
     @property
     def is_sold_out(self) -> bool:

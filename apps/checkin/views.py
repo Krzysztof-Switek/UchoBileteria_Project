@@ -1,4 +1,5 @@
 from datetime import timedelta
+from functools import wraps
 
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q
@@ -28,14 +29,44 @@ def _scannable_events():
     ).order_by("start_at")
 
 
+def gate_must_be_open(view):
+    """Scanner and check-in endpoints only work while the gate is open
+    (services.gate_status: event day in LIVE, any date in DEMO). Emergency
+    lists deliberately skip this — they're printed ahead of the event."""
+
+    @wraps(view)
+    def wrapper(request, event_id, *args, **kwargs):
+        event = get_object_or_404(Event, pk=event_id)
+        gate = services.gate_status(event)
+        if not gate:
+            if request.method == "POST" or view.__name__ == "offline_manifest":
+                return JsonResponse(
+                    {"ok": False, "result": "GATE_CLOSED", "message": gate.reason}, status=403
+                )
+            return render(
+                request, "checkin/gate_closed.html", {"event": event, "gate": gate}, status=403
+            )
+        return view(request, event_id, *args, **kwargs)
+
+    return wrapper
+
+
+def _with_gate(events):
+    for event in events:
+        event.gate = services.gate_status(event)
+    return events
+
+
 @login_required
 @can_scan
 def event_select(request):
-    return render(request, "checkin/event_select.html", {"events": _scannable_events()})
+    events = _with_gate(list(_scannable_events()))
+    return render(request, "checkin/event_select.html", {"events": events})
 
 
 @login_required
 @can_scan
+@gate_must_be_open
 def scanner(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
     checked_in_count = Ticket.objects.filter(event=event, status=TicketStatus.CHECKED_IN).count()
@@ -49,6 +80,7 @@ def scanner(request, event_id):
 @login_required
 @can_scan
 @require_POST
+@gate_must_be_open
 def scan(request, event_id):
     """Receives the decoded QR text (or a short code) and returns the verdict."""
     event = get_object_or_404(Event, pk=event_id)
@@ -81,6 +113,7 @@ def scan(request, event_id):
 @login_required
 @can_scan
 @require_POST
+@gate_must_be_open
 def undo_check_in(request, event_id):
     """OBS-06: undo a check-in from the scanner's last-5-scans history."""
     event = get_object_or_404(Event, pk=event_id)
@@ -101,6 +134,11 @@ def verify(request):
     event_id = request.GET.get("event")
     if event_id:
         event = get_object_or_404(Event, pk=event_id)
+        gate = services.gate_status(event)
+        if not gate:
+            return render(
+                request, "checkin/gate_closed.html", {"event": event, "gate": gate}, status=403
+            )
         result, ticket = services.check_in_by_token(token, event, request.user)
         context = {
             "result": result,
@@ -114,12 +152,14 @@ def verify(request):
     return render(
         request,
         "checkin/verify_pick_event.html",
-        {"events": _scannable_events(), "token": token},
+        {"events": [e for e in _with_gate(list(_scannable_events())) if e.gate],
+         "token": token},
     )
 
 
 @login_required
 @can_scan
+@gate_must_be_open
 def search(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
     query = request.GET.get("q", "")
@@ -134,6 +174,7 @@ def search(request, event_id):
 @login_required
 @can_scan
 @require_POST
+@gate_must_be_open
 def check_in_code(request, event_id):
     """Manual check-in from the search screen."""
     event = get_object_or_404(Event, pk=event_id)
@@ -154,6 +195,7 @@ def check_in_code(request, event_id):
 
 @login_required
 @can_scan
+@gate_must_be_open
 def offline_manifest(request, event_id):
     """OBS-07: ticket data the scanner caches for offline verification —
     short code, buyer e-mail, status, and the QR token hash (never the raw

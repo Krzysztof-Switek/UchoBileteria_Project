@@ -3,6 +3,16 @@
 from .models import AuditLog
 
 
+def event_of(entity):
+    """The Event an audited object belongs to: itself, its `.event`, or None."""
+    from apps.events.models import Event
+
+    if isinstance(entity, Event):
+        return entity
+    event = getattr(entity, "event", None)
+    return event if isinstance(event, Event) else None
+
+
 def log_action(action: str, entity, *, actor=None, metadata: dict | None = None) -> AuditLog:
     """
     Write an audit record.
@@ -21,5 +31,6 @@ def log_action(action: str, entity, *, actor=None, metadata: dict | None = None)
         action=action,
         entity_type=type(entity).__name__,
         entity_id=str(entity.pk),
+        event=event_of(entity),
         metadata=metadata or {},
     )

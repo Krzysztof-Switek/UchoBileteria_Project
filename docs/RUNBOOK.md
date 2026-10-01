@@ -26,12 +26,18 @@ Konta zakłada się komendą `manage.py create_staff_user <email> <ROLA>`
 (hasło wpisywane interaktywnie, nigdy jako argument), np.:
 
 ```bash
-python manage.py create_staff_user jan.kowalski@klub.pl EVENT_MANAGER
+python manage.py create_staff_user jan.kowalski@klub.pl MANAGER
 ```
 
 - Loginem jest zawsze adres e-mail (logowanie po e-mailu, wielkość liter bez znaczenia).
-- Role: `ADMIN`, `EVENT_MANAGER`, `SALES_MANAGER`, `READ_ONLY` → dostają `is_staff`
-  i logują się na `/admin/`.
+- Trzy role:
+  - `ADMIN` — wszystko: wydarzenia, zamówienia, zwroty, raporty, tryb DEMO/LIVE, dziennik.
+  - `MANAGER` — wszystko poza przełącznikiem DEMO/LIVE (ten widzi tylko superużytkownik): dane, raporty,
+    prowadzi wydarzenia i pule, robi zwroty (także „odwołaj i zwróć”), obsługuje skaner.
+    Docelowo tę rolę ma pełnić agent AI — dlatego włączenie prawdziwych pieniędzy
+    zostaje decyzją człowieka z rolą `ADMIN`.
+  - `DOOR_STAFF` — tylko skaner.
+- `ADMIN` i `MANAGER` dostają `is_staff` i logują się na `/admin/`.
 - **`DOOR_STAFF` (bramkarze): bez `is_staff`**, logują się na `/logowanie/`
   i trafiają prosto do `/wejscie/`.
 - Hasło musi mieć min. 12 znaków (zaostrzone `AUTH_PASSWORD_VALIDATORS` — panel
@@ -88,7 +94,7 @@ Stripe → prawdziwy zwrot po webhooku `charge.refunded`). Kupujący dostają e-
 
 - Logi: `docker compose logs -f app cron`.
 - Dziennik zdarzeń: panel admina → *Wpisy audytu* (publikacje, płatności, zwroty, skany, eksporty).
-- Webhooki: panel admina → *Zdarzenia płatności* (status PROCESSED/DUPLICATE/ERROR);
+- Webhooki: panel admina → *Zamówienia i płatności* → wydarzenie → *Dziennik płatności* (wpisy bez zamówienia: link na liście wydarzeń; status PROCESSED/DUPLICATE/ERROR);
   status ERROR = pieniądze bez dopasowanego zamówienia — wymaga ręcznej decyzji.
 - Kolejka e-maili: panel admina → *E-maile (kolejka)* — status FAILED po 5 próbach.
 - Zadania kalendarza: *Zadania kalendarza* — błędy nie blokują niczego.

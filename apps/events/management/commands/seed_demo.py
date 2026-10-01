@@ -23,24 +23,29 @@ class Command(BaseCommand):
                 "start_at": now + timedelta(days=14),
                 "end_at": now + timedelta(days=14, hours=5),
                 "sales_start_at": now - timedelta(hours=1),
+                # Clamped by Event.save() to midnight before the concert day.
                 "sales_end_at": now + timedelta(days=14),
                 "capacity_total": 500,
                 "status": EventStatus.PUBLISHED,
             },
         )
         if created:
-            for name, priority, price, cap, start in [
-                ("Early Bird", 1, "40.00", 50, None),
-                ("Regular", 2, "60.00", 350, now + timedelta(days=5)),
-                ("Last Call", 3, "80.00", 100, now + timedelta(days=10)),
+            # Back-to-back windows (pools must not overlap); the last pool has
+            # no end of its own and sells until the event's online cutoff.
+            regular_from = now + timedelta(days=5)
+            last_call_from = now + timedelta(days=10)
+            for name, price, cap, start, end in [
+                ("Early Bird", "40.00", 50, now - timedelta(hours=1), regular_from),
+                ("Regular", "60.00", 350, regular_from, last_call_from),
+                ("Last Call", "80.00", 100, last_call_from, None),
             ]:
                 TicketPool.objects.create(
                     event=event,
                     name=name,
-                    priority=priority,
                     price_gross=Decimal(price),
                     capacity=cap,
                     sales_start_at=start,
+                    sales_end_at=end,
                 )
             self.stdout.write(self.style.SUCCESS(
                 "Utworzono wydarzenie demo: /wydarzenia/test-koncert/"

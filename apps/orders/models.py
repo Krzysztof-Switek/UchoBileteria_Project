@@ -42,28 +42,39 @@ ORDER_TRANSITIONS = {
 
 
 class Order(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    event = models.ForeignKey("events.Event", on_delete=models.PROTECT, related_name="orders")
+    id = models.UUIDField(verbose_name="ID", primary_key=True, default=uuid.uuid4, editable=False)
+    event = models.ForeignKey(
+        "events.Event", verbose_name="wydarzenie", on_delete=models.PROTECT, related_name="orders",
+    )
     pool = models.ForeignKey(
-        "events.TicketPool", on_delete=models.PROTECT, related_name="orders"
+        "events.TicketPool", verbose_name="pula", on_delete=models.PROTECT, related_name="orders"
     )
     buyer_email = models.EmailField("e-mail kupującego")
     quantity = models.PositiveSmallIntegerField("liczba biletów")
     amount_gross = models.DecimalField("kwota brutto", max_digits=9, decimal_places=2)
-    currency = models.CharField(max_length=8, default="PLN")
+    currency = models.CharField(verbose_name="waluta", max_length=8, default="PLN")
     status = models.CharField(
         max_length=20, choices=OrderStatus.choices, default=OrderStatus.CREATED
     )
-    payment_provider = models.CharField(max_length=10, choices=PaymentProviderKind.choices)
-    payment_session_id = models.CharField(max_length=200, blank=True)
-    provider_order_id = models.CharField(max_length=200, blank=True)
+    payment_provider = models.CharField(
+        verbose_name="operator płatności",
+        max_length=10, choices=PaymentProviderKind.choices,
+    )
+    payment_session_id = models.CharField(
+        verbose_name="ID sesji płatności",
+        max_length=200, blank=True,
+    )
+    provider_order_id = models.CharField(
+        verbose_name="ID zamówienia u operatora",
+        max_length=200, blank=True,
+    )
     # Provider-hosted checkout page (Stripe session URL / internal demo cash desk).
-    checkout_url = models.CharField(max_length=500, blank=True)
+    checkout_url = models.CharField(verbose_name="adres kasy", max_length=500, blank=True)
     is_demo = models.BooleanField("zamówienie demo", editable=False)
     expires_at = models.DateTimeField("wygasa", null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    paid_at = models.DateTimeField(null=True, blank=True)
-    refunded_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(verbose_name="utworzono", auto_now_add=True)
+    paid_at = models.DateTimeField(verbose_name="opłacono", null=True, blank=True)
+    refunded_at = models.DateTimeField(verbose_name="zwrócono", null=True, blank=True)
 
     class Meta:
         verbose_name = "zamówienie"
@@ -103,24 +114,36 @@ class PaymentEventStatus(models.TextChoices):
 class PaymentEvent(models.Model):
     """Log of every webhook/payment notification. Idempotency anchor."""
 
-    provider = models.CharField(max_length=10, choices=PaymentProviderKind.choices)
-    provider_event_id = models.CharField(max_length=200)
-    event_type = models.CharField(max_length=100)
-    order = models.ForeignKey(
-        Order, null=True, blank=True, on_delete=models.SET_NULL, related_name="payment_events"
+    provider = models.CharField(
+        verbose_name="operator",
+        max_length=10, choices=PaymentProviderKind.choices,
     )
-    amount = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True)
+    provider_event_id = models.CharField(verbose_name="ID zdarzenia u operatora", max_length=200)
+    event_type = models.CharField(verbose_name="typ", max_length=100)
+    order = models.ForeignKey(
+        Order,
+        verbose_name="zamówienie",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="payment_events",
+    )
+    amount = models.DecimalField(
+        verbose_name="kwota",
+        max_digits=9, decimal_places=2, null=True, blank=True,
+    )
     processing_status = models.CharField(
+        verbose_name="status",
         max_length=20, choices=PaymentEventStatus.choices, default=PaymentEventStatus.RECEIVED
     )
-    payload_hash = models.CharField(max_length=64, blank=True)
-    is_demo = models.BooleanField(editable=False)
-    received_at = models.DateTimeField(auto_now_add=True)
-    processed_at = models.DateTimeField(null=True, blank=True)
+    payload_hash = models.CharField(verbose_name="skrót treści", max_length=64, blank=True)
+    is_demo = models.BooleanField(verbose_name="demo", editable=False)
+    received_at = models.DateTimeField(verbose_name="otrzymano", auto_now_add=True)
+    processed_at = models.DateTimeField(verbose_name="przetworzono", null=True, blank=True)
 
     class Meta:
-        verbose_name = "zdarzenie płatności"
-        verbose_name_plural = "zdarzenia płatności"
+        verbose_name = "wpis dziennika płatności"
+        verbose_name_plural = "dziennik płatności"
         ordering = ["-received_at"]
         constraints = [
             models.UniqueConstraint(
@@ -141,10 +164,17 @@ class PaymentMode(models.TextChoices):
 class PaymentConfig(models.Model):
     """DB singleton holding the global demo/live payment switch."""
 
-    mode = models.CharField(max_length=10, choices=PaymentMode.choices, default=PaymentMode.DEMO)
-    updated_at = models.DateTimeField(auto_now=True)
+    mode = models.CharField(
+        verbose_name="tryb",
+        max_length=10, choices=PaymentMode.choices, default=PaymentMode.DEMO,
+    )
+    updated_at = models.DateTimeField(verbose_name="zmieniono", auto_now=True)
     updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL
+        settings.AUTH_USER_MODEL,
+        verbose_name="zmienił(a)",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
     )
 
     class Meta:

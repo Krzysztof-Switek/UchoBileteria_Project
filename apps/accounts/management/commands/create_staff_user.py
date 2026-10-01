@@ -22,8 +22,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "role",
             choices=list(ROLE_PERMISSIONS.keys()),
-            help="Grupa uprawnień, np. ADMIN, EVENT_MANAGER, SALES_MANAGER, "
-            "READ_ONLY, DOOR_STAFF.",
+            help="Grupa uprawnień: ADMIN, MANAGER albo DOOR_STAFF.",
         )
 
     def handle(self, *args, **options):

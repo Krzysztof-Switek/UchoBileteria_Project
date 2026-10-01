@@ -70,6 +70,8 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "apps.orders.context_processors.payment_mode",
                 "apps.accounts.context_processors.club_identity",
+                "apps.accounts.context_processors.dev_login_accounts",
+                "apps.accounts.context_processors.nav_home",
             ],
         },
     },
