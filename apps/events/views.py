@@ -1,7 +1,9 @@
 from datetime import UTC
+from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.db.models import Q
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
@@ -36,7 +38,55 @@ def event_detail(request, slug):
         "is_cancelled": event.status == EventStatus.CANCELLED,
         "quantity_choices": range(1, event.max_tickets_per_order + 1),
     }
+    if event.is_seated:
+        from apps.seating.services import MAX_SEATS_PER_ORDER, seat_map_payload, zone_prices
+
+        payload = seat_map_payload(event)
+        if payload:
+            context["seat_config"] = {
+                **payload,
+                "price": context["active_pool_price_raw"],
+                "currency": active_pool.currency if active_pool else "",
+                "states_url": reverse("events:seat_states", args=[event.slug]),
+                "preselected": [k for k in request.GET.get("wybrane", "").split(",") if k][:60],
+                "max_single": event.max_tickets_per_order,
+                "max_total": MAX_SEATS_PER_ORDER,
+                "zone_prices": zone_prices(
+                    event, active_pool.price_gross if active_pool else None
+                ),
+            }
+            zones = context["seat_config"]["zone_prices"]
+            context["zone_price_list"] = [  # Decimal -> the template formats "108,00"
+                {"code": code, **zone, "price": Decimal(zone["price"])}
+                for code, zone in zones.items()
+            ]
+            context["prefill_email"] = request.GET.get("email", "")[:254]
     return render(request, "events/detail.html", context)
+
+
+def seat_states(request, slug):
+    """Light JSON polled by the buyer's map: seat_key -> free/taken/blocked
+    (plus "mine" for the seats of the buyer's own unpaid order)."""
+    from apps.orders.models import Order
+    from apps.seating.services import public_seat_states
+
+    event = get_object_or_404(Event, slug=slug, status=EventStatus.PUBLISHED)
+    mine: set[str] = set()
+    order_id = request.GET.get("zamowienie")
+    if order_id:
+        try:
+            order = Order.objects.filter(id=order_id, event=event).first()
+        except (ValueError, ValidationError):
+            order = None
+        if order and order.status in ("CREATED", "PAYMENT_PENDING"):
+            mine = set(order.seat_keys)
+    event.refresh_from_db(fields=["sold_total", "capacity_total"])
+    response = JsonResponse({
+        "states": public_seat_states(event, mine),
+        "sales_state": services.get_sales_state(event),
+    })
+    response["Cache-Control"] = "no-store"
+    return response
 
 
 def sales_start_reminder(request, slug):
@@ -49,7 +99,7 @@ def sales_start_reminder(request, slug):
     ics = (
         "BEGIN:VCALENDAR\r\n"
         "VERSION:2.0\r\n"
-        "PRODID:-//Bileteria UCHO//PL\r\n"
+        "PRODID:-//Bileteria Scena Ucho//PL\r\n"
         "BEGIN:VEVENT\r\n"
         f"UID:sprzedaz-{event.pk}@bileteria-ucho\r\n"
         f"DTSTAMP:{dtstamp}\r\n"
@@ -62,3 +112,22 @@ def sales_start_reminder(request, slug):
     response = HttpResponse(ics, content_type="text/calendar; charset=utf-8")
     response["Content-Disposition"] = f'attachment; filename="przypomnienie-{event.slug}.ics"'
     return response
+
+
+def terms(request):
+    """Regulamin sprzedaży biletów — accepted with every purchase."""
+    from django.conf import settings
+
+    from apps.orders.terms import TERMS_VERSION
+
+    return render(request, "legal/regulamin.html", {
+        "version": TERMS_VERSION,
+        "club": {
+            "name": settings.CLUB_NAME,
+            "legal_name": getattr(settings, "CLUB_LEGAL_NAME", "") or settings.CLUB_NAME,
+            "nip": getattr(settings, "CLUB_NIP", ""),
+            "address": settings.CLUB_ADDRESS,
+            "email": settings.CLUB_CONTACT_EMAIL,
+            "phone": settings.CLUB_PHONE,
+        },
+    })

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="pl">
+<body style="font-family: Arial, sans-serif; color: #111; max-width: 560px; margin: 0 auto;">
+    <h1 style="font-size: 22px;">Wydarzenie odwołane — {{ event.title }}</h1>
+    <p style="white-space: pre-line;">{{ event.cancellation_reason }}</p>
+    <p style="font-size: 17px;">Zwrot: <strong>{{ order.kept_amount }} {{ order.currency }}</strong> za {{ order.active_quantity }} bil. — na kartę lub rachunek, z którego zapłacono. Osobny e-mail potwierdzi wykonanie zwrotu. Bilety tracą ważność.</p>
+    <p>Bilety z tego zamówienia:</p>
+    <ul>
+        {% for ticket in tickets %}
+        <li><strong>{{ ticket.short_code }}</strong>{% if ticket.seat %} — {{ ticket.seat.label }}{% endif %}</li>
+        {% endfor %}
+    </ul>
+    <p style="color: #777; font-size: 12px;">Zamówienie {{ order.short_id }} · {{ order.buyer_email }}{% if order.is_demo %} · tryb demo{% endif %} · zasady: regulamin sprzedaży biletów § 5–6</p>
+</body>
+</html>

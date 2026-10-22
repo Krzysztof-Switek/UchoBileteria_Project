@@ -64,7 +64,9 @@ def test_full_event_lifecycle(client, django_user_model):
 
     # 6-7. Buyer purchases a ticket and pays in the demo cash desk;
     #      the payment webhook confirms it.
-    client.post("/kup/nocny-koncert/", {"buyer_email": "fan@example.com", "quantity": 1})
+    client.post("/kup/nocny-koncert/", {
+        "accept_terms": "on", "buyer_email": "fan@example.com", "quantity": 1
+    })
     order = Order.objects.get()
     client.post(f"/kasa-demo/{order.id}/zaplac/")
     order.refresh_from_db()
@@ -87,7 +89,9 @@ def test_full_event_lifecycle(client, django_user_model):
     assert result == ScanResult.ALREADY_CHECKED_IN
 
     # 12-13. Admin refunds another (unused) order; its ticket cannot enter.
-    client.post("/kup/nocny-koncert/", {"buyer_email": "drugi@example.com", "quantity": 1})
+    client.post("/kup/nocny-koncert/", {
+        "accept_terms": "on", "buyer_email": "drugi@example.com", "quantity": 1
+    })
     order2 = Order.objects.latest("created_at")
     client.post(f"/kasa-demo/{order2.id}/zaplac/")
     order2.refresh_from_db()
@@ -100,7 +104,9 @@ def test_full_event_lifecycle(client, django_user_model):
 
     # 14. Early Bird sells out and Regular activates (price changes on page).
     # EB capacity 2: order1 holds one seat, the refunded seat is free again.
-    client.post("/kup/nocny-koncert/", {"buyer_email": "trzeci@example.com", "quantity": 1})
+    client.post("/kup/nocny-koncert/", {
+        "accept_terms": "on", "buyer_email": "trzeci@example.com", "quantity": 1
+    })
     order3 = Order.objects.latest("created_at")
     client.post(f"/kasa-demo/{order3.id}/zaplac/")
     early.refresh_from_db()
@@ -109,7 +115,9 @@ def test_full_event_lifecycle(client, django_user_model):
     assert "Regular" in page  # next pool active before its start date
 
     # 15. Event sells out entirely (2 EB + 3 Regular = 5) and sales close.
-    client.post("/kup/nocny-koncert/", {"buyer_email": "czwarty@example.com", "quantity": 3})
+    client.post("/kup/nocny-koncert/", {
+        "accept_terms": "on", "buyer_email": "czwarty@example.com", "quantity": 3
+    })
     order4 = Order.objects.latest("created_at")
     client.post(f"/kasa-demo/{order4.id}/zaplac/")
     event.refresh_from_db()

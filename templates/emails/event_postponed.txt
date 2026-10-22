@@ -1,0 +1,18 @@
+Zmiana terminu — {{ event.title }}
+
+{{ event.cancellation_reason }}
+
+NOWY TERMIN: {{ replacement.start_at|date:"l, j E Y, H:i" }}{% if replacement.gates_open_at %} (wejście od {{ replacement.gates_open_at|date:"H:i" }}){% endif %}
+Miejsce: {{ replacement.venue_name }}{% if replacement.venue_address %}, {{ replacement.venue_address }}{% endif %}
+
+Twoje bilety ({{ order.active_quantity }} szt.) mogą zachować ważność na nowy termin — te same kody{% if order.seat_labels %}, w miarę możliwości te same miejsca{% endif %}. Jeśli nowy termin Ci nie odpowiada, możesz zamiast tego otrzymać zwrot {{ order.kept_amount }} {{ order.currency }}.
+
+Potwierdź wybór: {{ choice_url }}
+
+Na decyzję masz czas do {{ deadline|date:"j E Y, H:i" }}. Bez Twojego potwierdzenia bilety nie przechodzą na nowy termin: po tej dacie automatycznie zwrócimy pieniądze na kartę lub rachunek, z którego zapłacono, a bilety stracą ważność.
+
+Bilety z tego zamówienia:
+{% for ticket in tickets %} - {{ ticket.short_code }}{% if ticket.seat %} — {{ ticket.seat.label }}{% endif %}
+{% endfor %}
+Zamówienie {{ order.short_id }} · {{ order.buyer_email }}{% if order.is_demo %} · tryb demo{% endif %}
+Zasady: regulamin sprzedaży biletów § 5–6.

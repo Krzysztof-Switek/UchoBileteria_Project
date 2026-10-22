@@ -89,9 +89,11 @@ class TestManagerAccess:
         for url in ("/admin/events/event/add/", "/admin/orders/order/wydarzenia/",
                     "/admin/orders/order/?wszystkie=1", "/admin/tickets/ticket/?wszystkie=1",
                     "/admin/orders/paymentevent/?wszystkie=1",
-                    "/admin/auditlog/auditlog/?wszystkie=1",
-                    "/raporty/", "/szukaj/?q=abc"):
+                    "/raporty/", "/raporty/finanse/", "/szukaj/?q=abc"):
             assert client.get(url).status_code == 200, url
+        # the audit log is the admin's control tool, not the manager's (05.10)
+        assert client.get("/admin/auditlog/auditlog/?wszystkie=1").status_code == 403
+        assert "?widok=dziennik" not in client.get("/admin/").content.decode()
 
     def test_manager_dashboard_shows_events_tile(self, client, django_user_model):
         make_pool(make_event(title="Koncert na pulpicie"))

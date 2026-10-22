@@ -1,31 +1,45 @@
 {% extends "admin/index.html" %}
 {% load dashboard_tags %}
 
+{# no "Panel obsługi" heading above the tiles (05.10.2026) #}
+{% block content_title %}{% endblock %}
+
 {% block content %}
 {% url 'checkin:event_select' as gate_url %}
 {% url 'admin:events_event_add' as add_event_url %}
 {% url 'admin:orders_by_event' as orders_url %}
+{% comment %}One grid, 4 per row. First row = the everyday actions: add an event and open
+the gate (highlighted), then the seat plans and the emergency list (red title). (05.10.2026){% endcomment %}
 <div class="ucho-tile-grid">
-    {% if perms.tickets.checkin_ticket %}
-    {% include "admin/ucho_tile.html" with url=gate_url icon="gate" title="Otwórz bramkę" %}
-    {% endif %}
-    {% if perms.orders.view_order %}
-    {% include "admin/ucho_tile.html" with url=orders_url icon="chart" title="Raporty sprzedaży" %}
-    {% endif %}
     {% if perms.events.add_event %}
-    {% include "admin/ucho_tile.html" with url=add_event_url icon="plus" title="Dodaj wydarzenie" %}
+    {% include "admin/ucho_tile.html" with url=add_event_url icon="plus" title="Dodaj wydarzenie" primary=True %}
+    {% endif %}
+    {% if perms.tickets.checkin_ticket %}
+    {% include "admin/ucho_tile.html" with url=gate_url icon="gate" title="Otwórz bramkę" primary=True %}
+    {% endif %}
+    {% if perms.seating.view_seatinglayout %}
+    {% url 'admin:seating_seatinglayout_changelist' as layouts_url %}
+    {% include "admin/ucho_tile.html" with url=layouts_url icon="seats" title="Plany sali" %}
+    {% endif %}
+    {% if perms.tickets.checkin_ticket %}
+    {% comment %}opens today's event emergency list (print); another event can be picked there;
+    light-red title so it catches the eye when the scanner fails{% endcomment %}
+    {% url 'checkin:emergency_list_today' as emergency_url %}
+    {% include "admin/ucho_tile.html" with url=emergency_url icon="printer" title="Lista awaryjna" alert=True %}
     {% endif %}
     {% if perms.orders.view_order %}
-    {% include "admin/ucho_tile.html" with url=orders_url icon="receipt" title="Zamówienia i płatności" %}
+    {% url 'reports:event_finance' as finance_url %}
+    {% include "admin/ucho_tile.html" with url=finance_url icon="chart" title="Raporty sprzedaży" %}
+    {% include "admin/ucho_tile.html" with url=orders_url|add:'?widok=zamowienia' icon="receipt" title="Zamówienia i płatności" %}
     {% endif %}
     {% if perms.tickets.view_ticket %}
-    {% include "admin/ucho_tile.html" with url=orders_url icon="ticket" title="Bilety" %}
+    {% include "admin/ucho_tile.html" with url=orders_url|add:'?widok=bilety' icon="ticket" title="Bilety" %}
     {% endif %}
     {% if perms.tickets.view_emailoutbox %}
-    {% include "admin/ucho_tile.html" with url=orders_url icon="mail" title="E-maile (kolejka)" %}
+    {% include "admin/ucho_tile.html" with url=orders_url|add:'?widok=emaile' icon="mail" title="E-maile (kolejka)" %}
     {% endif %}
     {% if perms.auditlog.view_auditlog %}
-    {% include "admin/ucho_tile.html" with url=orders_url icon="history" title="Dziennik zdarzeń" %}
+    {% include "admin/ucho_tile.html" with url=orders_url|add:'?widok=dziennik' icon="history" title="Dziennik zdarzeń" %}
     {% endif %}
 </div>
 {% if perms.orders.view_order %}
@@ -33,7 +47,7 @@
 {% render_attention_card %}
 {% endif %}
 {# Our apps are all tiles above now; what's left here is e.g. users/groups (superuser). #}
-{% with rest=app_list|without_apps:"events,orders,tickets,auditlog" %}
+{% with rest=app_list|without_apps:"events,orders,tickets,auditlog,seating" %}
 {% if rest %}
 <div id="content-main" class="app-list">
   {% include "admin/app_list.html" with app_list=rest show_changelinks=True %}

@@ -1,0 +1,134 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'seating/seatmap.css' %}">
+{% endblock %}
+
+{% block nav-sidebar %}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Strona główna</a>
+    &rsaquo; <a href="{% url 'admin:events_event_changelist' %}">Wydarzenia</a>
+    &rsaquo; <a href="{% url 'admin:events_event_change' event.pk %}">{{ event.title }}</a>
+    &rsaquo; Plan sali
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main" class="ucho-eventmap">
+    <div class="ucho-page-actions">
+        <a href="{% url 'admin:events_event_change' event.pk %}" class="button ucho-done-btn">← Wróć do wydarzenia</a>
+        {% if seat_map %}<a href="{% url 'admin:seating_event_print' event.pk %}" class="button" target="_blank" rel="noopener" title="Plan z zajętymi i wolnymi miejscami — w oknie drukowania wybierz „Zapisz jako PDF”">Drukuj / PDF</a>{% endif %}
+    </div>
+    <p class="ucho-eventmap-sub">{{ event.start_at|date:"d.m.y H:i" }} · {{ event.get_status_display }} ·
+        {% if seat_map %}<strong>miejsca numerowane</strong> — układ „{{ seat_map.source_layout_name }}”
+        (przypięty {{ seat_map.created_at|date:"d.m.y H:i" }}){% else %}<strong>bilety bez miejsc</strong>{% endif %}</p>
+
+    {% if seat_map %}
+    <div class="ucho-eventmap-stats">
+        <span><b data-stat="SOLD">{{ counts.SOLD }}</b> sprzedanych</span>
+        <span><b data-stat="HELD">{{ counts.HELD }}</b> czeka na płatność</span>
+        <span><b data-stat="AVAILABLE">{{ counts.AVAILABLE }}</b> wolnych</span>
+        <span><b data-stat="BLOCKED">{{ counts.BLOCKED }}</b> zablokowanych</span>
+        <span>pojemność sprzedaży: <b data-stat="capacity">{{ event.capacity_total }}</b>{% if pools_total < event.capacity_total %} · <span class="ucho-warn">pule biletów: {{ pools_total }} — mniej niż miejsc</span>{% endif %}</span>
+    </div>
+    <div class="ucho-eventmap-grid">
+        <div>
+            <div id="sm-admin-map"></div>
+            <div class="sm-legend">
+                <span><i class="lg-free"></i>wolne</span>
+                <span><i class="lg-held"></i>czeka na płatność</span>
+                <span><i class="lg-taken"></i>sprzedane</span>
+                <span><i class="lg-blocked"></i>zablokowane</span>
+                <span><i class="lg-selected"></i>zaznaczone</span>
+            </div>
+        </div>
+        <aside class="ucho-eventmap-panel" id="sm-admin-panel" aria-live="polite">
+            <h3>Zaznaczone miejsca</h3>
+            <p class="ucho-muted" id="sma-hint">Kliknij miejsca na planie (kolejne kliknięcia dodają do zaznaczenia).</p>
+            <ul id="sma-list" class="ucho-eventmap-list"></ul>
+            {% if can_change %}
+            <div id="sma-actions" hidden>
+                <div id="sma-block" hidden>
+                    <label>Notatka blokady <input type="text" id="sma-note" maxlength="200" placeholder="np. goście zespołu, wózek"></label>
+                    <button type="button" class="button default" data-act="block">Zablokuj wolne zaznaczone</button>
+                </div>
+                <button type="button" class="button" data-act="unblock" hidden>Odblokuj zaznaczone</button>
+                <button type="button" class="button" data-act="move" hidden>Przenieś kupującego na inne miejsce…</button>
+                <button type="button" class="button" data-act="clear">Wyczyść zaznaczenie</button>
+            </div>
+            <div id="sma-move" hidden class="ucho-eventmap-move">
+                <p><b>Przenoszenie:</b> <span id="sma-move-from"></span><br>Kliknij <b>wolne</b> miejsce docelowe na planie.</p>
+                <p id="sma-move-to"></p>
+                <label class="ucho-check"><input type="checkbox" id="sma-notify" checked> Wyślij kupującemu e-mail o zmianie miejsca</label>
+                <button type="button" class="button default" data-act="move-confirm" disabled>Przenieś</button>
+                <button type="button" class="button" data-act="move-cancel">Anuluj</button>
+            </div>
+            {% endif %}
+            <p id="sma-message" class="ucho-eventmap-message" role="status"></p>
+        </aside>
+    </div>
+
+    <h2 class="ucho-eventmap-h2">Obłożenie stolików i rzędów</h2>
+    <table class="ucho-eventmap-occ">
+        <thead><tr><th>Stolik / rząd</th><th>Sprzedaż</th><th>Miejsc</th><th>Sprzedane</th><th>Czeka na płatność</th><th>Wolne</th><th>Zablokowane</th></tr></thead>
+        <tbody>
+        {% for g in occupancy %}
+        <tr{% if g.free == g.total %} class="is-free"{% elif g.sold == g.total %} class="is-full"{% endif %}>
+            <td>{% if g.kind == "ROW" %}Rząd{% else %}Stolik{% endif %} {{ g.label }}</td>
+            <td>{{ g.sell_mode }}</td><td>{{ g.total }}</td><td>{{ g.sold }}</td><td>{{ g.held }}</td><td>{{ g.free }}</td><td>{{ g.blocked }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if can_change %}
+    <h2 class="ucho-eventmap-h2">{% if seat_map %}Zmień układ{% else %}Sprzedawaj miejsca numerowane{% endif %}</h2>
+    {% if locked_reason %}
+    <p class="ucho-muted">{{ locked_reason }}</p>
+    {% else %}
+    <p class="ucho-muted">Przypięcie tworzy niezależną kopię układu dla tego wydarzenia — późniejsza edycja układu
+        w „Planach sali” jej nie zmieni. Pojemność wydarzenia = liczba miejsc. Zmiana możliwa do pierwszej sprzedaży.</p>
+    {% if layouts %}
+    <div class="ucho-layout-grid">
+        {% for layout in layouts %}
+        <article class="ucho-layout-card{% if seat_map and seat_map.source_layout_id == layout.pk %} is-current{% endif %}">
+            <div class="ucho-layout-thumb" data-thumb="{{ layout.pk }}"></div>
+            <div class="ucho-layout-body">
+                <h3>{{ layout.name }}</h3>
+                <p class="ucho-layout-meta"><strong>{{ layout.seat_count }}</strong> miejsc · {{ layout.table_count }} stolików/rzędów</p>
+                <form method="post" class="ucho-layout-actions">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="attach">
+                    <input type="hidden" name="layout" value="{{ layout.pk }}">
+                    <button type="submit" class="button default">{% if seat_map %}Przypnij ten układ zamiast obecnego{% else %}Przypnij ten układ{% endif %}</button>
+                    <a href="{% url 'admin:seating_layout_editor' layout.pk %}" class="button" target="_blank" rel="noopener">Podgląd / edycja</a>
+                </form>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>Nie ma jeszcze układów. <a href="{% url 'admin:seating_seatinglayout_changelist' %}">Utwórz układ w „Planach sali”</a>.</p>
+    {% endif %}
+    {% if seat_map %}
+    <form method="post" class="ucho-eventmap-detach">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="detach">
+        <button type="submit" class="button">Wróć do biletów bez miejsc</button>
+    </form>
+    {% endif %}
+    {% endif %}
+    {% endif %}
+</div>
+
+{{ thumbs|json_script:"ucho-thumbs" }}
+{{ rooms|json_script:"ucho-rooms" }}
+{{ map_config|json_script:"sm-admin-config" }}
+<script src="{% static 'seating/seatmap.js' %}"></script>
+<script src="{% static 'seating/seatmap-admin.js' %}"></script>
+{% endblock %}

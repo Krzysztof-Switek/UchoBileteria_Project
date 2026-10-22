@@ -5,6 +5,8 @@ from django.contrib.auth import views as auth_views
 from django.urls import include, path
 from django.views.generic import TemplateView
 
+from apps.events import views as event_views
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path(
@@ -16,7 +18,7 @@ urlpatterns = [
     # KUP-04: linked from the public footer on every page.
     path(
         "regulamin/",
-        TemplateView.as_view(template_name="legal/regulamin.html"),
+        event_views.terms,  # versioned terms of sale, accepted with every purchase
         name="regulamin",
     ),
     path(

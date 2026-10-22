@@ -10,6 +10,9 @@ urlpatterns = [
     path("zamowienie/<uuid:order_id>/wyslij-ponownie/", views.resend_tickets,
          name="resend_tickets"),
     path("zamowienie/<uuid:order_id>/bilety.pdf", views.tickets_pdf, name="tickets_pdf"),
+    path("zamowienie/<uuid:order_id>/zmien-miejsca/", views.change_seats, name="change_seats"),
+    path("zamowienie/<uuid:order_id>/odwolanie/", views.cancellation_choice,
+         name="cancellation_choice"),
     # Demo checkout (virtual currency)
     path("kasa-demo/<uuid:order_id>/", views.demo_checkout, name="demo_checkout"),
     path("kasa-demo/<uuid:order_id>/zaplac/", views.demo_pay, name="demo_pay"),

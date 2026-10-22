@@ -1,0 +1,1075 @@
+{
+ "format": "ucho-hall-layout",
+ "version": 1,
+ "generated": "2026-10-05 15:43",
+ "source_project": "UCHO TECHNICAL MODEL (Podwórko.art / Scena Ucho)",
+ "units": {
+  "length": "m",
+  "angle": "deg"
+ },
+ "coordinate_system": {
+  "id": "VEN_CS_MAIN",
+  "origin": "Wewnętrzny narożnik sali przy bufecie — przecięcie lica ściany południowej sali (od strony zaplecza) z licem ściany wschodniej bufetu, na poziomie posadzki sali (±0,00). Punkt przy dolnym końcu schodów na antresolę / za ladą. Wszystkie punkty sali mają X ≥ 0 i Y ≥ 0.",
+  "x_axis": "lewo/prawo patrząc z widowni na scenę; +X: w prawo patrząc z widowni na scenę (= na północ, w stronę antresoli / muru płn.)",
+  "y_axis": "od widowni w kierunku tylnej ściany sceny; +Y: w kierunku tylnej ściany sceny (= na zachód)",
+  "z_axis": "wysokość od poziomu podłogi sali; Z=0 = posadzka sali",
+  "plan_orientation": "rysując z +Y do góry: scena u góry, bar na dole, ściana płd. (wejścia) po lewej"
+ },
+ "hall": {
+  "id": "VEN_ROOM_SALA_GLOWNA",
+  "name": "10 Sala główna (ze sceną 11)",
+  "data_status": "measured_partly",
+  "confidence": "probable",
+  "notes": "Obrys = przestrzeń otwarta sali: od lica ściany zachodniej (za sceną) do lica frontu lady bufetu (U=1999,5 cm w układzie rysunku), a na południe od lady (strefa 287,5 cm) do ściany wschodniej. Przy scenie (do U=540 cm) sala sięga ściany zewnętrznej północnej; dalej na wschód granicą jest wewnętrzny mur ceglany 50 cm (za nim szczelina/korytarz 72 cm z drzwiami przy końcu zachodnim i wschodnim). Pozycja końca muru (U≈540 i U≈2055 cm) — odczyt ze skali skanu, brak wymiaru. Wysokość: ściany do +5,08 (oparcie kratownic dachu), kalenica +7,08 (zewn.) — wysokość w świetle pod pasem dolnym kratownic NIEZNANA (pomiar B/D checklisty). Inwentaryzacja wymienia scenę (11) i salę (10) jako osobne pozycje — tu scena jest elementem (geometry.yaml). 2026-10-03 właściciel: podest (12, +0,17, wzdłuż muru płn. pod antresolą) został zdemontowany — w tym miejscu jest pusta przestrzeń sali; poziom posadzki po demontażu do sprawdzenia (B4). 2026-10-05 (SRC_0003, decyzja właściciela): długość sali 22,30 m (rysunek: 22,045) — lico ściany zach. przesunięte na Y=22,30; granica od strony bufetu = front blatu lady Y=2,80 (rysunek: front lady 2,65). Elementy środkowej części sali (mur wewn., antresola, słupy, otwory w ścianie płd.) pozostawione wg rysunku — położenie różnicy 0,255 m w łańcuchu wymiarów nieustalone (M30). 2026-10-05 (SRC_0006): szerokość przy posadzce 9,80 m (lico muru ceglanego, wyżej ok. 10,00); koniec baru 1,65 m od ściany płd. → przejście za koniec baru do ściany za barem ma 1,65 m (rysunek: 2,845).",
+  "outline": [
+   [
+    11.3,
+    22.3
+   ],
+   [
+    11.3,
+    17.245
+   ],
+   [
+    9.8,
+    17.245
+   ],
+   [
+    9.8,
+    2.8
+   ],
+   [
+    1.65,
+    2.8
+   ],
+   [
+    1.65,
+    0.0
+   ],
+   [
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    22.3
+   ]
+  ],
+  "floor_z": 0.0,
+  "level_id": "VEN_LEVEL_PARTER"
+ },
+ "context_rooms": [
+  {
+   "id": "VEN_ROOM_BUFET",
+   "name": "13 Bufet (strefa za ladą)",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Strefa za ladą: od frontu lady (U=1999,5) do ściany wschodniej (U=2264,5), od muru wewn. / ściany zewn. do końca lady (720,5 cm od lica muru). Nad bufetem leżą biuro (23) i VIP room (24) (+3,90) oraz wschodnie skrzydło antresoli — wysokość w świetle NIEZNANA. Narożnik przy U≈2055 — odczyt ze skali. W ścianie wschodniej drzwi 100 cm (230 cm od lica ściany zewn. płn.) do zaplecza (kuchnia 14). Rzędna +0,08 opisana w strefie za ladą; czy obejmuje też pas U 1929-1999 cm (linia na rysunku wzdłuż całej sali) — do sprawdzenia.",
+   "outline": [
+    [
+     9.8,
+     2.8
+    ],
+    [
+     9.8,
+     2.095
+    ],
+    [
+     11.28,
+     2.095
+    ],
+    [
+     11.28,
+     0.0
+    ],
+    [
+     1.65,
+     0.0
+    ],
+    [
+     1.65,
+     2.8
+    ]
+   ],
+   "floor_z": 0.08,
+   "level_id": "VEN_LEVEL_PARTER"
+  }
+ ],
+ "overhead": [
+  {
+   "id": "VEN_ROOM_ANTRESOLA",
+   "name": "22 Antresola",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Antresola wzdłuż ściany północnej i wschodniej (opis 3.8): konstrukcja stalowa, podciągi I180, słupy stalowe Ø150 mm, częściowo oparta na murze ceglanym 50 cm; posadzka sklejka wodoodporna 2x20 mm; balustrada stalowa z profili 50 mm (wysokość NIEZNANA). Pas płn. 90 cm (od 3,20 do 6,95 m od lica ściany zach.), część głęboka 403 cm od lica ściany zewn. płn. (6,95-16,20 m), skrzydło wschodnie szer. 268 cm do ściany biura / VIP roomu, sięga 883 cm od lica ściany zewn. płn. (wejście ze schodów). Rozbieżność: koniec części głębokiej wg A-3 = 16,20 m od lica ściany zach. (60+320+375+925), na A-2 linia przerywana krawędzi antresoli odczytana ze skali ≈16,33 m — przyjęto A-3, do pomiaru. Wysokość pod kratownicami dachu NIEZNANA. 2026-10-05 (SRC_0003): prześwit posadzka sali ±0,00 → spód belek antresoli = 2,50 m (miejsce pomiaru nieopisane). Rzędna posadzki antresoli +2,88 (A-4) pozostawiona: 2,50 + I180 (0,18) + sklejka 2x20 mm = ok. 2,72 — różnica ok. 0,16 m do wyjaśnienia (inne warstwy posadzki? inna wysokość belek? pomiar w miejscu po podeście +0,17?) — M10. 2026-10-05 (SRC_0004): antresola NIE wchodzi nad scenę. Pas przy ścianie zewn. płn. istnieje, ale kończy się na tej samej linii co część głęboka: 2,40 m przed krawędzią sceny → Y=15,30. Wg A-3 część głęboka kończyła się na Y=15,095, a pas 90 cm (X 10,40–11,30) sięgał do Y=18,845 — oba zastąpione pomiarem.",
+   "outline": [
+    [
+     11.3,
+     15.3
+    ],
+    [
+     11.3,
+     3.165
+    ],
+    [
+     2.47,
+     3.165
+    ],
+    [
+     2.47,
+     5.845
+    ],
+    [
+     7.27,
+     5.845
+    ],
+    [
+     7.27,
+     15.3
+    ]
+   ],
+   "floor_z": 2.88,
+   "level_id": "VEN_LEVEL_ANTRESOLA",
+   "kind": "room_above"
+  },
+  {
+   "id": "VEN_ROOM_POM_TECH_23",
+   "name": "23 Biuro (nad bufetem)",
+   "data_status": "drawing_2005",
+   "confidence": "probable",
+   "notes": "2026-10-03 właściciel: obecnie BIURO (w inwentaryzacji 2005 „pom. techniczne 23”). ID bez zmian. Wymiary 3,09 x 5,04 m z rysunku; położenie (lico zachodnie U≈1956 cm) odczytane ze skali prawej połowy rzutu antresoli — niska pewność rejestracji arkuszy. Ścianki g-k (opis 3.10).",
+   "outline": [
+    [
+     11.3,
+     3.085
+    ],
+    [
+     11.3,
+     -0.015
+    ],
+    [
+     6.26,
+     -0.015
+    ],
+    [
+     6.26,
+     3.085
+    ]
+   ],
+   "floor_z": 3.9,
+   "level_id": "VEN_LEVEL_POM_TECHNICZNE",
+   "kind": "room_above"
+  },
+  {
+   "id": "VEN_ROOM_POM_TECH_24",
+   "name": "24 VIP room (nad bufetem)",
+   "data_status": "drawing_2005",
+   "confidence": "probable",
+   "notes": "2026-10-03 właściciel: obecnie VIP ROOM (w inwentaryzacji 2005 „pom. techniczne 24”). ID bez zmian. Wymiary 3,09 x 5,24 m z rysunku; położenie odczytane ze skali (jak pom. 23). Między 23 i 24 przejście ok. 1 m ze schodkami (rzędna +3,90).",
+   "outline": [
+    [
+     5.24,
+     3.085
+    ],
+    [
+     5.24,
+     -0.015
+    ],
+    [
+     0.0,
+     -0.015
+    ],
+    [
+     0.0,
+     3.085
+    ]
+   ],
+   "floor_z": 3.9,
+   "level_id": "VEN_LEVEL_POM_TECHNICZNE",
+   "kind": "room_above"
+  },
+  {
+   "id": "VEN_PLATFORM_DJ",
+   "name": "Stanowisko D.J. (rzut antresoli)",
+   "data_status": "drawing_2005",
+   "confidence": "probable",
+   "notes": "Narysowane na rzucie antresoli w narożniku płd.-zach. (nad schodkami sceny / przejściem do 09), poza obrysem antresoli 22. Obrys (ok. 2,15 x 2,44 m) odczytany ze skali — brak wymiarów. Poziom posadzki i konstrukcja NIEZNANE. Czy stanowisko nadal istnieje — do potwierdzenia. 2026-10-05: przesunięte o +0,255 m w Y razem ze ścianą zach. (długość sali wg SRC_0003).",
+   "type": "platform",
+   "dimensions": {
+    "width": null,
+    "depth": null,
+    "height": null
+   },
+   "geometry": {
+    "shape": "polygon",
+    "points": [
+     [
+      2.44,
+      22.3
+     ],
+     [
+      2.44,
+      20.15
+     ],
+     [
+      0.0,
+      20.15
+     ],
+     [
+      0.0,
+      22.3
+     ]
+    ],
+    "z_base": null,
+    "height": null
+   },
+   "kind": "platform_above"
+  },
+  {
+   "id": "VEN_CEILING_POD_ANTRESOLA",
+   "name": "Spód konstrukcji antresoli (prześwit nad posadzką sali)",
+   "data_status": "measured",
+   "confidence": "probable",
+   "notes": "z_base = spód belek antresoli nad posadzką sali (pomiar w jednym, nieopisanym miejscu). Obrys = obrys VEN_ROOM_ANTRESOLA (przy zmianie antresoli zaktualizować oba). Nad bufetem obrys obejmuje też skrzydło wsch. — prześwit tam nie mierzony.",
+   "type": "ceiling",
+   "dimensions": {},
+   "geometry": {
+    "shape": "polygon",
+    "points": [
+     [
+      11.3,
+      15.3
+     ],
+     [
+      11.3,
+      3.165
+     ],
+     [
+      2.47,
+      3.165
+     ],
+     [
+      2.47,
+      5.845
+     ],
+     [
+      7.27,
+      5.845
+     ],
+     [
+      7.27,
+      15.3
+     ]
+    ],
+    "z_base": 2.5,
+    "height": null
+   },
+   "kind": "structure_underside",
+   "clearance_m": 2.5
+  }
+ ],
+ "walls": [
+  {
+   "id": "VEN_WALL_ZEWN_PLN",
+   "name": "Ściana zewnętrzna północna (sala)",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Mur ceramiczny 50 cm + styropian 10 cm (opis 3.1). height = rzędna +5,08 z przekroju (wierzch muru / oparcie dachu) — interpretacja, do pomiaru.",
+   "type": "wall",
+   "dimensions": {
+    "thickness": 0.6,
+    "height": 5.08
+   },
+   "geometry": {
+    "shape": "polygon",
+    "points": [
+     [
+      11.9,
+      22.9
+     ],
+     [
+      11.9,
+      -0.605
+     ],
+     [
+      11.3,
+      -0.605
+     ],
+     [
+      11.3,
+      22.9
+     ]
+    ],
+    "z_base": 0.0,
+    "height": 5.08
+   }
+  },
+  {
+   "id": "VEN_WALL_ZEWN_ZACH",
+   "name": "Ściana zewnętrzna zachodnia (za sceną)",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Odcinek przy sali (do lica zewn. ściany płd. sali). Grubość 60 cm z opisu (50 + 10 ocieplenie), położenie lica wewn. zgodne ze skalą rysunku. 2026-10-05: lico wewn. przesunięte z Y=22,045 (SRC_0001) na Y=22,30 (SRC_0003, decyzja właściciela).",
+   "type": "wall",
+   "dimensions": {
+    "thickness": 0.6,
+    "height": null
+   },
+   "geometry": {
+    "shape": "polygon",
+    "points": [
+     [
+      11.9,
+      22.9
+     ],
+     [
+      11.9,
+      22.3
+     ],
+     [
+      -0.5,
+      22.3
+     ],
+     [
+      -0.5,
+      22.9
+     ]
+    ],
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_WALL_MUR_WEWN_PLN",
+   "name": "Mur ceglany wewnętrzny północny (pod antresolą)",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Mur 50 cm z cegły pełnej, odsunięty 72 cm od ściany zewn.; częściowo podpiera antresolę (opis 3.8). Końce muru (U≈540 i ≈2055 cm) odczytane ze skali; przy obu końcach drzwi do szczeliny 72 cm. 2026-10-05 (SRC_0006): lico wewn. przy posadzce X=9,80 (rysunek: 10,08); wyżej ok. 10,00 — mur nieregularny, u podstawy grubszy. Lico zewn. (10,58) i końce muru nadal wg rysunku, więc grubość przy posadzce wychodzi ok. 0,78 m — thickness ustawione na UNKNOWN. Zmierzono w jednym miejscu (Y≈9); przy barze słup BAR_1 (X 9,85–10,00) wypada na linii muru — na zdjęciu IMG_5462 mur zdaje się kończyć przed barem (koniec muru M32).",
+   "type": "wall",
+   "dimensions": {
+    "thickness": null,
+    "height": null
+   },
+   "geometry": {
+    "shape": "polygon",
+    "points": [
+     [
+      10.58,
+      17.245
+     ],
+     [
+      10.58,
+      2.095
+     ],
+     [
+      9.8,
+      2.095
+     ],
+     [
+      9.8,
+      17.245
+     ]
+    ],
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_WALL_SALA_PLD",
+   "name": "Ściana południowa sali (od strony zaplecza)",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "W ścianie otwory do zaplecza (03 korytarz, 09 dostawa) — nie zdigitalizowane w wersji 1. 2026-10-05: łańcuch A-2 wzdłuż tej ściany (25|180|706|240|94|100|860) zamyka się na 22,05 m, pomiar SRC_0003 daje 22,30 m. Przesunięto tylko drzwi backstage (25 cm od ściany zach.); otwory do garderoby i korytarza 03 bez zmian — w którym odcinku jest różnica 0,255 m, nieustalone (M30).",
+   "type": "wall",
+   "dimensions": {
+    "thickness": 0.5,
+    "height": null
+   },
+   "geometry": {
+    "shape": "polygon",
+    "points": [
+     [
+      0.0,
+      22.3
+     ],
+     [
+      0.0,
+      0.0
+     ],
+     [
+      -0.5,
+      0.0
+     ],
+     [
+      -0.5,
+      22.3
+     ]
+    ],
+    "z_base": 0.0,
+    "height": null
+   }
+  }
+ ],
+ "entrances": [
+  {
+   "id": "VEN_DOOR_BACKSTAGE_SALA",
+   "name": "Drzwi backstage → sala (dwuskrzydłowe, 180 cm)",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Skrzydła otwierane do pom. 09 (wg rysunku). Tuż przy płd.-zach. narożniku sceny.",
+   "type": "door",
+   "dimensions": {
+    "width": 1.8,
+    "height": null,
+    "clear_width": null
+   },
+   "geometry": {
+    "shape": "polygon",
+    "points": [
+     [
+      0.0,
+      22.05
+     ],
+     [
+      0.0,
+      20.25
+     ],
+     [
+      -0.5,
+      20.25
+     ],
+     [
+      -0.5,
+      22.05
+     ]
+    ],
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_OPENING_SALA_GARDEROBA",
+   "name": "Otwór sala → garderoba (240 cm)",
+   "data_status": "drawing_2005",
+   "confidence": "probable",
+   "notes": "Otwór/przejście w ścianie płd. sali do garderoby (08). Czy jest zamykany (drzwi/kurtyna) — do sprawdzenia.",
+   "type": "opening",
+   "dimensions": {
+    "width": 2.4,
+    "height": null
+   },
+   "geometry": {
+    "shape": "polygon",
+    "points": [
+     [
+      0.0,
+      12.935
+     ],
+     [
+      0.0,
+      10.535
+     ],
+     [
+      -0.5,
+      10.535
+     ],
+     [
+      -0.5,
+      12.935
+     ]
+    ],
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_OPENING_SALA_KORYTARZ",
+   "name": "Otwór sala → korytarz 03 (100 cm)",
+   "data_status": "drawing_2005",
+   "confidence": "probable",
+   "notes": "Przejście z sali do korytarza 03 (toalety, wejście główne).",
+   "type": "opening",
+   "dimensions": {
+    "width": 1.0,
+    "height": null
+   },
+   "geometry": {
+    "shape": "polygon",
+    "points": [
+     [
+      0.0,
+      9.595
+     ],
+     [
+      0.0,
+      8.595
+     ],
+     [
+      -0.5,
+      8.595
+     ],
+     [
+      -0.5,
+      9.595
+     ]
+    ],
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_DOOR_BUFET_ZAPLECZE",
+   "name": "Drzwi bufet → zaplecze baru (100 cm)",
+   "data_status": "drawing_2005",
+   "confidence": "probable",
+   "notes": "Próg: bufet +0,08 → zaplecze +0,26 (różnica 18 cm wg rzędnych z rysunku) — do sprawdzenia.",
+   "type": "door",
+   "dimensions": {
+    "width": 1.0,
+    "height": null,
+    "clear_width": null
+   },
+   "geometry": {
+    "shape": "polygon",
+    "points": [
+     [
+      8.98,
+      0.0
+     ],
+     [
+      8.98,
+      -0.535
+     ],
+     [
+      7.98,
+      -0.535
+     ],
+     [
+      7.98,
+      0.0
+     ]
+    ],
+    "z_base": 0.0,
+    "height": null
+   }
+  }
+ ],
+ "columns": [
+  {
+   "id": "VEN_COLUMN_ANT_A1",
+   "name": "Słup stalowy Ø150 — oś płn. antresoli nr 1",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Środek odczytany ze skali skanu (U=818, V=402 cm w układzie rysunku; ±5 cm) — brak wymiaru na rysunku. Średnica 150 mm z opisu 3.1/3.8. Wysokość do spodu konstrukcji antresoli NIEZNANA. 2026-10-05 (SRC_0004): środek przeniesiony z [7.88, 14.465] (skala rysunku) na [7.835, 14.925] — wyliczony z lic (pomiar właściciela) przy Ø0,15 z rysunku. 2026-10-05 (SRC_0006): X 7,835 → 7,555 — lico muru ceglanego przy posadzce na X=9,80 (nie 10,08), 2,17 m od lica muru.",
+   "type": "column",
+   "dimensions": {
+    "diameter": 0.15
+   },
+   "geometry": {
+    "shape": "circle",
+    "center": [
+     7.555,
+     14.925
+    ],
+    "diameter": 0.15,
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_COLUMN_ANT_A2",
+   "name": "Słup stalowy Ø150 — oś płn. antresoli nr 2",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Środek odczytany ze skali skanu (U=1061, V=401 cm w układzie rysunku; ±5 cm) — brak wymiaru na rysunku. Średnica 150 mm z opisu 3.1/3.8. Wysokość do spodu konstrukcji antresoli NIEZNANA. 2026-10-05 (SRC_0004): środek przeniesiony z [7.89, 12.035] (skala rysunku) na [7.835, 12.645] — wyliczony z lic (pomiar właściciela) przy Ø0,15 z rysunku. 2026-10-05 (SRC_0006): X 7,835 → 7,555 — lico muru ceglanego przy posadzce na X=9,80 (nie 10,08), 2,17 m od lica muru.",
+   "type": "column",
+   "dimensions": {
+    "diameter": 0.15
+   },
+   "geometry": {
+    "shape": "circle",
+    "center": [
+     7.555,
+     12.645
+    ],
+    "diameter": 0.15,
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_COLUMN_ANT_A3",
+   "name": "Słup stalowy Ø150 — oś płn. antresoli nr 3",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Środek odczytany ze skali skanu (U=1303, V=401 cm w układzie rysunku; ±5 cm) — brak wymiaru na rysunku. Średnica 150 mm z opisu 3.1/3.8. Wysokość do spodu konstrukcji antresoli NIEZNANA. 2026-10-05 (SRC_0004): środek przeniesiony z [7.89, 9.615] (skala rysunku) na [7.835, 10.365] — wyliczony z lic (pomiar właściciela) przy Ø0,15 z rysunku. 2026-10-05 (SRC_0006): X 7,835 → 7,555 — lico muru ceglanego przy posadzce na X=9,80 (nie 10,08), 2,17 m od lica muru.",
+   "type": "column",
+   "dimensions": {
+    "diameter": 0.15
+   },
+   "geometry": {
+    "shape": "circle",
+    "center": [
+     7.555,
+     10.365
+    ],
+    "diameter": 0.15,
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_COLUMN_ANT_A4",
+   "name": "Słup stalowy Ø150 — oś płn. antresoli nr 4",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Środek odczytany ze skali skanu (U=1540, V=401 cm w układzie rysunku; ±5 cm) — brak wymiaru na rysunku. Średnica 150 mm z opisu 3.1/3.8. Wysokość do spodu konstrukcji antresoli NIEZNANA. 2026-10-05 (SRC_0004): środek przeniesiony z [7.89, 7.245] (skala rysunku) na [7.835, 8.085] — wyliczony z lic (pomiar właściciela) przy Ø0,15 z rysunku. 2026-10-05 (SRC_0006): X 7,835 → 7,555 — lico muru ceglanego przy posadzce na X=9,80 (nie 10,08), 2,17 m od lica muru.",
+   "type": "column",
+   "dimensions": {
+    "diameter": 0.15
+   },
+   "geometry": {
+    "shape": "circle",
+    "center": [
+     7.555,
+     8.085
+    ],
+    "diameter": 0.15,
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_COLUMN_ANT_A5",
+   "name": "Słup stalowy Ø150 — narożnik osi płn./wsch. antresoli",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Środek odczytany ze skali skanu (U=1780, V=404 cm w układzie rysunku; ±5 cm) — brak wymiaru na rysunku. Średnica 150 mm z opisu 3.1/3.8. Wysokość do spodu konstrukcji antresoli NIEZNANA. 2026-10-05 (SRC_0004): środek przeniesiony z [7.86, 4.845] (skala rysunku) na [7.835, 5.805] — wyliczony z lic (pomiar właściciela) przy Ø0,15 z rysunku. UWAGA: wg rysunku narożny słup leżał w linii słupów B2/B3 (Y=4,845); po pomiarze jest 0,96 m dalej — położenie B2/B3 (nadal wg rysunku) do sprawdzenia (M13). 2026-10-05 (SRC_0006): X 7,835 → 7,555 — lico muru ceglanego przy posadzce na X=9,80 (nie 10,08), 2,17 m od lica muru. Kontrola: B2/B3 (w tej samej linii wg właściciela) wychodzą na Y=5,695 — różnica 0,11 m (łańcuch 5 odcinków od sceny).",
+   "type": "column",
+   "dimensions": {
+    "diameter": 0.15
+   },
+   "geometry": {
+    "shape": "circle",
+    "center": [
+     7.555,
+     5.805
+    ],
+    "diameter": 0.15,
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_COLUMN_ANT_B2",
+   "name": "Słup stalowy Ø150 — oś zach. skrzydła wsch. nr 2",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Środek odczytany ze skali skanu (U=1780, V=672 cm w układzie rysunku; ±5 cm) — brak wymiaru na rysunku. Średnica 150 mm z opisu 3.1/3.8. Wysokość do spodu konstrukcji antresoli NIEZNANA. 2026-10-05 (SRC_0006): środek przeniesiony z [5.18, 4.845] (skala rysunku) na [6.165, 5.695] — z pomiaru lic przy Ø0,15.",
+   "type": "column",
+   "dimensions": {
+    "diameter": 0.15
+   },
+   "geometry": {
+    "shape": "circle",
+    "center": [
+     6.165,
+     5.695
+    ],
+    "diameter": 0.15,
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_COLUMN_ANT_B3",
+   "name": "Słup stalowy Ø150 — oś zach. skrzydła wsch. nr 3",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Środek odczytany ze skali skanu (U=1780, V=938 cm w układzie rysunku; ±5 cm) — brak wymiaru na rysunku. Średnica 150 mm z opisu 3.1/3.8. Wysokość do spodu konstrukcji antresoli NIEZNANA. 2026-10-05 (SRC_0006): środek przeniesiony z [2.52, 4.845] (skala rysunku) na [2.405, 5.695] — z pomiaru lic przy Ø0,15.",
+   "type": "column",
+   "dimensions": {
+    "diameter": 0.15
+   },
+   "geometry": {
+    "shape": "circle",
+    "center": [
+     2.405,
+     5.695
+    ],
+    "diameter": 0.15,
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_COLUMN_SCH_N",
+   "name": "Słup stalowy Ø150 — schody — narożnik płn.-wsch. biegu",
+   "data_status": "drawing_2005",
+   "confidence": "probable",
+   "notes": "Środek odczytany ze skali skanu (U=1802, V=1026 cm w układzie rysunku; ±5 cm) — brak wymiaru na rysunku. Średnica 150 mm z opisu 3.1/3.8. Wysokość do spodu konstrukcji antresoli NIEZNANA.",
+   "type": "column",
+   "dimensions": {
+    "diameter": 0.15
+   },
+   "geometry": {
+    "shape": "circle",
+    "center": [
+     1.64,
+     4.625
+    ],
+    "diameter": 0.15,
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_COLUMN_SCH_S",
+   "name": "Słup stalowy Ø150 — schody — narożnik płd.-wsch. biegu",
+   "data_status": "drawing_2005",
+   "confidence": "probable",
+   "notes": "Środek odczytany ze skali skanu (U=1802, V=1186 cm w układzie rysunku; ±5 cm) — brak wymiaru na rysunku. Średnica 150 mm z opisu 3.1/3.8. Wysokość do spodu konstrukcji antresoli NIEZNANA.",
+   "type": "column",
+   "dimensions": {
+    "diameter": 0.15
+   },
+   "geometry": {
+    "shape": "circle",
+    "center": [
+     0.04,
+     4.625
+    ],
+    "diameter": 0.15,
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_COLUMN_BAR_1",
+   "name": "Słup stalowy Ø150 — przed ladą bufetu nr 1",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Środek odczytany ze skali skanu (U=1971, V=199 cm w układzie rysunku; ±5 cm) — brak wymiaru na rysunku. Średnica 150 mm z opisu 3.1/3.8. Wysokość do spodu konstrukcji antresoli NIEZNANA. 2026-10-05 (SRC_0006): środek przeniesiony z [9.91, 2.935] (skala rysunku) na [9.925, 2.935] — z pomiaru lic przy Ø0,15.",
+   "type": "column",
+   "dimensions": {
+    "diameter": 0.15
+   },
+   "geometry": {
+    "shape": "circle",
+    "center": [
+     9.925,
+     2.935
+    ],
+    "diameter": 0.15,
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_COLUMN_BAR_2",
+   "name": "Słup stalowy Ø150 — przed ladą bufetu nr 2",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Środek odczytany ze skali skanu (U=1970, V=672 cm w układzie rysunku; ±5 cm) — brak wymiaru na rysunku. Średnica 150 mm z opisu 3.1/3.8. Wysokość do spodu konstrukcji antresoli NIEZNANA. 2026-10-05 (SRC_0006): środek przeniesiony z [5.18, 2.945] (skala rysunku) na [6.165, 2.935] — z pomiaru lic przy Ø0,15.",
+   "type": "column",
+   "dimensions": {
+    "diameter": 0.15
+   },
+   "geometry": {
+    "shape": "circle",
+    "center": [
+     6.165,
+     2.935
+    ],
+    "diameter": 0.15,
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_COLUMN_BAR_3",
+   "name": "Słup stalowy Ø150 — przed ladą bufetu nr 3",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Środek odczytany ze skali skanu (U=1970, V=939 cm w układzie rysunku; ±5 cm) — brak wymiaru na rysunku. Średnica 150 mm z opisu 3.1/3.8. Wysokość do spodu konstrukcji antresoli NIEZNANA. 2026-10-05 (SRC_0006): środek przeniesiony z [2.51, 2.945] (skala rysunku) na [2.405, 2.935] — z pomiaru lic przy Ø0,15.",
+   "type": "column",
+   "dimensions": {
+    "diameter": 0.15
+   },
+   "geometry": {
+    "shape": "circle",
+    "center": [
+     2.405,
+     2.935
+    ],
+    "diameter": 0.15,
+    "z_base": 0.0,
+    "height": null
+   }
+  },
+  {
+   "id": "VEN_COLUMN_BAR_4",
+   "name": "Słup stalowy Ø150 — przy ścianie płd. nr 4",
+   "data_status": "drawing_2005",
+   "confidence": "probable",
+   "notes": "Środek odczytany ze skali skanu (U=1970, V=1187 cm w układzie rysunku; ±5 cm) — brak wymiaru na rysunku. Średnica 150 mm z opisu 3.1/3.8. Wysokość do spodu konstrukcji antresoli NIEZNANA. 2026-10-05: wg SRC_0006 wzdłuż baru stoją 3 słupy; czy ten słup (przy ścianie płd.) istnieje — do sprawdzenia (M13).",
+   "type": "column",
+   "dimensions": {
+    "diameter": 0.15
+   },
+   "geometry": {
+    "shape": "circle",
+    "center": [
+     0.03,
+     2.945
+    ],
+    "diameter": 0.15,
+    "z_base": 0.0,
+    "height": null
+   }
+  }
+ ],
+ "stage": [
+  {
+   "id": "VEN_STAGE_MAIN",
+   "name": "11 Scena +0,75",
+   "data_status": "measured_partly",
+   "confidence": "unknown",
+   "notes": "width = wzdłuż krawędzi frontowej (oś N-S), depth = od krawędzi do tylnej (zachodniej) ściany. Scena przylega do ściany zachodniej i północnej (zewnętrznej). Przy płd.-zach. narożniku sceny schodki (4 stopnie) i niewymiarowany kwadrat ok. 0,4 m (słup? — do sprawdzenia). Rysunek z 2005 r.; obecny stan sceny może być inny — pomiar sekcja C checklisty. 2026-10-03 właściciel: obecna scena RÓŻNI SIĘ od planu z 2005 r. — geometria do zastąpienia pomiarem/zdjęciami (confidence obniżone do unknown; wartości pozostawione tylko jako punkt wyjścia). 2026-10-05 (SRC_0003): głębokość 4,50 m (było 3,40 wg 2005), scena przy ścianie zach. → front Y=17,80. Fosa: barierki 5,00 m od ściany za sceną (Y=17,30), czyli 0,50 m przed frontem sceny; barierek nie modelujemy jako elementu budynku. Szerokość (9,75) i wysokość (+0,75) nadal z 2005 r. — do pomiaru (M02, M04). 2026-10-05 korekta (SRC_0004): głębokość 4,60 m → front Y=17,70; fosa 0,40 m (barierki Y=17,30). Antresola NIE wchodzi nad scenę — jej krawędź 2,40 m przed frontem sceny (Y=15,30). 2026-10-05 (SRC_0005): obrys = część UŻYTKOWA sceny, szer. 9,00 m od X=1,37 (1,37 m od ściany płd.) do X=10,37 (było 1,55–11,30 wg 2005). Poza nią fragment, na którym stoi nagłośnienie — nie modelowany (właściciel: bez znaczenia na tym etapie); pas X 10,37–11,30 przy ścianie płn. nieopisany. Wysokość +0,75 nadal z 2005 r. (M04). Na scenie kolumna DJ (VEN_COLUMN_DJ), schody VEN_STAIR_SCENA. 2026-10-05 (SRC_0006): barierki fosy na całej szerokości sceny, demontowalne.",
+   "type": "stage",
+   "dimensions": {
+    "width": 9.0,
+    "depth": 4.6,
+    "height": 0.75
+   },
+   "geometry": {
+    "shape": "polygon",
+    "points": [
+     [
+      10.37,
+      22.3
+     ],
+     [
+      10.37,
+      17.7
+     ],
+     [
+      1.37,
+      17.7
+     ],
+     [
+      1.37,
+      22.3
+     ]
+    ],
+    "z_base": 0.0,
+    "height": 0.75
+   }
+  }
+ ],
+ "stairs": [
+  {
+   "id": "VEN_STAIR_ANTRESOLA_1",
+   "name": "Schody na antresolę — bieg 1 (14 stopni 16/25)",
+   "data_status": "drawing_2005",
+   "confidence": "probable",
+   "notes": "Bieg wzdłuż ściany płd. sali, wejście od zachodu (U≈1478 cm), wznosi się na wschód do spocznika. Stalowe z dwuteowników 80 (opis 3.9). height = 14 x 0,16 = 2,24 m (wyliczone z opisu stopni). Początek biegu odczytany ze skali (13 x 25 = 325 cm zgodne z rysunkiem).",
+   "type": "stair",
+   "dimensions": {
+    "width": 1.72,
+    "rise": 0.16,
+    "going": 0.25,
+    "steps": 14.0
+   },
+   "geometry": {
+    "shape": "polygon",
+    "points": [
+     [
+      1.72,
+      7.865
+     ],
+     [
+      1.72,
+      4.635
+     ],
+     [
+      0.0,
+      4.635
+     ],
+     [
+      0.0,
+      7.865
+     ]
+    ],
+    "z_base": 0.0,
+    "height": 2.24
+   }
+  },
+  {
+   "id": "VEN_STAIR_ANTRESOLA_2",
+   "name": "Schody na antresolę — bieg 2 (4 stopnie 16/25)",
+   "data_status": "drawing_2005",
+   "confidence": "probable",
+   "notes": "Ze spocznika na północ, na skrzydło wschodnie antresoli (+2,88).",
+   "type": "stair",
+   "dimensions": {
+    "width": 1.8,
+    "rise": 0.16,
+    "going": 0.25,
+    "steps": 4.0
+   },
+   "geometry": {
+    "shape": "polygon",
+    "points": [
+     [
+      2.47,
+      4.635
+     ],
+     [
+      2.47,
+      2.835
+     ],
+     [
+      1.72,
+      2.835
+     ],
+     [
+      1.72,
+      4.635
+     ]
+    ],
+    "z_base": 2.24,
+    "height": 0.64
+   }
+  }
+ ],
+ "platforms": [
+  {
+   "id": "VEN_PLATFORM_SPOCZNIK",
+   "name": "Spocznik schodów na antresolę (+2,24)",
+   "data_status": "drawing_2005",
+   "confidence": "probable",
+   "notes": "Spocznik z blachy nierdzewnej ryflowanej (opis 3.9). Rzędna wyliczona (14 x 0,16), nie opisana.",
+   "type": "platform",
+   "dimensions": {
+    "width": 1.8,
+    "depth": 1.72,
+    "height": 2.24
+   },
+   "geometry": {
+    "shape": "polygon",
+    "points": [
+     [
+      1.72,
+      4.635
+     ],
+     [
+      1.72,
+      2.835
+     ],
+     [
+      0.0,
+      2.835
+     ],
+     [
+      0.0,
+      4.635
+     ]
+    ],
+    "z_base": 0.0,
+    "height": 2.24
+   }
+  }
+ ],
+ "fixtures": [
+  {
+   "id": "VEN_BAR_COUNTER",
+   "name": "Lada bufetu (13)",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Front lady wymiarowany (U=1999,5 cm), lico tylne (≈0,40 m głębokości) odczytane ze skali — głębokość i wysokość lady NIEZNANE. Przebieg lady z 2005 r. — do weryfikacji na miejscu. 2026-10-05 (SRC_0003): front BLATU na Y=2,80 (wg rysunku 2005 front lady Y=2,65). Obrys = blat; czy różnica 0,15 m to nawis blatu, czy przebudowa lady — nieustalone (M21). Lico tylne nadal ze skali. 2026-10-05 (SRC_0006): koniec płd. lady X=1,65 (rysunek: 2,845) → przejście 1,65 m przy ścianie płd. Słupy BAR_1..3 (lico Y=2,86) stoją 0,17 m od lady → front korpusu ok. Y=2,69, blat (2,80) wystaje ok. 0,11. Koniec płn. (X=10,08) nadal wg rysunku — do sprawdzenia razem z końcem muru (M32).",
+   "type": "other",
+   "dimensions": {
+    "length": 7.205,
+    "depth": null,
+    "height": null
+   },
+   "geometry": {
+    "shape": "polygon",
+    "points": [
+     [
+      10.08,
+      2.8
+     ],
+     [
+      10.08,
+      2.245
+     ],
+     [
+      1.65,
+      2.245
+     ],
+     [
+      1.65,
+      2.8
+     ]
+    ],
+    "z_base": 0.0,
+    "height": null
+   }
+  }
+ ],
+ "barrier": [
+  {
+   "id": "VEN_BARIERKI_FOSA",
+   "name": "Barierki fosy przed sceną (demontowalne)",
+   "data_status": "measured",
+   "confidence": "probable",
+   "notes": "Linia barierek Y = 22,30 − 5,00 = 17,30 (zgodne z 2,80 + 14,50). Zasięg X = szerokość użytkowa sceny (1,37–10,37) — „na całej szerokości sceny”; zakończenia boczne nie mierzone. Fosa 0,40 m do frontu sceny. Wyposażenie demontowalne, nie element konstrukcyjny.",
+   "type": "other",
+   "dimensions": {
+    "height": null
+   },
+   "geometry": {
+    "shape": "polyline",
+    "points": [
+     [
+      1.37,
+      17.3
+     ],
+     [
+      10.37,
+      17.3
+     ]
+    ]
+   }
+  }
+ ],
+ "unknown_geometry": [
+  {
+   "id": "VEN_COLUMN_DJ",
+   "name": "Kolumna na narożniku stanowiska DJ (czarny walec na scenie, płd.-zach.)",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Kolumna podpierająca narożnik stanowiska DJ (VEN_PLATFORM_DJ); stoi na scenie / przy jej płd. krawędzi. Lico od strony ściany płd. na X=1,82; od ściany za sceną (Y=22,30) 1,76 m → Y=20,54 (jeśli do lica). Średnica NIEZNANA (na zdjęciach wyraźnie grubsza niż słupy antresoli Ø150; obudowa czarna) — bez niej nie da się wyznaczyć środka, stąd geometry: UNKNOWN. Odpowiada prawdopodobnie kwadratowi ~0,4 m z rysunku 2005 (obecnie obudowany walcem?). Wysokość / połączenie z konstrukcją DJ — do ustalenia.",
+   "type": "column",
+   "dimensions": {
+    "diameter": null
+   }
+  },
+  {
+   "id": "VEN_STAIR_SCENA",
+   "name": "Schody na scenę (płd.-zach., przy kolumnie DJ)",
+   "data_status": "measured_partly",
+   "confidence": "probable",
+   "notes": "Położenie (prawdopodobnie w przejściu 1,37 m między sceną a ścianą płd., przy drzwiach backstage) i kierunek biegu do potwierdzenia; liczba i wysokość stopni NIEZNANE (w 2005 r.: 4 stopnie).",
+   "type": "stair",
+   "dimensions": {
+    "width": 0.95,
+    "rise": null,
+    "going": null,
+    "steps": null
+   }
+  }
+ ]
+}

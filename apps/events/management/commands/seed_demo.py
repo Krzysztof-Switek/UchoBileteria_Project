@@ -19,7 +19,7 @@ class Command(BaseCommand):
             defaults={
                 "title": "Testowy koncert UCHO",
                 "description": "Wydarzenie testowe do przeklikania trybu demo.",
-                "venue_name": "Klub UCHO",
+                "venue_name": "Podwórko Art / Scena Ucho",
                 "start_at": now + timedelta(days=14),
                 "end_at": now + timedelta(days=14, hours=5),
                 "sales_start_at": now - timedelta(hours=1),

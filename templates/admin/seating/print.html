@@ -1,0 +1,88 @@
+{% load static %}<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan sali — {{ heading }}</title>
+<link rel="stylesheet" href="{% static 'seating/seatmap.css' %}">
+<style>
+    /* Printable plan for managers (06.10.2026): always light, A4 landscape,
+       the browser's print dialog saves it as PDF. */
+    :root { color-scheme: light; }
+    body { margin: 0; background: #fff; color: #0c1220; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Arial, sans-serif; }
+    .pp-page { max-width: 1100px; margin: 0 auto; padding: 18px 20px; }
+    .pp-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+    .pp-bar button, .pp-bar a { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid #c8cdd8; background: #fff; color: #0c1220; text-decoration: none; cursor: pointer; }
+    .pp-bar button { background: #2f6fed; border-color: #2f6fed; color: #fff; font-weight: 700; }
+    .pp-bar span { color: #5b6475; font-size: 13px; }
+    .pp-head { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; border-bottom: 2px solid #0c1220; padding-bottom: 6px; }
+    .pp-head h1 { font-size: 22px; margin: 0; }
+    .pp-head .pp-sub { color: #3b4456; }
+    .pp-head .pp-date { color: #5b6475; font-size: 12px; white-space: nowrap; }
+    .pp-facts { margin: 8px 0 10px; display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 13px; }
+    .pp-facts b { font-size: 15px; }
+    .pp-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--c); margin-right: 5px; vertical-align: -1px; }
+    .pp-dot.is-full { background: var(--c); }
+    .pp-notes { margin: 0 0 10px; padding-left: 18px; font-size: 13px; color: #3b4456; }
+    #pp-map .sm-canvas { height: 640px; border-color: #c8cdd8; }
+    #pp-map .sm-zoom { display: none; }
+    .sm-root { --sm-bg: #f6f7fb; --sm-surface: #fff; --sm-fg: #0c1220; --sm-muted: #5b6475; --sm-line: #c8cdd8; }
+    @media print {
+        @page { size: A4 landscape; margin: 8mm; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .pp-bar { display: none; }
+        .pp-page { max-width: none; padding: 0; }
+        #pp-map .sm-canvas { height: 150mm; border: 0.3mm solid #999; }
+    }
+</style>
+</head>
+<body>
+<div class="pp-page">
+    <div class="pp-bar">
+        <button type="button" onclick="window.print()">Drukuj / zapisz PDF</button>
+        <a href="{{ back_url }}">← Wróć</a>
+        <span>W oknie drukowania wybierz drukarkę albo „Zapisz jako PDF”; orientacja pozioma ustawi się sama.</span>
+    </div>
+    <div class="pp-head">
+        <div>
+            <h1>{{ heading }}</h1>
+            <div class="pp-sub">{{ subheading }}</div>
+        </div>
+        <div class="pp-date">Wydrukowano {{ generated_at|date:"d.m.Y H:i" }}</div>
+    </div>
+    <div class="pp-facts">
+        <span><b>{{ seat_count }}</b> miejsc</span>
+        {% if summary.tables %}<span><b>{{ summary.tables }}</b> stolików</span>{% endif %}
+        {% if summary.rows %}<span><b>{{ summary.rows }}</b> rzędów</span>{% endif %}
+        {% if counts %}
+        <span><i class="pp-dot" style="--c:#16a34a"></i>wolne: <b>{{ counts.AVAILABLE }}</b></span>
+        <span><i class="pp-dot is-full" style="--c:#8b909a"></i>sprzedane: <b>{{ counts.SOLD }}</b></span>
+        {% if counts.HELD %}<span><i class="pp-dot" style="--c:#d97706"></i>czeka na płatność: <b>{{ counts.HELD }}</b></span>{% endif %}
+        {% if counts.BLOCKED %}<span><i class="pp-dot" style="--c:#7c3aed"></i>zablokowane: <b>{{ counts.BLOCKED }}</b></span>{% endif %}
+        {% endif %}
+    </div>
+    {% if summary.notes or description %}
+    <ul class="pp-notes">
+        {% for note in summary.notes %}<li>{{ note }}</li>{% endfor %}
+        {% if description %}<li>{{ description }}</li>{% endif %}
+    </ul>
+    {% endif %}
+    <div id="pp-map"></div>
+</div>
+{{ config|json_script:"pp-config" }}
+<script src="{% static 'seating/seatmap.js' %}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const config = JSON.parse(document.getElementById("pp-config").textContent);
+    const hasStates = Object.keys(config.states).length > 0;
+    const map = new UchoSeatMap.SeatMap(document.getElementById("pp-map"), {
+        mode: hasStates ? "admin" : "preview", room: config.room, layout: config.layout,
+        states: config.states, orientation: "left",
+    });
+    // the paper is a different size than the screen — fit the whole hall again
+    window.addEventListener("beforeprint", () => map.fit());
+    window.addEventListener("afterprint", () => map.fit());
+});
+</script>
+</body>
+</html>

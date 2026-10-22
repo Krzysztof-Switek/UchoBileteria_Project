@@ -20,6 +20,7 @@
         <div>
             <span class="font-mono font-bold tracking-widest">{{ ticket.short_code }}</span>
             <span class="text-zinc-500 ml-2">{{ ticket.buyer_email }}</span>
+            {% if ticket.seat %}<span class="ml-2 font-bold">{{ ticket.seat.label }}</span>{% endif %}
             <span class="ml-2 text-sm px-2 py-0.5 rounded
                 {% if ticket.status == 'ISSUED' %}bg-emerald-900 text-emerald-300
                 {% elif ticket.status == 'CHECKED_IN' %}bg-amber-900 text-amber-300

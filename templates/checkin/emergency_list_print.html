@@ -6,13 +6,32 @@
 
 {% block content %}
 <style>
-    /* Print-specific density: the screen view can afford Tailwind's normal
-       text-sm, but on paper this is the ONLY thing on the page — bigger,
-       high-contrast rows read faster under gate-line pressure than a dense
-       spreadsheet-style table would. */
+    /* Alternating rows (05.10.2026): the list is used in an emergency, often
+       in poor light — every other row shaded so the eye stays on the line. */
+    .door-list-row:nth-child(even) { background: var(--surface-2); }
+    .door-print-head { display: none; }
+
+    /* Print: black on white, shading forced to print, compact rows so a
+       500-ticket list is a dozen pages, not fifty; the column header repeats
+       on every page. */
     @media print {
-        .door-list-row { font-size: 15px; }
-        .door-list-email { font-size: 16px; }
+        @page { size: A4 portrait; margin: 9mm 9mm 10mm; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        html, body, .door-list { background: #fff !important; }
+        .door-list { border: 0 !important; padding: 0 !important; }
+        .door-print-head {
+            display: flex; justify-content: space-between; align-items: baseline; gap: 8mm;
+            font-size: 10pt; border-bottom: 2px solid #000; padding-bottom: 1.5mm; margin-bottom: 1mm;
+        }
+        .door-print-head b { font-size: 13pt; }
+        .door-list table { color: #000 !important; }
+        .door-list thead tr { border-bottom: 1.5px solid #000 !important; }
+        .door-list th { color: #000 !important; font-size: 9pt; padding-top: 1mm !important; padding-bottom: 1mm !important; }
+        .door-list-row { font-size: 11.5pt; break-inside: avoid; border-bottom: 0.3mm solid #999 !important; }
+        .door-list-row td { padding-top: 0.9mm !important; padding-bottom: 0.9mm !important; line-height: 1.2; color: #000 !important; }
+        .door-list-row:nth-child(even) { background: #d6d6d6 !important; }
+        .door-list-email { font-size: 12.5pt; }
+        .door-list-box { vertical-align: middle; width: 4.4mm !important; height: 4.4mm !important; border: 0.5mm solid #000 !important; background: #fff; }
     }
 </style>
 
@@ -20,11 +39,21 @@
     <div>
         <h1 class="text-xl font-bold">{{ event.title }} — lista awaryjna</h1>
         <p class="text-quiet text-sm mt-1">
-            Użyj tej listy tylko, jeśli skaner nie działa. Posortowana wg e-maila —
+            Użyj tej listy tylko, jeśli skaner nie działa. Posortowana alfabetycznie wg e-maila —
             zapytaj gościa o adres, znajdź go na liście, zaznacz wejście długopisem.
         </p>
     </div>
-    <div class="flex gap-2">
+    <div class="flex gap-2 items-center flex-wrap">
+        {% if other_events|length > 1 %}
+        <label class="text-sm text-quiet">Wydarzenie:
+            <select class="input-theme rounded-lg px-2 py-2 ml-1"
+                    onchange="if (this.value) window.location.href = this.value">
+                {% for e in other_events %}
+                <option value="{% url 'checkin:emergency_list_print' e.pk %}"{% if e.pk == event.pk %} selected{% endif %}>{{ e.start_at|date:"d.m.y" }} · {{ e.title }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        {% endif %}
         <button type="button" onclick="window.print()" class="btn-primary font-bold rounded-lg px-4 py-2">Drukuj</button>
         <a href="{% url 'checkin:scanner' event.id %}" class="input-theme rounded-lg px-4 py-2">&larr; Wróć do skanera</a>
     </div>
@@ -33,8 +62,12 @@
 <input type="search" id="door-list-filter" placeholder="Filtruj po e-mailu lub kodzie biletu…"
        class="no-print input-theme w-full px-3 py-2 rounded-lg mb-4">
 
-<div class="card p-4">
-    <div class="flex items-center justify-between text-sm text-quiet mb-3">
+<div class="door-list card p-4">
+    <div class="door-print-head">
+        <span><b>{{ event.title }}</b> · {{ event.start_at|date:"d.m.Y H:i" }}</span>
+        <span>Lista awaryjna · {{ tickets|length }} bil. · stan {{ generated_at|date:"d.m.Y H:i" }}</span>
+    </div>
+    <div class="no-print flex items-center justify-between text-sm text-quiet mb-3">
         <span>{{ event.title }} &middot; {{ event.start_at|date:"j E Y, H:i" }}</span>
         <span id="door-list-count">{{ tickets|length }} aktywnych biletów</span>
     </div>
@@ -42,20 +75,20 @@
     <table class="w-full border-collapse">
         <thead>
             <tr class="text-left text-xs uppercase tracking-wide text-muted border-b-theme">
-                <th class="py-2 pr-2">E-mail</th>
+                <th class="py-2 pl-2 pr-2">E-mail</th>
                 <th class="py-2 px-2">Kod biletu</th>
-                <th class="py-2 px-2">Pula</th>
-                <th class="py-2 pl-2 text-center">Wejście</th>
+                <th class="py-2 px-2">{% if event.is_seated %}Miejsce{% else %}Pula{% endif %}</th>
+                <th class="py-2 pl-2 pr-2 text-center">Wejście</th>
             </tr>
         </thead>
         <tbody>
             {% for ticket in tickets %}
-            <tr class="door-list-row border-b-theme" data-search="{{ ticket.buyer_email|lower }} {{ ticket.short_code|lower }}">
-                <td class="door-list-email py-2.5 pr-2 font-semibold">{{ ticket.buyer_email }}</td>
+            <tr class="door-list-row border-b-theme" data-search="{{ ticket.buyer_email|lower }} {{ ticket.short_code|lower }}{% if ticket.seat %} {{ ticket.seat.label|lower }}{% endif %}">
+                <td class="door-list-email py-2.5 pl-2 pr-2 font-semibold">{{ ticket.buyer_email }}</td>
                 <td class="py-2.5 px-2 font-mono">{{ ticket.short_code }}</td>
-                <td class="py-2.5 px-2 text-quiet">{{ ticket.pool.name|default:"—" }}</td>
-                <td class="py-2.5 pl-2 text-center">
-                    <span style="display:inline-block;width:18px;height:18px;border:2px solid currentColor;border-radius:4px;"></span>
+                <td class="py-2.5 px-2 text-quiet">{% if ticket.seat %}<b>{{ ticket.seat.label }}</b>{% else %}{{ ticket.pool.name|default:"—" }}{% endif %}</td>
+                <td class="py-2.5 pl-2 pr-2 text-center">
+                    <span class="door-list-box" style="display:inline-block;width:18px;height:18px;border:2px solid currentColor;border-radius:4px;"></span>
                 </td>
             </tr>
             {% endfor %}

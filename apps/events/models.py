@@ -24,6 +24,11 @@ class EventStatus(models.TextChoices):
     FINISHED = "FINISHED", "Zakończone"
 
 
+class SeatingMode(models.TextChoices):
+    GENERAL = "GENERAL", "Bilety bez miejsc"
+    SEATED = "SEATED", "Miejsca numerowane"
+
+
 class EffectiveEventStatus:
     """Computed sales statuses, superset of EventStatus values."""
 
@@ -42,7 +47,7 @@ class Event(models.Model):
     # Fixed real-world venue — this club runs one room, so the value is a
     # default rather than a per-event admin field (see EventAdmin.get_fieldsets).
     venue_name = models.CharField(
-        "nazwa miejsca", max_length=200, default="Podwórko.art / Scena UCHO"
+        "nazwa miejsca", max_length=200, default="Podwórko Art / Scena Ucho"
     )
     venue_address = models.CharField(
         "adres", max_length=300, blank=True, default="ul. Świętego Piotra 2, 81-347 Gdynia"
@@ -61,6 +66,11 @@ class Event(models.Model):
     )
     max_tickets_per_order = models.PositiveSmallIntegerField(
         "maks. biletów na zamówienie", default=10
+    )
+    # SEATED: capacity_total = seats on the attached seat map that are not
+    # blocked (apps.seating keeps it in step) and buyers pick seats on a map.
+    seating_mode = models.CharField(
+        "sprzedaż", max_length=10, choices=SeatingMode.choices, default=SeatingMode.GENERAL
     )
     calendar_event_id = models.CharField(
         verbose_name="ID w Kalendarzu Google",
@@ -81,6 +91,19 @@ class Event(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="events_updated",
+    )
+    # Cancellation (06.10.2026): buyers get an e-mail; with a new date of the
+    # same show they choose "keep my tickets for the new date" or "refund";
+    # no answer by the deadline = automatic refund (apps/orders/cancellation.py).
+    cancelled_at = models.DateTimeField("odwołano", null=True, blank=True)
+    cancellation_reason = models.TextField("powód odwołania (dla kupujących)", blank=True)
+    replacement_event = models.ForeignKey(
+        "self", verbose_name="nowy termin", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="replaces",
+    )
+    decision_deadline = models.DateTimeField(
+        "termin decyzji kupujących", null=True, blank=True,
+        help_text="Do kiedy kupujący wybiera nowy termin albo zwrot; potem zwrot automatyczny.",
     )
 
     class Meta:
@@ -133,6 +156,10 @@ class Event(models.Model):
     @property
     def tickets_left(self) -> int:
         return self.capacity_total - self.sold_total
+
+    @property
+    def is_seated(self) -> bool:
+        return self.seating_mode == SeatingMode.SEATED
 
     def effective_status(self, now=None) -> str:
         """Sales status computed from stored status, dates and counters."""

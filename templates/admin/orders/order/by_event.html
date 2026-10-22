@@ -2,13 +2,17 @@
 
 {% block breadcrumbs %}
 <div class="breadcrumbs">
-    <a href="{% url 'admin:index' %}">Strona główna</a> &rsaquo; Wybierz wydarzenie
+    <a href="{% url 'admin:index' %}">Strona główna</a> &rsaquo; {% if mode_label %}{{ mode_label }} &rsaquo; {% endif %}Wybierz wydarzenie
 </div>
 {% endblock %}
 
 {% block content %}
 <div id="content-main" class="ucho-by-event">
+    {% if mode_label %}
+    <p class="ucho-by-event-mode">Kliknij wydarzenie, aby otworzyć: <strong>{{ mode_label }}</strong>.</p>
+    {% endif %}
     <form method="get" class="ucho-by-event-filters">
+        {% if mode %}<input type="hidden" name="widok" value="{{ mode }}">{% endif %}
         <input type="search" name="q" value="{{ params.q }}" placeholder="Nazwa wydarzenia…" autofocus>
         <select name="rok" aria-label="Rok">
             <option value="">Rok</option>
@@ -27,7 +31,7 @@
             <input type="checkbox" name="puste" value="1"{% if show_empty %} checked{% endif %}> także bez aktywności
         </label>
         <button type="submit" class="button default">Szukaj</button>
-        <a href="{% url 'admin:orders_by_event' %}" class="ucho-by-event-reset">Wyczyść</a>
+        <a href="{% url 'admin:orders_by_event' %}{% if mode %}?widok={{ mode }}{% endif %}" class="ucho-by-event-reset">Wyczyść</a>
     </form>
 
     {% if unassigned_log %}
@@ -48,27 +52,27 @@
                     <th class="num">Bilety (wejścia)</th>
                     <th class="num">E-maile</th>
                     <th class="num">Dziennik płatności</th>
-                    <th class="num">Dziennik zdarzeń</th>
+                    {% if perms.auditlog.view_auditlog %}<th class="num">Dziennik zdarzeń</th>{% endif %}
                     <th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for row in rows %}
-                <tr>
-                    <td><a href="{% url 'admin:events_event_change' row.event.pk %}">{{ row.event.title }}</a></td>
+                <tr{% if row.is_nearest %} class="is-nearest"{% endif %}>
+                    <td><a href="{{ row.target_url }}">{{ row.event.title }}</a>{% if row.is_nearest %} <span class="ucho-badge ucho-badge-nearest">najbliższe</span>{% endif %}</td>
                     <td>{{ row.start }}</td>
                     <td class="num">{{ row.orders }}</td>
                     <td class="num">{{ row.paid }}</td>
                     <td class="num">{{ row.tickets }} ({{ row.checked_in }})</td>
                     <td class="num">{{ row.emails }}{% if row.emails_failed %} <span class="ucho-by-event-failed">({{ row.emails_failed }} z błędem)</span>{% endif %}</td>
                     <td class="num">{{ row.log }}</td>
-                    <td class="num">{{ row.audit }}</td>
+                    {% if perms.auditlog.view_auditlog %}<td class="num">{{ row.audit }}</td>{% endif %}
                     <td class="ucho-by-event-links">
                         <a href="{% url 'admin:orders_order_changelist' %}?event__id__exact={{ row.event.pk }}">Zamówienia</a>
                         <a href="{% url 'admin:tickets_ticket_changelist' %}?event__id__exact={{ row.event.pk }}">Bilety</a>
                         <a href="{% url 'admin:tickets_emailoutbox_changelist' %}?order__event__id__exact={{ row.event.pk }}">E-maile</a>
                         <a href="{% url 'admin:orders_paymentevent_changelist' %}?order__event__id__exact={{ row.event.pk }}">Dziennik płatności</a>
-                        <a href="{% url 'admin:auditlog_auditlog_changelist' %}?event__id__exact={{ row.event.pk }}">Dziennik zdarzeń</a>
+                        {% if perms.auditlog.view_auditlog %}<a href="{% url 'admin:auditlog_auditlog_changelist' %}?event__id__exact={{ row.event.pk }}">Dziennik zdarzeń</a>{% endif %}
                         <a href="{% url 'reports:event_report' row.event.pk %}?tryb={% if is_demo %}demo{% else %}live{% endif %}">Raport</a>
                     </td>
                 </tr>
@@ -85,9 +89,9 @@
         <a href="{% url 'admin:tickets_ticket_changelist' %}?wszystkie=1">wszystkie bilety</a> ·
         <a href="{% url 'admin:tickets_emailoutbox_changelist' %}?wszystkie=1">wszystkie e-maile</a>{% if unassigned_emails %} ·
         <a href="{% url 'admin:tickets_emailoutbox_changelist' %}?order__isnull=True">e-maile bez zamówienia ({{ unassigned_emails }})</a>{% endif %} ·
-        <a href="{% url 'admin:orders_paymentevent_changelist' %}?wszystkie=1">cały dziennik płatności</a> ·
+        <a href="{% url 'admin:orders_paymentevent_changelist' %}?wszystkie=1">cały dziennik płatności</a>{% if perms.auditlog.view_auditlog %} ·
         <a href="{% url 'admin:auditlog_auditlog_changelist' %}?wszystkie=1">cały dziennik zdarzeń</a>{% if unassigned_audit %} ·
-        <a href="{% url 'admin:auditlog_auditlog_changelist' %}?event__isnull=True">zdarzenia niezwiązane z wydarzeniem ({{ unassigned_audit }})</a>{% endif %}.
+        <a href="{% url 'admin:auditlog_auditlog_changelist' %}?event__isnull=True">zdarzenia niezwiązane z wydarzeniem ({{ unassigned_audit }})</a>{% endif %}{% endif %}.
         Raporty zbiorcze (miesiące, kwartały, lata): <a href="{% url 'reports:dashboard' %}">raporty okresowe</a>.
     </p>
 </div>

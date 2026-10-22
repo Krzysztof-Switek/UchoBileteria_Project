@@ -29,7 +29,7 @@ ROLE_PERMISSIONS: dict[str, list[tuple[str, str]] | str] = {
 # members lose that group and need a new role assigned by an admin.
 RETIRED_ROLES = {"EVENT_MANAGER": "MANAGER", "SALES_MANAGER": None, "READ_ONLY": None}
 
-OUR_APPS = ["events", "orders", "tickets", "auditlog"]
+OUR_APPS = ["events", "orders", "tickets", "auditlog", "seating"]
 
 # Withheld from MANAGER: PaymentConfig flips DEMO -> LIVE (real money). The
 # admin also limits it to superusers outright (PaymentConfigAdmin); the active
@@ -37,6 +37,13 @@ OUR_APPS = ["events", "orders", "tickets", "auditlog"]
 PAYMENT_MODE_PERMISSIONS = [
     "add_paymentconfig", "change_paymentconfig", "delete_paymentconfig", "view_paymentconfig",
 ]
+# The hall ("Ustawienia sali"): since 2026-10-06 the manager edits it and saves
+# hall versions (sound desk on the floor, a catwalk); only deleting a hall
+# version stays with ADMIN.
+ROOM_EDIT_PERMISSIONS = ["delete_room"]
+# And the audit log ("Dziennik zdarzeń") — a control tool for the admin: who
+# changed what, including the manager / AI agent itself. (2026-10-05)
+AUDIT_PERMISSIONS = ["add_auditlog", "change_auditlog", "delete_auditlog", "view_auditlog"]
 
 
 def setup_roles() -> list[str]:
@@ -49,7 +56,9 @@ def setup_roles() -> list[str]:
         elif spec == "__all_but_payment_mode__":
             perms = Permission.objects.filter(
                 content_type__app_label__in=OUR_APPS
-            ).exclude(codename__in=PAYMENT_MODE_PERMISSIONS)
+            ).exclude(
+                codename__in=PAYMENT_MODE_PERMISSIONS + ROOM_EDIT_PERMISSIONS + AUDIT_PERMISSIONS
+            )
         else:
             ids = []
             for app_label, codename in spec:

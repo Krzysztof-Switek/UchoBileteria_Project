@@ -1,0 +1,73 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'seating/seatmap.css' %}">
+{% endblock %}
+
+{% block nav-sidebar %}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Strona główna</a>
+    &rsaquo; <a href="{% url 'admin:seating_seatinglayout_changelist' %}">Plany sali</a>
+    &rsaquo; Ustawienia sali
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main" class="ucho-room-page">
+    <div class="ucho-page-actions">
+        <a href="{% url 'admin:seating_seatinglayout_changelist' %}" class="button ucho-done-btn" id="smr-done">{% if can_edit %}Zakończ — wróć do Planów sali ✓{% else %}← Wróć do Planów sali{% endif %}</a>
+    </div>
+    <div class="ucho-room-warning">
+        <strong>⚠ Ustawienia sali — stały rzut pomieszczenia.</strong>
+        Tu zmienia się to, co widać na każdym planie: ściany, scenę, bar, słupy, wejścia, antresolę.
+        Stoliki i krzesła układa się w <a href="{% url 'admin:seating_seatinglayout_changelist' %}">Planach sali</a>, nie tutaj.
+        {% if can_edit %}
+        <br>Rzut pochodzi z modelu technicznego ({{ room.source }}). Twoje zmiany zostają przy jego ponownym wczytaniu,
+        a „Przywróć jak w modelu technicznym” cofa je wszystkie. Każdy zapis trafia do dziennika zdarzeń.
+        <div class="ucho-room-unlock" id="smr-unlock-box">
+            <label class="ucho-check"><input type="checkbox" id="smr-unlock-confirm"> Wiem, że zmieniam stały rzut sali</label>
+            <button type="button" class="button" id="smr-unlock" disabled>Odblokuj edycję sali</button>
+        </div>
+        {% else %}
+        <br>Podgląd — nie masz uprawnień do zmiany rzutu sali.
+        {% endif %}
+    </div>
+
+    <div class="ucho-room-grid">
+        <div>
+            {% if can_edit %}
+            <div class="ucho-room-toolbar" data-edit-only>
+                <button type="button" class="button" data-draw="rect">▭ Narysuj prostokąt</button>
+                <button type="button" class="button" data-draw="poly">⬠ Narysuj kształt</button>
+                <button type="button" class="button default" id="smr-finish" hidden>Zakończ kształt</button>
+                <button type="button" class="button" id="smr-cancel" hidden>Anuluj rysowanie</button>
+            </div>
+            <p class="ucho-room-hint" id="smr-hint" data-edit-only></p>
+            {% endif %}
+            <div id="sm-room-map"></div>
+        </div>
+        <aside class="ucho-room-panel">
+            <h3>Ukryte elementy</h3>
+            <ul id="smr-hidden"></ul>
+            <h3>Własne elementy</h3>
+            <ul id="smr-custom"></ul>
+            <p class="ucho-muted" style="font-size:12px;margin-top:6px">Rodzaje: {% for key, label in kinds.items %}{{ label }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+            {% if can_edit %}
+            <div data-edit-only>
+                <label class="ucho-check"><input type="checkbox" id="smr-refresh" checked> Odśwież rysunek sali na mapach nadchodzących wydarzeń</label>
+                <button type="button" class="button default" id="smr-save">Zapisz ustawienia sali</button>
+                <button type="button" class="button" id="smr-reset">Przywróć jak w modelu technicznym</button>
+                <p id="smr-status" class="ucho-editor-status" role="status"></p>
+            </div>
+            {% endif %}
+        </aside>
+    </div>
+</div>
+{{ room_config|json_script:"sm-room-config" }}
+<script src="{% static 'seating/seatmap.js' %}"></script>
+<script src="{% static 'seating/seatmap-room.js' %}"></script>
+{% endblock %}

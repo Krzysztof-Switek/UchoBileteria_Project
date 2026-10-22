@@ -1,6 +1,7 @@
 {% extends "base_public.html" %}
 
-{% block title %}{{ event.title }} — Klub UCHO{% endblock %}
+{% block title %}{{ event.title }} — {{ club_name }}{% endblock %}
+{% block main_width %}{% if seat_config %}max-w-6xl{% else %}max-w-3xl{% endif %}{% endblock %}
 
 {% block content %}
 <a href="{% url 'events:list' %}" class="link-quiet text-sm">&larr; wszystkie wydarzenia</a>
@@ -17,7 +18,14 @@
 {% endif %}
 
 <div class="mt-8 card rounded-xl p-6">
-    {% if is_cancelled %}
+    {% if is_cancelled and event.replacement_event %}
+        <div class="text-center py-4">
+            <p class="font-semibold text-lg">Zmiana terminu</p>
+            <p class="mt-1">Wydarzenie odbędzie się <strong>{{ event.replacement_event.start_at|date:"l, j E Y, H:i" }}</strong>.</p>
+            <p class="text-muted mt-1">Jeśli masz bilet, sprawdź e-mail — potwierdzasz nowy termin albo wybierasz zwrot.</p>
+            {% if event.replacement_event.status == "PUBLISHED" %}<a href="{% url 'events:detail' event.replacement_event.slug %}" class="btn-primary inline-block mt-4 rounded-lg px-5 py-2.5 font-bold">Przejdź do nowego terminu</a>{% endif %}
+        </div>
+    {% elif is_cancelled %}
         <div class="text-center py-4">
             <div class="text-4xl leading-none">✕</div>
             <p class="text-danger font-semibold text-lg mt-2">Wydarzenie odwołane.</p>
@@ -27,18 +35,32 @@
     {% elif sales_state == "ON_SALE" and active_pool %}
         <div class="flex items-baseline justify-between flex-wrap gap-2">
             <div>
+                {% if zone_price_list %}
+                <span class="text-lg font-bold">Ceny wg strefy:</span>
+                {% for z in zone_price_list %}<span class="ml-2 whitespace-nowrap"><b>{{ z.code }}</b> {{ z.price }} {{ active_pool.currency }}</span>{% endfor %}
+                <span class="text-muted ml-2">· {{ active_pool.name }}</span>
+                {% else %}
                 <span class="text-2xl font-bold">{{ active_pool.price_gross }} {{ active_pool.currency }}</span>
                 <span class="text-muted ml-2">{{ active_pool.name }}</span>
+                {% endif %}
             </div>
+            {% if seat_config %}
+            <span class="text-sm text-muted">Miejsca numerowane — wybierz je na planie sali.
+                Wolnych: {{ event.tickets_left }}</span>
+            {% else %}
             <span class="text-sm {% if active_pool.tickets_left <= 10 %}text-warning font-semibold{% else %}text-muted{% endif %}">
                 Zostało {{ active_pool.tickets_left }} z tej puli
             </span>
+            {% endif %}
         </div>
         {% if next_pool %}
         <p class="text-muted text-sm mt-1">
             Kolejna pula: {{ next_pool.name }} — {{ next_pool.price_gross }} {{ next_pool.currency }}
         </p>
         {% endif %}
+        {% if seat_config %}
+        {% include "seating/_buy_panel.html" %}
+        {% else %}
         <form method="post" action="{% url 'orders:purchase' event.slug %}" class="mt-4 space-y-3">
             {% csrf_token %}
             <div>
@@ -58,10 +80,15 @@
                 <span id="purchase-total" class="font-bold"
                       data-price="{{ active_pool_price_raw }}" data-currency="{{ active_pool.currency }}">{{ active_pool.price_gross }} {{ active_pool.currency }}</span>
             </p>
+            <label class="flex items-start gap-2 text-sm text-quiet">
+                <input type="checkbox" name="accept_terms" required class="mt-1">
+                <span>Akceptuję <a href="{% url 'regulamin' %}" target="_blank" rel="noopener" class="underline">regulamin sprzedaży biletów</a> (m.in. zasady zwrotów przy odwołaniu lub przeniesieniu wydarzenia).</span>
+            </label>
             <button type="submit" class="btn-primary font-bold rounded-lg px-6 py-3">
                 Kup bilet
             </button>
         </form>
+        {% endif %}
         {% block extra_script %}
         <script>
             document.addEventListener("DOMContentLoaded", () => {

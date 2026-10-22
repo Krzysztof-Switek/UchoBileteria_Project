@@ -1,0 +1,53 @@
+{% extends "admin/base_site.html" %}
+
+{% block nav-sidebar %}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Strona główna</a>
+    &rsaquo; <a href="{% url 'admin:events_event_changelist' %}">Wydarzenia</a>
+    &rsaquo; <a href="{% url 'admin:events_event_change' event.pk %}">{{ event.title }}</a>
+    &rsaquo; {% if event.replacement_event %}Zmiana terminu{% else %}Odwołanie{% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <p>{% if event.replacement_event %}Termin zmieniony{% else %}Odwołano{% endif %} {{ event.cancelled_at|date:"d.m.Y H:i" }}.
+       {% if event.replacement_event %}Nowy termin: <a href="{% url 'admin:events_event_change' event.replacement_event.pk %}">{{ event.replacement_event.title }}</a> — {{ event.replacement_event.start_at|date:"d.m.Y H:i" }}; decyzja kupujących do {{ event.decision_deadline|date:"d.m.Y H:i" }}, potem zwrot automatyczny.{% else %}Bez nowego terminu — zwroty dla wszystkich.{% endif %}</p>
+    <p>{% for label, n, value in counts %}<span class="ucho-cancel-count{% if value == 'REFUND_FAILED' and n %} is-alert{% endif %}">{{ label }}: <strong>{{ n }}</strong></span>{% endfor %}</p>
+    {% if awaiting and can_refund %}
+    <form method="post" class="ucho-confirm-changes ucho-refund-now">
+        {% csrf_token %}
+        <p><strong>Nie chcesz czekać do terminu decyzji?</strong> Możesz od razu zwrócić pieniądze wszystkim, którzy jeszcze nie wybrali ({{ awaiting }}) — np. gdy nowy termin też się nie odbędzie. Kupujący dostaną e-mail o zwrocie.</p>
+        <label class="ucho-check"><input type="checkbox" name="confirm" value="1"> Potwierdzam zwrot dla {{ awaiting }} czekających zamówień</label>
+        <button type="submit" class="button default">Zwróć teraz wszystkim czekającym</button>
+    </form>
+    {% endif %}
+    {% if orders %}
+    <table class="ucho-layout-events">
+        <thead><tr><th>E-mail</th><th>Zamówienie</th><th>Bilety</th><th>Kwota</th><th>Stan</th><th>Decyzja</th><th></th><th></th></tr></thead>
+        <tbody>
+        {% for o in orders %}
+            <tr>
+                <td>{{ o.buyer_email }}</td>
+                <td><a href="{% url 'admin:orders_order_change' o.pk %}">{{ o.short_id }}</a></td>
+                <td>{{ o.active_quantity }}</td>
+                <td>{{ o.kept_amount }} {{ o.currency }}</td>
+                <td>{{ o.get_cancellation_status_display }}{% if o.status == "REFUNDED" %} · zwrot potwierdzony{% endif %}</td>
+                <td>{{ o.cancellation_decided_at|date:"d.m.y H:i"|default:"—" }}</td>
+                <td>{% if can_refund and o.status == "PAID" and o.event_id == event.pk %}{% if o.cancellation_status == "AWAITING" or o.cancellation_status == "REFUND_FAILED" %}
+                    <form method="post">{% csrf_token %}<input type="hidden" name="order" value="{{ o.pk }}">
+                        <button type="submit" class="button">{% if o.cancellation_status == "REFUND_FAILED" %}Ponów zwrot{% else %}Zwróć teraz{% endif %}</button></form>
+                {% endif %}{% endif %}</td>
+                <td><a href="{% url 'admin:orders_order_evidence' o.pk %}">Historia i dowody</a></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <p class="help">Szczegóły każdego kroku (e-mail, wybór, zlecenie zwrotu, potwierdzenie operatora, błędy) — w zamówieniu i w dzienniku zdarzeń.</p>
+    {% else %}
+    <p>Nie było opłaconych zamówień.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,11 @@
+Wydarzenie odwołane — {{ event.title }}
+
+{{ event.cancellation_reason }}
+
+ZWROT: {{ order.kept_amount }} {{ order.currency }} za {{ order.active_quantity }} bil. — na kartę lub rachunek, z którego zapłacono. Osobny e-mail potwierdzi wykonanie zwrotu. Bilety tracą ważność.
+
+Bilety z tego zamówienia:
+{% for ticket in tickets %} - {{ ticket.short_code }}{% if ticket.seat %} — {{ ticket.seat.label }}{% endif %}
+{% endfor %}
+Zamówienie {{ order.short_id }} · {{ order.buyer_email }}{% if order.is_demo %} · tryb demo{% endif %}
+Zasady: regulamin sprzedaży biletów § 5–6.

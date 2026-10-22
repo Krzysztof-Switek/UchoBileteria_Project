@@ -3,6 +3,7 @@
 import csv
 
 from django.db.models import Q
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from apps.auditlog.services import log_action
@@ -93,6 +94,7 @@ def find_tickets(event: Event, query: str):
     return (
         Ticket.objects.filter(event=event)
         .filter(Q(short_code__icontains=query) | Q(buyer_email__icontains=query))
+        .select_related("seat")
         .order_by("buyer_email")
     )
 
@@ -111,9 +113,10 @@ def offline_manifest_tickets(event: Event) -> list[dict]:
             "token_hash": t.qr_token_hash,
             "buyer_email": t.buyer_email,
             "status": t.status,
+            "seat": t.seat.label if t.seat_id else "",
         }
-        for t in Ticket.objects.filter(event=event).only(
-            "short_code", "qr_token_hash", "buyer_email", "status"
+        for t in Ticket.objects.filter(event=event).select_related("seat").only(
+            "short_code", "qr_token_hash", "buyer_email", "status", "seat"
         )
     ]
 
@@ -125,8 +128,8 @@ def active_tickets_for_door_list(event: Event):
     find the person standing in front of them by asking for it."""
     return (
         Ticket.objects.filter(event=event, status=TicketStatus.ISSUED)
-        .select_related("pool")
-        .order_by("buyer_email", "short_code")
+        .select_related("pool", "seat")
+        .order_by(Lower("buyer_email"), "short_code")
     )
 
 
@@ -134,14 +137,14 @@ def write_emergency_list(event: Event, file_obj, actor=None) -> int:
     """Spec section 16: CSV with everything needed for offline entrance."""
     writer = csv.writer(file_obj)
     writer.writerow(
-        ["Wydarzenie", "Data", "Kod biletu", "E-mail kupującego", "Status",
+        ["Wydarzenie", "Data", "Kod biletu", "E-mail kupującego", "Miejsce", "Status",
          "Zamówienie", "Wejście (zaznacz ręcznie)"]
     )
     count = 0
     tickets = (
         Ticket.objects.filter(event=event)
-        .select_related("order")
-        .order_by("buyer_email", "short_code")
+        .select_related("order", "seat")
+        .order_by(Lower("buyer_email"), "short_code")
     )
     for ticket in tickets:
         writer.writerow(
@@ -150,6 +153,7 @@ def write_emergency_list(event: Event, file_obj, actor=None) -> int:
                 timezone.localtime(event.start_at).strftime("%Y-%m-%d %H:%M"),
                 ticket.short_code,
                 ticket.buyer_email,
+                ticket.seat.label if ticket.seat_id else "",
                 ticket.get_status_display(),
                 ticket.order.short_id,
                 "",

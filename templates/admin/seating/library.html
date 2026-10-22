@@ -1,0 +1,132 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'seating/seatmap.css' %}">
+{% endblock %}
+
+{# no left menu here — the page needs the width (06.10.2026) #}
+{% block nav-sidebar %}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Strona główna</a> &rsaquo; Plany sali
+</div>
+{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div id="content-main" class="ucho-layouts">
+    <div class="ucho-layouts-head">
+        <div>
+            {% if not room %}
+            <p class="errornote">Brak sali — uruchom <code>manage.py import_hall</code>, aby wczytać rzut z modelu technicznego.</p>
+            {% endif %}
+            <p class="ucho-layouts-tabs">
+                {% if show_archived %}
+                <a href="{% url 'admin:seating_seatinglayout_changelist' %}">← Aktywne układy</a> · <strong>Archiwum</strong>
+                {% else %}
+                <strong>Aktywne układy</strong>{% if archived_count %} · <a href="?archiwum=1">Archiwum ({{ archived_count }})</a>{% endif %}
+                {% endif %}
+            </p>
+        </div>
+        {% if can_add and room and not show_archived %}
+        <form method="post" action="{% url 'admin:seating_layout_new' %}" class="ucho-layouts-new">
+            {% csrf_token %}
+            <input type="text" name="name" placeholder="Nazwa nowego układu, np. Kabaret 12 stolików" maxlength="200" required>
+            {% if show_room_column %}
+            <select name="room" title="Wersja sali">
+                {% for r in room_versions %}<option value="{{ r.pk }}">{{ r.name }}</option>{% endfor %}
+            </select>
+            {% endif %}
+            <button type="submit" class="button default">+ Nowy układ</button>
+        </form>
+        {% endif %}
+    </div>
+
+    {% if layouts %}
+    <div class="ucho-layout-grid">
+        {% for layout in layouts %}
+        <article class="ucho-layout-card">
+            <a href="{% url 'admin:seating_layout_editor' layout.pk %}" class="ucho-layout-thumb" data-thumb="{{ layout.pk }}" aria-label="Otwórz {{ layout.name }}"></a>
+            <div class="ucho-layout-body">
+                <h3><a href="{% url 'admin:seating_layout_editor' layout.pk %}">{{ layout.name }}</a></h3>
+                <p class="ucho-layout-meta">
+                    <strong>{{ layout.seat_count }}</strong> miejsc{% if layout.summary.tables %} · <strong>{{ layout.summary.tables }}</strong> stolików{% endif %}{% if layout.summary.rows %} · <strong>{{ layout.summary.rows }}</strong> rzędów{% endif %}
+                    {% if show_room_column %}<br>Sala: {{ layout.room.name }}{% endif %}
+                </p>
+                {% if layout.summary.notes or layout.description %}
+                <ul class="ucho-layout-notes">
+                    {% for note in layout.summary.notes %}<li>{{ note }}</li>{% endfor %}
+                    {% if layout.description %}<li class="ucho-layout-desc">{{ layout.description }}</li>{% endif %}
+                </ul>
+                {% endif %}
+                <p class="ucho-layout-meta">
+                    {% if layout.usage %}<a href="{% url 'admin:seating_layout_events' layout.pk %}">Użyty w {{ layout.usage }} wydarzeniach</a>{% if layout.last_used %} (ostatnio {{ layout.last_used|date:"d.m.y" }}){% endif %}{% else %}Jeszcze nieużyty{% endif %}
+                    · zmieniono {{ layout.updated_at|date:"d.m.y H:i" }}{% if layout.updated_by %} · {{ layout.updated_by }}{% endif %}
+                </p>
+                <div class="ucho-layout-actions">
+                    <a href="{% url 'admin:seating_layout_editor' layout.pk %}" class="button">{% if can_change %}Edytuj{% else %}Podgląd{% endif %}</a>
+                    <a href="{% url 'admin:seating_layout_print' layout.pk %}" class="button" target="_blank" rel="noopener" title="Plan do wydruku — w oknie drukowania wybierz „Zapisz jako PDF”">Drukuj / PDF</a>
+                    {% if can_add %}
+                    <form method="post" action="{% url 'admin:seating_layout_duplicate' layout.pk %}">
+                        {% csrf_token %}<button type="submit" class="button">Duplikuj</button>
+                    </form>
+                    {% endif %}
+                    {% if can_change %}
+                    <form method="post" action="{% url 'admin:seating_layout_archive' layout.pk %}">
+                        {% csrf_token %}{% if show_archived %}<input type="hidden" name="archiwum" value="1">{% endif %}
+                        <button type="submit" class="button">{% if layout.is_archived %}Przywróć{% else %}Archiwizuj{% endif %}</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="ucho-layouts-empty">{% if show_archived %}Archiwum jest puste.{% else %}Nie ma jeszcze żadnych układów — utwórz pierwszy powyżej.{% endif %}</p>
+    {% endif %}
+
+    {% if room_versions and not show_archived %}
+    <section class="ucho-room-versions">
+        <h2>Wersje sali</h2>
+        <p class="ucho-layout-meta">Rzut pomieszczenia: ściany, scena, bar, wejścia. Osobna wersja przydaje się, gdy na części wydarzeń stoi np. realizator na parterze albo wybieg przy scenie — układ wybiera wersję sali w edytorze.</p>
+        <table class="ucho-room-versions-table">
+            {% for r in room_versions %}
+            <tr>
+                <td><strong>{{ r.name }}</strong></td>
+                <td>{{ r.layout_count }} układów</td>
+                <td><a href="{% url 'admin:seating_room' r.pk %}" class="button">{% if can_edit_room %}Edytuj salę{% else %}Podgląd{% endif %}</a></td>
+                <td>
+                    {% if can_add_room %}
+                    <form method="post" action="{% url 'admin:seating_room_copy' r.pk %}" class="ucho-room-copy">
+                        {% csrf_token %}
+                        <input type="text" name="name" maxlength="200" required placeholder="Nazwa nowej wersji, np. Sala z realizatorem na parterze">
+                        <button type="submit" class="button">+ Nowa wersja z tej sali</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </section>
+    {% endif %}
+</div>
+{{ thumbs|json_script:"ucho-thumbs" }}
+{{ rooms|json_script:"ucho-rooms" }}
+<script src="{% static 'seating/seatmap.js' %}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const thumbs = JSON.parse(document.getElementById("ucho-thumbs").textContent);
+    const rooms = JSON.parse(document.getElementById("ucho-rooms").textContent);
+    document.querySelectorAll("[data-thumb]").forEach((host) => {
+        const t = thumbs[host.dataset.thumb];
+        if (!t) return;
+        new UchoSeatMap.SeatMap(host, { mode: "preview", room: rooms[t.room], layout: t.layout });
+    });
+});
+</script>
+{% endblock %}

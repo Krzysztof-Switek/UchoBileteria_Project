@@ -28,7 +28,9 @@ def paid_order_via_purchase_flow(client, event=None, quantity=1, email="k@exampl
     if event is None:
         event = make_event()
         make_pool(event)
-    client.post(f"/kup/{event.slug}/", {"buyer_email": email, "quantity": quantity})
+    client.post(f"/kup/{event.slug}/", {
+        "accept_terms": "on", "buyer_email": email, "quantity": quantity
+    })
     order = Order.objects.latest("created_at")
     client.post(f"/kasa-demo/{order.id}/zaplac/")
     order.refresh_from_db()
@@ -239,10 +241,14 @@ class TestTicketPoolAdminHiddenFromAppList:
 
 class TestAdminNavigation:
     def test_staff_nav_present_on_index(self, admin_client_logged_in):
+        # 05.10.2026: top menu = Start, Wydarzenia, Otwórz bramkę, Dziennik (admin);
+        # Zamówienia / Bilety / Raporty are reached from the dashboard tiles.
         body = admin_client_logged_in.get("/admin/").content.decode()
-        labels = ["Start", "Wydarzenia", "Zamówienia", "Bilety", "Odprawa", "Raporty", "Dziennik"]
-        for label in labels:
-            assert label in body
+        nav = body.split('class="ucho-nav"', 1)[1].split("</nav>", 1)[0]
+        for label in ("Start", "Wydarzenia", "Otwórz bramkę", "Dziennik"):
+            assert f">{label}</a>" in nav
+        for label in ("Zamówienia", "Bilety", "Odprawa", "Raporty"):
+            assert f">{label}</a>" not in nav
 
     def test_global_search_box_present_with_keyboard_shortcut_hint(self, admin_client_logged_in):
         body = admin_client_logged_in.get("/admin/").content.decode()
@@ -373,13 +379,16 @@ class TestOpsDashboard:
     def test_add_event_tile_replaces_events_section(self, admin_client_logged_in):
         body = admin_client_logged_in.get("/admin/").content.decode()
         assert "Dodaj wydarzenie" in body
-        assert 'href="/admin/events/event/add/" class="ucho-tile"' in body
+        # primary tile since 05.10 (most used action, larger, first)
+        assert 'href="/admin/events/event/add/" class="ucho-tile is-primary"' in body
         assert "app-events" not in body  # the model-list section is gone
 
     def test_tickets_emails_and_audit_tiles_replace_sections(self, admin_client_logged_in):
         body = admin_client_logged_in.get("/admin/").content.decode()
-        # reports, orders, tickets, e-mails and the audit log go through the event picker
-        assert body.count('href="/admin/orders/order/wydarzenia/" class="ucho-tile"') == 5
+        # orders, tickets, e-mails and the audit log open the event picker in their own
+        # mode — picking an event opens that list, not the event form (05.10)
+        for mode in ("zamowienia", "bilety", "emaile", "dziennik"):
+            assert f'href="/admin/orders/order/wydarzenia/?widok={mode}" class="ucho-tile"' in body
         assert "app-tickets" not in body
         assert "app-auditlog" not in body
 
@@ -400,8 +409,18 @@ class TestOpsDashboard:
 
     def test_orders_tile_replaces_orders_section(self, admin_client_logged_in):
         body = admin_client_logged_in.get("/admin/").content.decode()
-        assert 'href="/admin/orders/order/wydarzenia/" class="ucho-tile"' in body
+        assert 'href="/admin/orders/order/wydarzenia/?widok=zamowienia" class="ucho-tile"' in body
         assert "app-orders" not in body
+
+    def test_picker_mode_links_events_to_the_tiles_list(self, admin_client_logged_in):
+        from tests.factories import make_event, make_order, make_pool
+
+        event = make_event(title="Tryb kafelka")
+        make_order(event, make_pool(event))
+        url = "/admin/orders/order/wydarzenia/?widok=bilety"
+        html = admin_client_logged_in.get(url).content.decode()
+        assert f'href="/admin/tickets/ticket/?event__id__exact={event.pk}"' in html
+        assert "Bilety — wybierz wydarzenie" in html and "najbliższe" in html
 
     def test_gate_and_reports_tiles_shown_not_inside_attention_card(self, admin_client_logged_in):
         # Daily shortcuts as tiles, not problems to fix — shown even when

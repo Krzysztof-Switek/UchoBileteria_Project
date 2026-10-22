@@ -43,6 +43,7 @@ class TicketAdmin(PerEventChangelistMixin, admin.ModelAdmin):
         "event",
         "pool",
         "order",
+        "seat",
         "buyer_email",
         "short_code",
         "qr_token_hash",

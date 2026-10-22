@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="pl">
+<body style="font-family: Arial, sans-serif; color: #111; max-width: 560px; margin: 0 auto;">
+    <h1 style="font-size: 22px;">Zmiany — {{ event.title }}</h1>
+    <p>Organizator wprowadził zmiany w wydarzeniu, na które masz bilety:</p>
+    <ul>
+        {% for c in changes %}
+        <li><strong>{{ c.label }}</strong>: <s>{{ c.old }}</s> → <strong>{{ c.new }}</strong></li>
+        {% endfor %}
+    </ul>
+    {% if note %}<p style="white-space: pre-line;">{{ note }}</p>{% endif %}
+    <p>
+        <strong>{{ event.start_at|date:"l, j E Y, H:i" }}</strong>{% if event.gates_open_at %} (wejście od {{ event.gates_open_at|date:"H:i" }}){% endif %}<br>
+        {{ event.venue_name }}{% if event.venue_address %}, {{ event.venue_address }}{% endif %}
+    </p>
+    <p>Twoje bilety pozostają ważne — kody i kody QR się nie zmieniły:</p>
+    <ul>
+        {% for ticket in tickets %}
+        <li><strong>{{ ticket.short_code }}</strong>{% if ticket.seat %} — {{ ticket.seat.label }}{% endif %}</li>
+        {% endfor %}
+    </ul>
+    <p style="color: #777; font-size: 12px;">Zamówienie {{ order.short_id }} · {{ order.buyer_email }}</p>
+</body>
+</html>

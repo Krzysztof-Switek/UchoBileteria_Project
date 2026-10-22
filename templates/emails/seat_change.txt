@@ -1,0 +1,13 @@
+Zmiana miejsca — {{ event.title }}
+
+Obsługa klubu przeniosła Cię na inne miejsce.
+Było: {{ old_label }}
+Jest: {{ new_label }}
+
+Twoje bilety (kody i QR bez zmian):
+{% for ticket in tickets %} - {{ ticket.short_code }}{% if ticket.seat %} — {{ ticket.seat.label }}{% endif %}
+{% endfor %}
+Kiedy: {{ event.start_at|date:"l, j E Y, H:i" }}
+Gdzie: {{ event.venue_name }}{% if event.venue_address %}, {{ event.venue_address }}{% endif %}
+
+Zamówienie {{ order.short_id }} · {{ order.buyer_email }}

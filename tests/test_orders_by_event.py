@@ -252,10 +252,11 @@ class TestReportsPerEvent:
         assert f"/raporty/wydarzenie/{event.pk}/" in html
         assert "raporty okresowe" in html  # aggregate reports stay reachable
 
-    def test_reports_tile_goes_to_picker(self, admin_client):
+    def test_reports_tile_goes_to_financial_report(self, admin_client):
+        # since 05.10 the tile opens the event financial report (own event picker)
         html = admin_client.get("/admin/").content.decode()
         tile = html.split("Raporty sprzedaży")[0].rsplit("<a ", 1)[1]
-        assert f'href="{PICKER}"' in tile
+        assert 'href="/raporty/finanse/"' in tile
 
     def test_event_report_links_back_to_picker(self, admin_client):
         event, _ = event_with_order()
@@ -263,9 +264,9 @@ class TestReportsPerEvent:
         assert PICKER in html
         assert "Raporty okresowe" in html
 
-    def test_nav_reports_link_goes_to_picker(self, admin_client):
-        # both navs: Django admin pages and the Tailwind staff pages (reports)
+    def test_nav_has_no_reports_menu(self, admin_client):
+        # 05.10.2026: "Raporty" removed from the top menu in both navs (the
+        # dashboard tiles lead to the reports)
         event, _ = event_with_order()
         for url in ("/admin/", f"/raporty/wydarzenie/{event.pk}/"):
-            html = admin_client.get(url).content.decode()
-            assert f'href="{PICKER}"' in html.split(">Raporty<")[0].rsplit("<a ", 1)[1], url
+            assert ">Raporty<" not in admin_client.get(url).content.decode(), url

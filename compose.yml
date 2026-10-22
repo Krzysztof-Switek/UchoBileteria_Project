@@ -43,6 +43,7 @@ services:
         python manage.py send_emails;
         python manage.py sync_calendar;
         python manage.py snapshot_emergency_lists;
+        python manage.py process_cancellations;
         sleep 60;
       done'
 

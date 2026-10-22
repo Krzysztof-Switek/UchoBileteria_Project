@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib import admin, messages
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -11,7 +13,14 @@ from apps.admin_badges import demo_badge as render_demo_badge
 from apps.admin_format import PerEventChangelistMixin, dt_column, short_dt
 
 from . import refunds
-from .models import Order, OrderStatus, PaymentConfig, PaymentEvent, PaymentEventStatus
+from .models import (
+    Order,
+    OrderRefund,
+    OrderStatus,
+    PaymentConfig,
+    PaymentEvent,
+    PaymentEventStatus,
+)
 
 ORDER_STATUS_TONES = {
     OrderStatus.CREATED: "info",
@@ -34,6 +43,21 @@ PAYMENT_EVENT_STATUS_TONES = {
 
 MONTHS_PL = ["styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec", "lipiec",
              "sierpień", "wrzesień", "październik", "listopad", "grudzień"]
+
+
+class OrderRefundInline(admin.TabularInline):
+    """History of partial refunds (selected tickets) on the order page."""
+
+    model = OrderRefund
+    extra = 0
+    can_delete = False
+    fields = ["created_at", "status", "quantity", "amount", "ticket_codes", "seat_labels",
+              "reason", "requested_by", "completed_at"]
+    readonly_fields = fields
+    verbose_name_plural = "zwroty części biletów"
+
+    def has_add_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Order)
@@ -67,11 +91,16 @@ class OrderAdmin(PerEventChangelistMixin, admin.ModelAdmin):
         "payment_session_id",
         "provider_order_id",
         "is_demo",
+        "seat_labels",
+        "seat_keys",
+        "refunded_amount",
+        "refunded_quantity",
         "created_at",
         "paid_at",
         "refunded_at",
     ]
     date_hierarchy = "created_at"
+    inlines = [OrderRefundInline]
     actions = ["refund_selected_orders"]
     change_form_template = "admin/orders/order/change_form.html"
 
@@ -106,7 +135,52 @@ class OrderAdmin(PerEventChangelistMixin, admin.ModelAdmin):
                 self.admin_site.admin_view(self.refund_view),
                 name="orders_order_refund",
             ),
+            path(
+                "<path:object_id>/zwrot-biletow/",
+                self.admin_site.admin_view(self.partial_refund_view),
+                name="orders_order_partial_refund",
+            ),
+            path(
+                "<path:object_id>/historia/",
+                self.admin_site.admin_view(self.evidence_view),
+                name="orders_order_evidence",
+            ),
         ] + super().get_urls()
+
+    def evidence_view(self, request, object_id):
+        """Printable history of one order (06.10.2026): every e-mail with its
+        exact text and send time, every decision, every message from the
+        payment operator — proof for a buyer who says nobody told them."""
+        from .cancellation import order_evidence
+
+        if not request.user.has_perm("orders.view_order"):
+            raise PermissionDenied
+        order = get_object_or_404(Order.objects.select_related("event", "moved_from_event"),
+                                  pk=object_id)
+        return render(request, "admin/orders/order/evidence.html", {
+            **self.admin_site.each_context(request),
+            "title": f"Historia zamówienia {order.short_id}",
+            "order": order,
+            "tickets": order.tickets.select_related("seat").order_by("short_code"),
+            "rows": order_evidence(order),
+            "generated_at": timezone.localtime(),
+            "opts": self.model._meta,
+        })
+
+    # Dashboard tiles open the picker "in their mode": clicking an event goes
+    # straight to that tile's list for the event, not to editing the event.
+    PICKER_VIEWS = {
+        "zamowienia": ("Zamówienia i płatności", "admin:orders_order_changelist",
+                       "event__id__exact", "orders.view_order"),
+        "platnosci": ("Dziennik płatności", "admin:orders_paymentevent_changelist",
+                      "order__event__id__exact", "orders.view_paymentevent"),
+        "bilety": ("Bilety", "admin:tickets_ticket_changelist", "event__id__exact",
+                   "tickets.view_ticket"),
+        "emaile": ("E-maile (kolejka)", "admin:tickets_emailoutbox_changelist",
+                   "order__event__id__exact", "tickets.view_emailoutbox"),
+        "dziennik": ("Dziennik zdarzeń", "admin:auditlog_auditlog_changelist",
+                     "event__id__exact", "auditlog.view_auditlog"),
+    }
 
     def by_event_view(self, request):
         """Entry point of the per-event tiles (orders, tickets, e-mails, logs):
@@ -178,6 +252,18 @@ class OrderAdmin(PerEventChangelistMixin, admin.ModelAdmin):
             .annotate(n=Count("id"))
         )
         show_empty = params.get("puste") == "1"
+        mode = params.get("widok", "")
+        if mode not in self.PICKER_VIEWS or not request.user.has_perm(self.PICKER_VIEWS[mode][3]):
+            mode = ""
+        target = None
+        if mode:
+            label, url_name, lookup, _perm = self.PICKER_VIEWS[mode]
+            target = (label, reverse(url_name), lookup)
+        from django.utils import timezone as tz
+
+        now = tz.now()
+        nearest = min(events, key=lambda e: abs((e.start_at - now).total_seconds()),
+                      default=None)
         rows = []
         for event in events.order_by("-start_at"):
             stats = order_stats.get(event.pk, {})
@@ -187,6 +273,9 @@ class OrderAdmin(PerEventChangelistMixin, admin.ModelAdmin):
                 continue
             rows.append({
                 "event": event,
+                "is_nearest": nearest is not None and event.pk == nearest.pk,
+                "target_url": (f"{target[1]}?{target[2]}={event.pk}" if target
+                               else reverse("admin:events_event_change", args=[event.pk])),
                 "start": short_dt(event.start_at),
                 "orders": stats.get("orders", 0),
                 "paid": stats.get("paid") or 0,
@@ -201,9 +290,11 @@ class OrderAdmin(PerEventChangelistMixin, admin.ModelAdmin):
         years = sorted({d.year for d in Event.objects.dates("start_at", "year")}, reverse=True)
         context = {
             **self.admin_site.each_context(request),
-            "title": "Wybierz wydarzenie",
+            "title": f"{target[0]} — wybierz wydarzenie" if target else "Wybierz wydarzenie",
+            "mode": mode,
+            "mode_label": target[0] if target else "",
             "opts": self.model._meta,
-            "rows": rows,
+            "rows": sorted(rows, key=lambda r: not r["is_nearest"]),
             "params": params,
             "years": years,
             "months": list(enumerate(MONTHS_PL, start=1)),
@@ -244,12 +335,62 @@ class OrderAdmin(PerEventChangelistMixin, admin.ModelAdmin):
             **self.admin_site.each_context(request),
             "title": f"Potwierdź zwrot zamówienia {order.short_id}",
             "orders": [order],
-            "total_amount": order.amount_gross,
-            "total_tickets": order.quantity,
+            "total_amount": order.kept_amount,
+            "total_tickets": order.active_quantity,
             "cancel_url": self._change_url(order),
             "opts": self.model._meta,
         }
         return render(request, "admin/orders/order/refund_confirm.html", context)
+
+    def partial_refund_view(self, request, object_id):
+        """Refund selected tickets of a paid order; the rest stay valid."""
+        order = get_object_or_404(Order, pk=object_id)
+        if not self.has_change_permission(request, order):
+            messages.error(request, "Brak uprawnień do zwrotu biletów.")
+            return redirect(self._change_url(order))
+        back = request.GET.get("wroc") or request.POST.get("wroc") or ""
+        back_url = back if back.startswith("/admin/") else self._change_url(order)
+        if order.status != OrderStatus.PAID:
+            messages.error(request, "Zwrócić można tylko bilety opłaconego zamówienia.")
+            return redirect(back_url)
+        tickets = refunds.refundable_tickets(order)
+        if request.method == "POST":
+            chosen = [t for t in tickets if str(t.id) in request.POST.getlist("tickets")]
+            reason = request.POST.get("reason", "").strip()
+            try:
+                result = refunds.refund_tickets(order, chosen, actor=request.user, reason=reason)
+            except ValidationError as exc:
+                messages.error(request, "; ".join(exc.messages))
+                return redirect(request.get_full_path())
+            except Exception as exc:  # noqa: BLE001 - report provider failures
+                messages.error(request, f"{order.short_id}: błąd zwrotu ({exc}).")
+                return redirect(back_url)
+            order.refresh_from_db()
+            if isinstance(result, OrderRefund):
+                state = ("zwrócone" if result.status == "SUCCEEDED"
+                         else "zlecone — czeka na potwierdzenie operatora płatności")
+                messages.success(request, f"Zwrot {result.quantity} bilet(ów), "
+                                          f"{result.amount} {order.currency}: {state}.")
+            else:
+                messages.success(request, f"Zwrócono całe zamówienie {order.short_id}.")
+            return redirect(back_url)
+
+        preselected = set(request.GET.getlist("bilet"))
+        unit = (order.amount_gross / order.quantity).quantize(Decimal("0.01"))
+        context = {
+            **self.admin_site.each_context(request),
+            "title": f"Zwrot części biletów — zamówienie {order.short_id}",
+            "order": order,
+            "tickets": tickets,
+            "preselected": preselected,
+            "unit_price": unit,
+            "unit_price_raw": str(unit),
+            "pending": order.refunds.filter(status="REQUESTED"),
+            "cancel_url": back_url,
+            "back": back if back.startswith("/admin/") else "",
+            "opts": self.model._meta,
+        }
+        return render(request, "admin/orders/order/partial_refund.html", context)
 
     def _change_url(self, order):
         return reverse("admin:orders_order_change", args=[order.pk])
@@ -287,8 +428,8 @@ class OrderAdmin(PerEventChangelistMixin, admin.ModelAdmin):
             **self.admin_site.each_context(request),
             "title": "Potwierdź zwrot zaznaczonych zamówień",
             "orders": payable,
-            "total_amount": sum((o.amount_gross for o in payable), start=0),
-            "total_tickets": sum(o.quantity for o in payable),
+            "total_amount": sum((o.kept_amount for o in payable), start=0),
+            "total_tickets": sum(o.active_quantity for o in payable),
             "action_checkbox_name": ACTION_CHECKBOX_NAME,
             "selected_ids": [o.pk for o in payable],
             "action_name": "refund_selected_orders",

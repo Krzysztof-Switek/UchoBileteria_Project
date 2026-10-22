@@ -52,7 +52,8 @@ PLANS_DIR = CLAUDE_DIR / "plans"
 SKIP_DIRS = {"__pycache__", "migrations", ".venv", "node_modules", ".git", "project_context"}
 # Trafia do osobnego CODE_INDEX.md, więc nie obciąża CONTEXT.md.
 CODE_FILES_FOR_INDEX = ("services.py", "views.py", "payments.py", "refunds.py", "sending.py",
-                        "calendar.py", "roles.py", "statemachine.py", "admin_badges.py")
+                        "calendar.py", "roles.py", "statemachine.py", "admin_badges.py",
+                        "layout.py", "hall_import.py")
 RECENT_DAYS = 21
 MAX_COMMITS = 12
 MAX_TODO_HITS = 40
@@ -87,6 +88,17 @@ WORK_RULES = """\
 
 # Mapa "zadanie → od czego zacząć". Ścieżki nieistniejące są oznaczane przy generowaniu.
 TASK_MAP = [
+    ("Planer miejsc (sala, układy stolików, miejsca numerowane)",
+     ["apps/seating/services.py", "apps/seating/layout.py", "apps/seating/admin.py",
+      "apps/seating/hall_import.py", "static/seating/", "templates/admin/seating/",
+      "templates/seating/", "sala_glowna/", "tests/test_seating.py"]),
+    ("Odwołanie wydarzenia (nowy termin / zwrot), zmiany wydarzenia ze sprzedażą",
+     ["apps/orders/cancellation.py", "apps/events/admin.py", "apps/orders/views.py",
+      "templates/admin/events/event/", "templates/orders/cancellation_choice.html",
+      "templates/emails/event_cancelled.txt", "tests/test_cancellation.py",
+      "tests/test_event_changes.py"]),
+    ("Regulamin sprzedaży (wersja, zgoda przy zakupie)",
+     ["templates/legal/regulamin.html", "apps/orders/terms.py", "apps/orders/forms.py"]),
     ("Zakup biletu / zamówienia / rezerwacja pojemności",
      ["apps/orders/services.py", "apps/orders/views.py", "apps/orders/models.py",
       "templates/orders/", "tests/test_orders.py"]),

@@ -701,3 +701,126 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .ucho-by-event-links a + a { margin-left: 14px; }
 .ucho-by-event-failed { color: var(--error-fg); font-weight: 600; }
 .ucho-by-event-all { margin-top: 12px; font-size: 0.8rem; color: var(--body-quiet-color); }
+
+/* The two everyday actions (add an event, open the gate): same size as the
+   other tiles, filled with the accent so they read first. (05.10.2026) */
+.ucho-tile.is-primary,
+.ucho-tile.is-primary:link,
+.ucho-tile.is-primary:visited {
+    border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 26%, var(--darkened-bg)),
+                color-mix(in srgb, var(--accent) 8%, var(--darkened-bg)));
+}
+.ucho-tile.is-primary .ucho-tile-icon { color: var(--body-bg); background: var(--accent); }
+
+/* Emergency list: only the title and icon in light red — catches the eye
+   when the scanner fails, without turning the tile into an alarm. (05.10.2026) */
+.ucho-tile.is-alert .ucho-tile-title { color: var(--error-fg); }
+.ucho-tile.is-alert .ucho-tile-icon {
+    color: var(--error-fg);
+    background: color-mix(in srgb, var(--error-fg) 14%, transparent);
+}
+
+/* event picker opened from a dashboard tile: nearest event first, marked */
+.ucho-by-event-mode { margin: 0 0 10px; }
+.ucho-by-event-table tr.is-nearest td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.ucho-badge-nearest { background: var(--accent); color: var(--body-bg); font-size: 11px; padding: 1px 6px; border-radius: 6px; }
+
+/* dashboard event list: explicit "Edytuj" per event (06.10.2026) */
+.ucho-dash-events-table td.ucho-dash-events-edit { width: 1%; white-space: nowrap; text-align: right; padding-left: 12px; }
+
+/* Event with sold tickets: changes wait for confirmation (06.10.2026) */
+.ucho-confirm-changes {
+    margin: 0 0 18px; padding: 14px 18px; border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--darkened-bg));
+}
+.ucho-confirm-changes h2 { margin: 0 0 8px; font-size: 1rem; background: none; color: var(--body-fg); padding: 0; }
+.ucho-confirm-changes ul { margin: 0 0 10px; padding-left: 18px; }
+.ucho-confirm-changes li { list-style: disc; line-height: 1.6; }
+.ucho-confirm-changes .help { margin: 2px 0 10px; color: var(--body-quiet-color); }
+.ucho-confirm-note { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.ucho-confirm-note textarea { width: min(640px, 100%); }
+.ucho-confirm-actions { display: flex; gap: 10px; align-items: center; }
+
+/* Cancelling an event (06.10.2026) */
+.ucho-cancel-form { display: flex; flex-direction: column; gap: 14px; max-width: 980px; }
+.ucho-cancel-form > label:not(.ucho-check), .ucho-cancel-form fieldset label:not(.ucho-check) { display: flex; flex-direction: column; gap: 4px; }
+.ucho-cancel-form fieldset { border: 1px solid var(--hairline-color); border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+.ucho-cancel-form legend { font-weight: 700; padding: 0 4px; }
+.ucho-cancel-form textarea { width: 100%; }
+.ucho-danger-btn, .ucho-danger-btn:hover { background: var(--delete-button-bg) !important; border-color: var(--delete-button-bg) !important; color: #fff !important; }
+.ucho-cancel-count { display: inline-block; margin-right: 18px; }
+.ucho-cancel-count.is-alert { color: var(--error-fg); }
+.ucho-dash-events-table td.ucho-dash-events-edit a.button,
+.ucho-dash-events-table td.ucho-dash-events-edit a.button:link,
+.ucho-dash-events-table td.ucho-dash-events-edit a.button:visited { text-decoration: none; padding: 4px 12px; }
+.ucho-cancel-form label.ucho-check { display: flex; gap: 8px; align-items: flex-start; }
+.ucho-refund-now { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; max-width: 760px; }
+
+/* Event page (06.10.2026): action bar at the top, clear "Dodaj pulę" */
+.ucho-event-topbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--hairline-color); border-radius: 12px; background: var(--darkened-bg); }
+.ucho-event-topbar .button { padding: 8px 16px; font-size: 0.85rem; }
+.ucho-event-topbar-spacer { flex: 1; }
+.ucho-event-topbar-help { margin: -6px 0 14px; font-size: 0.78rem; color: var(--body-quiet-color); }
+.ucho-danger-outline, .ucho-danger-outline:link, .ucho-danger-outline:visited { background: transparent !important; border: 1px solid var(--error-fg) !important; color: var(--error-fg) !important; }
+.ucho-danger-outline:hover { background: color-mix(in srgb, var(--error-fg) 14%, transparent) !important; }
+#pools-group .add-row { background: transparent; }
+#pools-group .add-row td { padding: 12px 8px; }
+#pools-group .add-row a.ucho-add-pool { display: inline-block; background: var(--accent) !important; color: var(--body-bg) !important; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; text-decoration: none; }
+#pools-group .add-row a.ucho-add-pool:hover { filter: brightness(1.1); }
+
+/* Cancel screen, simplified (06.10.2026) */
+.ucho-cancel-page { max-width: 980px; }
+.ucho-cancel-summary { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 4px 0 18px; }
+.ucho-cancel-summary > div { padding: 12px 18px; border-radius: 12px; border: 1px solid var(--hairline-color); background: var(--darkened-bg); display: flex; flex-direction: column; gap: 2px; min-width: 150px; }
+.ucho-cancel-summary span { font-size: 0.75rem; color: var(--body-quiet-color); }
+.ucho-cancel-summary strong { font-size: 1.4rem; }
+.ucho-cancel-step { border: 1px solid var(--hairline-color); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.ucho-cancel-step h2 { margin: 0; font-size: 1rem; background: none; color: var(--body-fg); padding: 0; }
+.ucho-cancel-step textarea { width: 100%; font: inherit; line-height: 1.5; }
+.ucho-cancel-step > .button { align-self: flex-start; }
+.ucho-cancel-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ucho-mode-card { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1px solid var(--hairline-color); border-radius: 10px; cursor: pointer; }
+.ucho-mode-card:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.ucho-mode-card input { align-self: flex-start; }
+.ucho-mode-card span { font-size: 0.8rem; color: var(--body-quiet-color); }
+.ucho-cancel-cal { border: 1px solid var(--hairline-color); border-radius: 10px; padding: 10px; }
+.ucho-cancel-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; text-transform: capitalize; }
+.ucho-cancel-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.ucho-cancel-cal-grid .cal-dow { font-size: 0.7rem; text-align: center; color: var(--body-quiet-color); }
+.ucho-cancel-cal-grid .cal-day { min-height: 62px; border: 1px solid var(--hairline-color); border-radius: 6px; padding: 3px; display: flex; flex-direction: column; gap: 2px; }
+.ucho-cancel-cal-grid .cal-day.is-today { border-color: var(--accent); }
+.ucho-cancel-cal-grid .cal-num { font-size: 0.7rem; color: var(--body-quiet-color); }
+.cal-chip { display: block; width: 100%; text-align: left; font-size: 0.68rem; line-height: 1.25; padding: 2px 4px; border-radius: 4px; border: 1px solid transparent; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: transparent; color: var(--body-fg); }
+button.cal-chip { cursor: pointer; }
+.cal-chip.is-pick { background: color-mix(in srgb, var(--accent) 22%, transparent); border-color: var(--accent); }
+.cal-chip.is-pick:hover, .cal-chip.is-chosen { background: var(--accent); color: var(--body-bg); }
+.cal-chip.is-current { background: color-mix(in srgb, var(--error-fg) 20%, transparent); border-color: var(--error-fg); }
+.cal-chip.is-other { opacity: 0.55; border-color: var(--hairline-color); }
+.ucho-cancel-cal-legend { margin: 8px 0 0; font-size: 0.72rem; color: var(--body-quiet-color); display: flex; gap: 12px; align-items: center; }
+.ucho-cancel-cal-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; border: 1px solid; }
+.ucho-cancel-cal-legend i.is-pick { background: var(--accent); border-color: var(--accent); }
+.ucho-cancel-cal-legend i.is-current { background: color-mix(in srgb, var(--error-fg) 30%, transparent); border-color: var(--error-fg); }
+.ucho-cancel-cal-legend i.is-other { border-color: var(--hairline-color); }
+.ucho-cancel-chosen { padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 8%, transparent); display: flex; flex-direction: column; gap: 6px; }
+.ucho-cancel-chosen p { margin: 0; }
+.ucho-cancel-chosen label { display: flex; flex-direction: column; gap: 4px; max-width: 260px; }
+.ucho-cancel-chosen[hidden] { display: none; }
+.ucho-cancel-cal-grid .cal-day.is-pickable { cursor: pointer; }
+.ucho-cancel-cal-grid .cal-day.is-pickable:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.ucho-cancel-cal-grid .cal-day.is-past { opacity: 0.45; }
+.ucho-cancel-cal-grid .cal-day.is-chosen-day { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1px var(--accent); }
+.ucho-cancel-cal-legend i.is-day { background: color-mix(in srgb, var(--accent) 22%, transparent); border-color: var(--accent); }
+.ucho-cancel-cal-head .button { padding: 4px 10px; }
+.ucho-pool-delete-note { color: var(--error-fg); font-size: 0.72rem; font-weight: 600; margin-top: 4px; max-width: 220px; white-space: normal; }
+
+/* Cancel screen: preview of the buyer's e-mail (06.10.2026) */
+.ucho-mail-preview { border: 1px solid var(--hairline-color); border-radius: 10px; overflow: hidden; }
+.ucho-mail-preview-head { padding: 8px 12px; font-size: 0.75rem; color: var(--body-quiet-color); background: var(--darkened-bg); border-bottom: 1px solid var(--hairline-color); }
+.ucho-mail-subject { padding: 8px 12px 0; font-weight: 700; }
+.ucho-mail-text { padding: 8px 12px; white-space: pre-line; line-height: 1.5; }
+.ucho-mail-auto { margin: 0 12px 12px; padding: 8px 12px; border: 1px dashed var(--accent); border-radius: 8px; background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.ucho-mail-auto p { margin: 4px 0; }
+.ucho-mail-auto-label { font-size: 0.72rem; color: var(--accent); font-weight: 600; margin-bottom: 4px; }
+.ucho-mail-button { display: inline-block; background: #2f6fed; color: #fff; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; }

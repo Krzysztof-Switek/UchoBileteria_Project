@@ -21,7 +21,9 @@ def paid_demo_order(client, event=None, quantity=2, email="k@example.com"):
     if event is None:
         event = make_event()
         make_pool(event)
-    client.post(f"/kup/{event.slug}/", {"buyer_email": email, "quantity": quantity})
+    client.post(f"/kup/{event.slug}/", {
+        "accept_terms": "on", "buyer_email": email, "quantity": quantity
+    })
     order = Order.objects.latest("created_at")
     client.post(f"/kasa-demo/{order.id}/zaplac/")
     order.refresh_from_db()

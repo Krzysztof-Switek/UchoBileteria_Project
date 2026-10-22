@@ -1,0 +1,170 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'seating/seatmap.css' %}">
+{% endblock %}
+
+{% block nav-sidebar %}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Strona główna</a>
+    &rsaquo; <a href="{% url 'admin:seating_seatinglayout_changelist' %}">Plany sali</a>
+    &rsaquo; {{ layout.name }}
+</div>
+{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div id="content-main" class="ucho-editor-page">
+    <div class="ucho-editor-head">
+        <label class="ucho-editor-name">Nazwa układu
+            <input type="text" id="sme-name" value="{{ layout.name }}" maxlength="200" {% if not can_change %}disabled{% endif %}>
+        </label>
+        <label class="ucho-editor-desc">Opis (opcjonalnie)
+            <input type="text" id="sme-desc" value="{{ layout.description }}" maxlength="2000" placeholder="np. na koncerty jazzowe, 4 loże przy scenie" {% if not can_change %}disabled{% endif %}>
+        </label>
+        {% if room_versions|length > 1 %}
+        <label class="ucho-editor-room">Wersja sali
+            <select id="sme-room" {% if not can_change %}disabled{% endif %}>
+                {% for r in room_versions %}<option value="{{ r.pk }}"{% if r.pk == layout.room_id %} selected{% endif %}>{{ r.name }}</option>{% endfor %}
+            </select>
+        </label>
+        {% endif %}
+        <div class="ucho-editor-actions">
+            <a href="{% url 'admin:seating_layout_print' layout.pk %}" class="button" target="_blank" rel="noopener">Drukuj / PDF</a>
+            <span id="sme-save-status" class="ucho-editor-status" role="status"></span>
+            {% if can_change %}<button type="button" class="button default" id="sme-save">Zapisz</button>{% endif %}
+            {% if editor_config.can_add %}<button type="button" class="button" id="sme-save-as">Zapisz jako nowy układ…</button>{% endif %}
+            <a href="{% url 'admin:seating_seatinglayout_changelist' %}" class="button ucho-done-btn" id="sme-done"
+               title="Zapisuje niezapisane zmiany i wraca do listy układów">{% if can_change %}Zakończ edycję ✓{% else %}Zamknij podgląd{% endif %}</a>
+        </div>
+    </div>
+    {% if usage %}
+    <p class="ucho-editor-usage">Ten układ jest przypięty do {{ usage|length }} wydarzeń
+        ({% for e in usage|slice:":4" %}{{ e.title }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if usage|length > 4 %}…{% endif %}).
+        Zapis zmieni plan sali na wydarzeniach, które dopiero się odbędą — przed zapisem pokażę ich listę do potwierdzenia.</p>
+    {% endif %}
+    {% if layout.based_on %}<p class="ucho-editor-usage">Skopiowany z: <a href="{% url 'admin:seating_layout_editor' layout.based_on.pk %}">{{ layout.based_on.name }}</a></p>{% endif %}
+    <div id="sm-editor-host"></div>
+</div>
+{{ editor_config|json_script:"sm-editor-config" }}
+<script src="{% static 'seating/seatmap.js' %}"></script>
+<script src="{% static 'seating/seatmap-editor.js' %}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const config = JSON.parse(document.getElementById("sm-editor-config").textContent);
+    const status = document.getElementById("sme-save-status");
+    const nameInput = document.getElementById("sme-name");
+    const descInput = document.getElementById("sme-desc");
+    const saveBtn = document.getElementById("sme-save");
+    config.onDirty = (dirty) => {
+        if (saveBtn) saveBtn.classList.toggle("is-dirty", dirty);
+        if (dirty) {
+            status.textContent = "Niezapisane zmiany";
+            status.className = "ucho-editor-status is-dirty";
+        }
+    };
+    const editor = new UchoSeatEditor(document.getElementById("sm-editor-host"), config);
+    [nameInput, descInput].forEach((input) => input && input.addEventListener("input", () => {
+        editor.dirty = true;
+        config.onDirty(true);
+    }));
+
+    // Save; if the layout is used by upcoming events the server first returns
+    // their list — ask in an in-page dialog, then save with confirm.
+    async function saveLayout() {
+        const body = {
+            name: nameInput.value, description: descInput.value, data: editor.payload(),
+            version: config.version,
+        };
+        let result = await editor.post(config.urls.data, body);
+        if (result.confirm) {
+            if (!(await editor.confirmPropagation(result.events))) {
+                return { ok: false, cancelled: true };
+            }
+            result = await editor.post(config.urls.data, Object.assign(body, { confirm: true }));
+        }
+        if (result.ok) config.version = result.version;
+        return result;
+    }
+
+    function showErrors(result) {
+        if (result.cancelled) {
+            status.textContent = "Nie zapisano (anulowano) — zmiany są nadal w edytorze.";
+            status.className = "ucho-editor-status is-dirty";
+            return;
+        }
+        const list = (result.errors || []).map((e) => e.message).join(" · ");
+        status.textContent = "Nie zapisano: " + (list || "błąd");
+        status.className = "ucho-editor-status is-error";
+    }
+
+    if (saveBtn) saveBtn.addEventListener("click", async () => {
+        status.textContent = "Zapisywanie…";
+        status.className = "ucho-editor-status";
+        const result = await saveLayout();
+        if (!result.ok) return showErrors(result);
+        editor.dirty = false;
+        saveBtn.classList.remove("is-dirty");
+        const w = (result.warnings || []).length;
+        status.textContent = result.message + (w ? " Ostrzeżenia: " + w + " (lista pod planem)." : "");
+        status.className = "ucho-editor-status is-ok";
+    });
+
+    // "Zakończ edycję": save what is unsaved, then back to the library
+    document.getElementById("sme-done").addEventListener("click", async (e) => {
+        if (!editor.dirty || !saveBtn) return; // nothing to save -> plain link
+        e.preventDefault();
+        status.textContent = "Zapisywanie przed wyjściem…";
+        const href = e.currentTarget.href;
+        const result = await saveLayout();
+        if (!result.ok) return showErrors(result); // stay — nothing gets lost
+        editor.dirty = false;
+        window.location.href = href;
+    });
+
+    // another hall version (e.g. with the sound desk on the floor): seats stay,
+    // upcoming events using the layout are redrawn after confirmation
+    const roomSelect = document.getElementById("sme-room");
+    if (roomSelect) {
+        const original = roomSelect.value;
+        roomSelect.addEventListener("change", async () => {
+            if (editor.dirty) {
+                roomSelect.value = original;
+                status.textContent = "Najpierw zapisz zmiany w układzie, potem zmień wersję sali.";
+                status.className = "ucho-editor-status is-error";
+                return;
+            }
+            const body = { room: roomSelect.value };
+            let result = await editor.post(config.urls.room, body);
+            if (result.confirm) {
+                if (!(await editor.confirmPropagation(result.events))) {
+                    roomSelect.value = original;
+                    return;
+                }
+                result = await editor.post(config.urls.room, Object.assign(body, { confirm: true }));
+            }
+            if (!result.ok) {
+                roomSelect.value = original;
+                return showErrors(result);
+            }
+            window.location.reload();
+        });
+    }
+
+    const saveAs = document.getElementById("sme-save-as");
+    if (saveAs) saveAs.addEventListener("click", async () => {
+        const name = await editor.askName("Zapisz jako nowy układ", nameInput.value + " (wersja 2)");
+        if (!name) return;
+        const result = await editor.post(config.urls.save_as, { name, data: editor.payload() });
+        if (!result.ok) return showErrors(result);
+        editor.dirty = false;
+        window.location.href = result.url;
+    });
+});
+</script>
+{% endblock %}

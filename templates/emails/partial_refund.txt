@@ -1,0 +1,17 @@
+Zwrot części biletów — {{ event.title }}
+
+Zwróciliśmy {{ refund.quantity }} bilet(y) z zamówienia {{ order.short_id }}.
+Kwota zwrotu: {{ refund.amount }} {{ order.currency }}
+{% if order.is_demo %}
+UWAGA: zamówienie testowe (tryb demo) — zwrot wirtualnej waluty.
+{% else %}
+Środki wrócą na konto, z którego dokonano płatności, zwykle w ciągu kilku dni roboczych.
+{% endif %}
+Unieważnione bilety:
+{% for code in refund.ticket_codes %} - {{ code }}
+{% endfor %}{% if refund.seat_labels %}Zwolnione miejsca: {{ refund.seat_labels|join:", " }}
+{% endif %}
+{% if kept %}Pozostałe bilety są nadal ważne:
+{% for ticket in kept %} - {{ ticket.short_code }}{% if ticket.seat %} — {{ ticket.seat.label }}{% endif %}
+{% endfor %}{% endif %}
+Zamówienie {{ order.short_id }} · {{ order.buyer_email }}

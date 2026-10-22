@@ -8,6 +8,7 @@
 <div class="rounded-2xl p-10 text-center text-white {% if ok %}bg-emerald-600{% else %}bg-red-700{% endif %}">
     <div class="text-3xl font-extrabold">{{ message }}</div>
     {% if ticket %}
+    {% if ticket.seat %}<div class="mt-3 text-4xl font-extrabold">{{ ticket.seat.label }}</div>{% endif %}
     <div class="mt-3 text-lg">{{ ticket.short_code }} · {{ ticket.buyer_email }}</div>
     {% endif %}
 </div>

@@ -27,6 +27,39 @@ POOL_HEADER = [
 FLOW_HEADER = ["Dzień", "Wpłaty", "Zwroty", "Saldo", "Tryb"]
 
 
+@staff_member_required
+@can_view_reports
+def event_finance(request):
+    """'Raport sprzedaży' tile: pick an event (default: the one closest to
+    today) and see its financial report; PDF download with generation time."""
+    from . import finance
+
+    events = list(finance.report_events())
+    event_id = request.GET.get("wydarzenie")
+    event = next((e for e in events if str(e.pk) == event_id), None) if event_id else None
+    event = event or finance.default_event(events)
+    context = {"events": events, "event": event, "is_demo": _is_demo(request)}
+    if event is not None:
+        context["data"] = finance.event_finance(event, is_demo=context["is_demo"])
+    return render(request, "reports/finance.html", context)
+
+
+@staff_member_required
+@can_view_reports
+def event_finance_pdf(request, event_id):
+    from . import finance
+
+    event = get_object_or_404(Event, pk=event_id)
+    data = finance.event_finance(event, is_demo=_is_demo(request))
+    pdf = finance.finance_pdf(data)
+    stamp = data["generated_at"].strftime("%Y-%m-%d_%H%M")
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'attachment; filename="raport-finansowy-{event.slug}-{stamp}.pdf"'
+    )
+    return response
+
+
 def _is_demo(request) -> bool:
     """Reports default to demo data until the live switch is flipped."""
     mode = request.GET.get("tryb")

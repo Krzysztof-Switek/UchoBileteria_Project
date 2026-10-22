@@ -1,0 +1,74 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Strona główna</a>
+    &rsaquo; <a href="{% url 'admin:events_event_change' order.event_id %}">{{ order.event.title }}</a>
+    &rsaquo; <a href="{% url 'admin:orders_order_changelist' %}?event__id__exact={{ order.event_id }}">Zamówienia</a>
+    &rsaquo; <a href="{% url 'admin:orders_order_change' order.pk %}">{{ order.short_id }}</a>
+    &rsaquo; Zwrot części biletów
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module ucho-partial-refund">
+    <p><strong>{{ order.buyer_email }}</strong> · {{ order.quantity }} bilet(ów) za {{ order.amount_gross }} {{ order.currency }}
+        {% if not order.seat_prices %}· cena jednego biletu: <strong>{{ unit_price }} {{ order.currency }}</strong>{% else %}· ceny biletów wg stref{% endif %}
+        {% if order.refunded_quantity %}· zwrócono już {{ order.refunded_quantity }} ({{ order.refunded_amount }} {{ order.currency }}){% endif %}</p>
+    <ul class="messagelist">
+        <li class="warning">Zaznaczone bilety zostaną unieważnione{% if order.seat_keys %}, a ich miejsca wrócą do sprzedaży{% endif %}.
+            Pozostałe bilety zamówienia zostają ważne. Kupujący dostanie e-mail z potwierdzeniem.</li>
+    </ul>
+    {% if pending %}
+    <p class="errornote">W toku: {% for r in pending %}{{ r.quantity }} bil. ({{ r.amount }} {{ order.currency }}){% if not forloop.last %}, {% endif %}{% endfor %} — czeka na potwierdzenie operatora płatności.</p>
+    {% endif %}
+    {% if tickets %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="wroc" value="{{ back }}">
+        <table>
+            <thead><tr><th></th><th>Kod biletu</th><th>Miejsce</th><th>Pula</th><th>Kwota</th></tr></thead>
+            <tbody>
+            {% for ticket in tickets %}
+            <tr>
+                <td><input type="checkbox" name="tickets" value="{{ ticket.id }}" id="t-{{ ticket.id }}" data-refund-ticket
+                           data-price="{% if ticket.price_gross %}{{ ticket.price_gross|stringformat:"s" }}{% else %}{{ unit_price_raw }}{% endif %}"
+                           {% if ticket.id|stringformat:"s" in preselected %}checked{% endif %}></td>
+                <td><label for="t-{{ ticket.id }}"><strong>{{ ticket.short_code }}</strong></label></td>
+                <td>{% if ticket.seat %}{{ ticket.seat.label }}{% else %}—{% endif %}</td>
+                <td>{{ ticket.pool.name }}</td>
+                <td>{% if ticket.price_gross %}{{ ticket.price_gross }}{% else %}{{ unit_price }}{% endif %} {{ order.currency }}{% if ticket.seat.category %} <span class="help">(strefa {{ ticket.seat.category }})</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <p>Do zwrotu: <strong id="refund-total">0,00 {{ order.currency }}</strong>
+            <span class="help">(przy zwrocie ostatnich biletów kwota wyrównuje się do pełnej wpłaty)</span></p>
+        <div class="form-row">
+            <label for="id_reason">Powód zwrotu (zapisywany w dzienniku zdarzeń):</label>
+            <textarea name="reason" id="id_reason" rows="3" style="width:100%;max-width:32rem;"></textarea>
+        </div>
+        <div class="submit-row">
+            <input type="submit" value="Zwróć zaznaczone bilety" class="default">
+            <a href="{{ cancel_url }}" class="button cancel-link">Anuluj</a>
+        </div>
+    </form>
+    <script>
+    (function () {
+        const boxes = document.querySelectorAll("[data-refund-ticket]");
+        const out = document.getElementById("refund-total");
+        function update() {
+            // each ticket's own price (price zones make them differ)
+            const sum = [...boxes].filter((b) => b.checked).reduce((acc, b) => acc + parseFloat(b.dataset.price), 0);
+            out.textContent = sum.toFixed(2).replace(".", ",") + " " + out.textContent.split(" ").pop();
+        }
+        boxes.forEach((b) => b.addEventListener("change", update));
+        update();
+    })();
+    </script>
+    {% else %}
+    <p>Nie ma biletów, które można zwrócić pojedynczo (wykorzystane przy wejściu albo już zwrócone).</p>
+    <p><a href="{{ cancel_url }}" class="button">Wróć</a></p>
+    {% endif %}
+</div>
+{% endblock %}

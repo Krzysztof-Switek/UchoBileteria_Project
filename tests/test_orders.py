@@ -184,7 +184,9 @@ class TestPurchaseView:
         event = make_event()
         make_pool(event)
         response = client.post(
-            f"/kup/{event.slug}/", {"buyer_email": "k@example.com", "quantity": 2}
+            f"/kup/{event.slug}/", {
+                "accept_terms": "on", "buyer_email": "k@example.com", "quantity": 2
+            }
         )
         assert response.status_code == 302
         order = Order.objects.get()
@@ -196,7 +198,9 @@ class TestPurchaseView:
         event = make_event()
         make_pool(event)
         response = client.post(
-            f"/kup/{event.slug}/", {"buyer_email": "niepoprawny", "quantity": 1}, follow=True
+            f"/kup/{event.slug}/", {
+                "accept_terms": "on", "buyer_email": "niepoprawny", "quantity": 1
+            }, follow=True
         )
         assert "Sprawdź poprawność" in response.content.decode()
         assert Order.objects.count() == 0
@@ -247,9 +251,11 @@ class TestPurchaseView:
         make_pool(event, capacity=500)
         for _ in range(10):
             client.post(f"/kup/{event.slug}/",
-                        {"buyer_email": "k@example.com", "quantity": 1})
+                        {"accept_terms": "on", "buyer_email": "k@example.com", "quantity": 1})
         response = client.post(
-            f"/kup/{event.slug}/", {"buyer_email": "k@example.com", "quantity": 1},
+            f"/kup/{event.slug}/", {
+                "accept_terms": "on", "buyer_email": "k@example.com", "quantity": 1
+            },
             follow=True,
         )
         assert "Zbyt wiele prób" in response.content.decode()

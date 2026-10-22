@@ -25,7 +25,9 @@ def start_paid_checkout(client, event=None, quantity=1):
         event = make_event()
         make_pool(event)
     response = client.post(
-        f"/kup/{event.slug}/", {"buyer_email": "k@example.com", "quantity": quantity}
+        f"/kup/{event.slug}/", {
+            "accept_terms": "on", "buyer_email": "k@example.com", "quantity": quantity
+        }
     )
     order = Order.objects.latest("created_at")
     assert response.url == f"/kasa-demo/{order.id}/"

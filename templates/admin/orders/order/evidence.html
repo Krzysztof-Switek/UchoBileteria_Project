@@ -1,0 +1,74 @@
+{% extends "admin/base_site.html" %}
+
+{% block nav-sidebar %}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Strona główna</a>
+    &rsaquo; <a href="{% url 'admin:orders_order_change' order.pk %}">Zamówienie {{ order.short_id }}</a>
+    &rsaquo; Historia i dowody
+</div>
+{% endblock %}
+
+{% block content %}
+{% comment %}
+Proof for one order (06.10.2026): what the buyer was told, when, with what text,
+what they decided and what the payment operator confirmed. Print or save as PDF
+when a buyer says they were never told (e.g. turns up with a refunded ticket).
+{% endcomment %}
+<style>
+    .ev-meta { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0 0 16px; }
+    .ev-meta dt { color: var(--body-quiet-color); }
+    .ev-meta dd { margin: 0; }
+    .ev-list { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--hairline-color); }
+    .ev-list li { position: relative; padding: 0 0 14px 16px; }
+    .ev-list li::before { content: ""; position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+    .ev-list li.is-email::before { background: #16a34a; }
+    .ev-list li.is-payment::before { background: #d97706; }
+    .ev-when { font-size: 0.78rem; color: var(--body-quiet-color); }
+    .ev-title { font-weight: 700; }
+    .ev-body { white-space: pre-wrap; font-size: 0.78rem; margin: 6px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--darkened-bg); max-width: 760px; }
+    .ev-details { font-size: 0.75rem; color: var(--body-quiet-color); }
+    @media print {
+        #header, .ucho-crumbbar, .ev-noprint, #footer { display: none !important; }
+        body, #container, #content { background: #fff !important; color: #000 !important; }
+        .ev-body { background: #f3f3f3 !important; }
+        details { display: block; }
+        details > summary { display: none; }
+    }
+</style>
+<div id="content-main">
+    <p class="ev-noprint"><button type="button" class="button default" onclick="document.querySelectorAll('details').forEach(d => d.open = true); window.print()">Drukuj / zapisz PDF</button>
+        <a href="{% url 'admin:orders_order_change' order.pk %}" class="button" role="button">← Wróć do zamówienia</a></p>
+    <dl class="ev-meta">
+        <dt>Zamówienie</dt><dd>{{ order.short_id }} ({{ order.pk }})</dd>
+        <dt>Kupujący</dt><dd>{{ order.buyer_email }}</dd>
+        <dt>Wydarzenie</dt><dd>{{ order.event.title }} — {{ order.event.start_at|date:"d.m.Y H:i" }}{% if order.moved_from_event %} (przeniesione z: {{ order.moved_from_event.title }} — {{ order.moved_from_event.start_at|date:"d.m.Y H:i" }}){% endif %}</dd>
+        <dt>Status</dt><dd>{{ order.get_status_display }}{% if order.cancellation_status %} · {{ order.get_cancellation_status_display }}{% endif %}</dd>
+        <dt>Kwota</dt><dd>{{ order.amount_gross }} {{ order.currency }}{% if order.refunded_amount %} · zwrócono {{ order.refunded_amount }} {{ order.currency }}{% if order.refunded_at %} ({{ order.refunded_at|date:"d.m.Y H:i" }}){% endif %}{% endif %}</dd>
+        <dt>Regulamin</dt><dd>{% if order.terms_version %}wersja {{ order.terms_version }}, zaakceptowany {{ order.terms_accepted_at|date:"d.m.Y H:i" }}{% else %}—{% endif %}</dd>
+        <dt>Bilety</dt><dd>{% for t in tickets %}{{ t.short_code }} ({{ t.get_status_display }}{% if t.seat %}, {{ t.seat.label }}{% endif %}){% if not forloop.last %} · {% endif %}{% endfor %}</dd>
+        <dt>Wygenerowano</dt><dd>{{ generated_at|date:"d.m.Y H:i" }}</dd>
+    </dl>
+
+    <h2>Przebieg</h2>
+    <ul class="ev-list">
+        {% for row in rows %}
+        <li class="is-{{ row.kind }}">
+            <div class="ev-when">{{ row.at|date:"d.m.Y H:i:s" }} · {{ row.who }}</div>
+            <div class="ev-title">{{ row.title }}</div>
+            {% if row.kind == "email" %}
+            <div class="ev-details">Status wysyłki: {{ row.status }}{% if row.sent_at %} — wysłano {{ row.sent_at|date:"d.m.Y H:i:s" }}{% endif %}</div>
+            <details><summary>Pokaż treść wysłanego e-maila</summary><div class="ev-body">{{ row.body }}</div></details>
+            {% elif row.kind == "payment" %}
+            <div class="ev-details">{% if row.amount %}kwota {{ row.amount }} · {% endif %}ID u operatora: {{ row.details.id }} · {{ row.details.status }}</div>
+            {% elif row.details %}
+            <div class="ev-details">{% for k, v in row.details.items %}{% if v %}{{ k }}: {{ v }}{% if not forloop.last %} · {% endif %}{% endif %}{% endfor %}</div>
+            {% endif %}
+        </li>
+        {% empty %}
+        <li>Brak zapisów.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

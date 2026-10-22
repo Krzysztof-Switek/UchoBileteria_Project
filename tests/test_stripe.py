@@ -52,7 +52,9 @@ def fake_stripe(monkeypatch):
 def live_order(client, quantity=2):
     event = make_event()
     make_pool(event, price_gross=Decimal("60.00"))
-    client.post(f"/kup/{event.slug}/", {"buyer_email": "k@example.com", "quantity": quantity})
+    client.post(f"/kup/{event.slug}/", {
+        "accept_terms": "on", "buyer_email": "k@example.com", "quantity": quantity
+    })
     return event, Order.objects.latest("created_at")
 
 
@@ -194,7 +196,9 @@ class TestStripeRefund:
         # default mode is DEMO
         event = make_event()
         make_pool(event)
-        client.post(f"/kup/{event.slug}/", {"buyer_email": "k@example.com", "quantity": 1})
+        client.post(f"/kup/{event.slug}/", {
+            "accept_terms": "on", "buyer_email": "k@example.com", "quantity": 1
+        })
         order = Order.objects.latest("created_at")
         client.post(f"/kasa-demo/{order.id}/zaplac/")
         order.refresh_from_db()

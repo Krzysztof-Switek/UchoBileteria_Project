@@ -1,14 +1,43 @@
 {% extends "admin/change_form.html" %}
+{% load static %}
 
 {# The wizard needs every pixel of vertical room it can get; the page's own
    "Dodaj wydarzenie" <h1> (from admin/base.html) doesn't earn its keep once
    the step tabs right below it already say the same thing. Change view keeps
    its title as normal. #}
+{# no left menu here — not needed on the event page (06.10.2026) #}
+{% block nav-sidebar %}{% endblock %}
+
 {% block content_title %}{% if not add %}{{ block.super }}{% endif %}{% endblock %}
 
 {% block extrastyle %}
 {{ block.super }}
+{% if add %}<link rel="stylesheet" href="{% static 'seating/seatmap.css' %}">{% endif %}
 <style>
+/* step 1: seating choice + preview of the chosen layout */
+.field-seating_choice ul { list-style: none; display: flex; gap: 18px; margin: 0; padding: 0; }
+.field-seating_choice ul li { list-style: none; }
+/* step 1: the four rows stay in the left column; the chosen layout's preview
+   is a right column as tall as those rows together (like merged cells) */
+.ucho-basic-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
+.ucho-basic-grid.has-preview { grid-template-columns: minmax(0, 1fr) minmax(320px, 42%); }
+.ucho-basic-grid > .ucho-basic-rows { min-width: 0; }
+#ucho-layout-preview { display: none; }
+/* the preview never sets the row height: it is laid over its cell, which the
+   four rows on the left make exactly as tall as they are */
+.ucho-basic-grid.has-preview #ucho-layout-preview {
+    display: block; position: relative; border-left: 1px solid var(--hairline-color);
+}
+#ucho-layout-preview .ucho-preview-inner {
+    position: absolute; inset: 8px 12px; display: flex; flex-direction: column; gap: 4px;
+}
+#ucho-layout-preview .sm-root { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+#ucho-layout-preview .sm-canvas { flex: 1; height: auto; min-height: 0; }
+#ucho-layout-preview .ucho-seating-info { margin: 0; }
+#ucho-layout-preview .sm-zoom { display: none; }
+#ucho-layout-preview .sm-seat-label { display: none; }
+.ucho-seating-info { font-size: 13px; margin-top: 6px; color: var(--body-quiet-color); }
+#ucho-end-next-day { font-size: 13px; margin: 4px 0 0; }
 /* Event link box — shown on both add and change, so it's always in view
    while working on the event, not just on one step. */
 .ucho-event-link-box { display: flex; align-items: center; gap: 8px; margin: 10px 0; padding: 7px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--body-bg); flex-wrap: wrap; }
@@ -266,8 +295,89 @@ label[for="id_gates_open_at_0"], label[for="id_start_at_0"], label[for="id_end_a
 {% endif %}
 {% endblock %}
 
+{% block after_related_objects %}
+{{ block.super }}
+<script>
+// Django's tiny "+ Dodaj kolejne Pula biletów" link under the pools -> a clear
+// button (06.10.2026). inlines.js creates the link on DOM ready, so wait for load.
+// "Usunąć?" ticked on a pool tickets were sold from: say no straight away
+// (the server refuses it anyway — TicketPoolFormSet.clean).
+document.addEventListener("change", (e) => {
+    const box = e.target;
+    if (!box.matches || !box.matches('#pools-group input[name$="-DELETE"]') || !box.checked) return;
+    const row = box.closest("tr");
+    const sold = parseInt((row.querySelector("td.field-sold_count")?.textContent || "0").trim(), 10) || 0;
+    if (!sold) return;
+    box.checked = false;
+    let note = row.querySelector(".ucho-pool-delete-note");
+    if (!note) {
+        note = document.createElement("div");
+        note.className = "ucho-pool-delete-note";
+        box.parentElement.appendChild(note);
+    }
+    note.textContent = "Nie można usunąć — sprzedano z tej puli " + sold +
+        " bil. Zakończ jej sprzedaż (wcześniejszy koniec lub ilość = sprzedane).";
+});
+window.addEventListener("load", () => {
+    const link = document.querySelector("#pools-group .add-row a");
+    if (!link) return;
+    link.textContent = "+ Dodaj pulę";
+    link.classList.add("button", "ucho-add-pool");
+    link.setAttribute("role", "button");
+});
+</script>
+{% endblock %}
+
+{% block submit_buttons_bottom %}{% if add %}{{ block.super }}{% endif %}{% endblock %}
+
 {% block form_top %}
 {{ block.super }}
+{% if not add %}
+{% comment %}Editing: every action button in one bar at the top of "Zmień wydarzenie"
+(06.10.2026) instead of Django's row at the bottom. "Usuń" only for an event
+nobody ordered tickets for; otherwise "Odwołaj wydarzenie".{% endcomment %}
+<div class="ucho-event-topbar">
+    <button type="submit" name="_save" class="button default">Zapisz</button>
+    <button type="submit" name="_continue" class="button">Zapisz i zostań na stronie</button>
+    {% if original.status == "DRAFT" %}<button type="submit" name="_publish" class="button">Zapisz i opublikuj</button>{% endif %}
+    <span class="ucho-event-topbar-spacer"></span>
+    {% if original.status == "CANCELLED" %}
+    <a href="{% url 'admin:events_event_cancellation' original.pk %}" class="button" role="button">{% if original.replacement_event %}Zmiana terminu{% else %}Odwołanie{% endif %} — stan</a>
+    {% elif ucho_can_cancel %}
+    <a href="{% url 'admin:events_event_cancel' original.pk %}" class="button ucho-danger-outline" role="button"
+       title="Odwołanie (zwrot) albo zmiana terminu — kupujący dostają e-mail">Odwołaj / zmień termin</a>
+    {% endif %}
+    {% if ucho_can_delete %}
+    <a href="{% url 'admin:events_event_delete' original.pk %}" class="button ucho-danger-outline" role="button"
+       title="Usuwa wydarzenie na stałe razem z pulami i planem sali — możliwe tylko, gdy nikt nie zamówił biletów">Usuń wydarzenie</a>
+    {% endif %}
+</div>
+{% if not ucho_can_delete and original.status != "CANCELLED" %}<p class="ucho-event-topbar-help">Usunąć można tylko wydarzenie bez zamówień — to ma zamówienia, więc zamiast usuwać użyj „Odwołaj wydarzenie” (kupujący dostaną zwrot albo nowy termin).</p>{% endif %}
+{% endif %}
+{% if ucho_pending_changes %}
+{% comment %}Tickets already sold: the changes wait for confirmation, and the person
+saving decides whether buyers get an e-mail (06.10.2026). The form below still
+holds everything that was typed; nothing is saved yet.{% endcomment %}
+<style>.change-form p.errornote, .change-form ul.errorlist.nonfield { display: none; }</style>
+<div class="ucho-confirm-changes" role="alert">
+    <h2>Na to wydarzenie sprzedano już bilety ({{ ucho_buyer_count }} zamówień) — potwierdź zmiany</h2>
+    <ul>
+        {% for c in ucho_pending_changes %}
+        <li><strong>{{ c.label }}</strong>: <s>{{ c.old }}</s> → <strong>{{ c.new }}</strong></li>
+        {% endfor %}
+    </ul>
+    <label class="ucho-check"><input type="checkbox" name="_notify_buyers" value="1"{% if ucho_notify_default %} checked{% endif %}>
+        Wyślij kupującym e-mail o tych zmianach ({{ ucho_buyer_count }} {% if ucho_buyer_count == 1 %}osoba{% else %}osób{% endif %})</label>
+    <p class="help">{% if ucho_notify_default %}Zaznaczone, bo zmienia się tytuł, data lub godzina wydarzenia.{% else %}Niezaznaczone — te zmiany zwykle nie wymagają powiadamiania (np. otwarcie bramek, opis, pule).{% endif %}</p>
+    <label class="ucho-confirm-note">Dodatkowa wiadomość w e-mailu (opcjonalnie)
+        <textarea name="_notify_note" rows="2" maxlength="2000" placeholder="np. Przepraszamy za zmianę — bilety pozostają ważne."></textarea>
+    </label>
+    <div class="ucho-confirm-actions">
+        <button type="submit" name="_confirm_changes" value="1" class="button default">Potwierdź i zapisz</button>
+        <a href="{{ request.path }}" class="button" role="button">Anuluj — porzuć zmiany</a>
+    </div>
+</div>
+{% endif %}
 {% if add %}
 <div id="ucho-wizard" class="ucho-wizard">
     <div class="ucho-wizard-steps">
@@ -278,6 +388,8 @@ label[for="id_gates_open_at_0"], label[for="id_start_at_0"], label[for="id_end_a
     <div id="ucho-wizard-hint" class="ucho-wizard-hint"></div>
 </div>
 {{ ucho_calendar_events|json_script:"ucho-calendar-events-data" }}
+{{ ucho_layouts|json_script:"ucho-layouts-data" }}
+<script src="{% static 'seating/seatmap.js' %}"></script>
 {{ ucho_max_capacity|json_script:"ucho-max-capacity-data" }}
 {% endif %}
 <!-- Below the step tabs, not above them — otherwise the tabs read as
@@ -381,6 +493,10 @@ Rendered here, moved by the script in after_field_sets into the
     {% url 'reports:event_report' original.pk as report_url %}
     {% include "admin/ucho_iconbtn.html" with url=report_url icon="report" label="Raport" new_tab=True %}
     {% endif %}
+    {% if perms.events.view_event %}
+    {% url 'admin:seating_event_map' original.pk as seats_url %}
+    {% include "admin/ucho_iconbtn.html" with url=seats_url icon="seats" label=original.is_seated|yesno:"Plan sali,Miejsca numerowane" %}
+    {% endif %}
 </div>
 {% endif %}
 {% endblock %}
@@ -444,6 +560,61 @@ Rendered here, moved by the script in after_field_sets into the
 document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("{{ opts.model_name }}_form");
     if (!form) return;
+
+    // ---------- step 1: tickets without seats / numbered seats ----------
+    const layoutsEl = document.getElementById("ucho-layouts-data");
+    const layouts = layoutsEl ? JSON.parse(layoutsEl.textContent) || {} : {};
+    const layoutSelect = document.getElementById("id_seating_layout");
+    const layoutRow = layoutSelect ? layoutSelect.closest(".form-row") : null;
+    const seatingRadios = Array.from(document.querySelectorAll('input[name="seating_choice"]'));
+    let previewHost = null;
+    function seatedChosen() {
+        const checked = seatingRadios.find((r) => r.checked);
+        return !!checked && checked.value === "SEATED";
+    }
+    let basicGrid = null;
+    function ensureGrid() {
+        // rows of "Podstawowe informacje" -> left column; preview -> right column
+        if (basicGrid) return;
+        const fieldset = layoutRow.closest("fieldset.module");
+        const rows = Array.from(fieldset.children).filter((el) => el.classList.contains("form-row"));
+        basicGrid = document.createElement("div");
+        basicGrid.className = "ucho-basic-grid";
+        const left = document.createElement("div");
+        left.className = "ucho-basic-rows";
+        rows[0].before(basicGrid);
+        rows.forEach((row) => left.appendChild(row));
+        previewHost = document.createElement("div");
+        previewHost.id = "ucho-layout-preview";
+        basicGrid.append(left, previewHost);
+    }
+    function updateSeating() {
+        if (!layoutRow) return;
+        ensureGrid();
+        layoutRow.style.display = seatedChosen() ? "" : "none";
+        previewHost.innerHTML = "";
+        const chosen = seatedChosen() && layouts[layoutSelect.value];
+        basicGrid.classList.toggle("has-preview", !!chosen);
+        if (chosen && window.UchoSeatMap) {
+            const inner = document.createElement("div");
+            inner.className = "ucho-preview-inner";
+            previewHost.appendChild(inner);
+            const mapHost = document.createElement("div");
+            inner.appendChild(mapHost);
+            new UchoSeatMap.SeatMap(mapHost, { mode: "preview", room: chosen.room, layout: chosen.layout });
+            const info = document.createElement("p");
+            info.className = "ucho-seating-info";
+            info.textContent = chosen.seats + " miejsc numerowanych — tyle wyniesie pojemność wydarzenia. " +
+                "Ceny ustawisz w kroku 3 (pula = cena podstawowa; strefy układu ją mnożą).";
+            inner.appendChild(info);
+        }
+        // step 3: the first pool should cover all seats
+        const cap = document.querySelector('[name="pools-0-capacity"]');
+        if (chosen && cap && !cap.value) cap.value = chosen.seats;
+    }
+    seatingRadios.forEach((r) => r.addEventListener("change", updateSeating));
+    if (layoutSelect) layoutSelect.addEventListener("change", updateSeating);
+    updateSeating();
 
     // ---------- wizard step paging ----------
     const stepButtons = Array.from(document.querySelectorAll(".ucho-wizard-step"));
@@ -693,11 +864,46 @@ document.addEventListener("DOMContentLoaded", () => {
         if (gEl) gEl.value = startStr;
         if (sEl) sEl.value = startStr;
         if (eEl) {
-            eEl.value = dayEnd && eTimeEl && eTimeEl.value.trim() ? formatPlDate(isoToDate(dayEnd)) : "";
+            let endIso = dayEnd;
+            if (endIso && endsNextDay()) endIso = isoOf(addDays(isoToDate(endIso), 1));
+            eEl.value = endIso && eTimeEl && eTimeEl.value.trim() ? formatPlDate(isoToDate(endIso)) : "";
+            showNextDayHint(endIso);
         }
         poolCalAnchored = false; // the concert date moved — let the pools calendar re-anchor to it
         renderPoolsCalendar();
     }
+
+    // A concert 23:00–3:00 ends the night after: on a one-day event an end time
+    // earlier than the start means the next day (the server applies the same rule).
+    function normTime(t) {
+        const m = /^(\d{1,2}):(\d{2})$/.exec((t || "").trim());
+        return m ? m[1].padStart(2, "0") + ":" + m[2] : "";
+    }
+    function endsNextDay() {
+        const start = normTime(document.getElementById("id_start_at_1")?.value);
+        const end = normTime(document.getElementById("id_end_at_1")?.value);
+        return !!(dayStart && dayStart === dayEnd && start && end && end <= start);
+    }
+    function showNextDayHint(endIso) {
+        let hint = document.getElementById("ucho-end-next-day");
+        const endInput = document.getElementById("id_end_at_1");
+        if (!endInput) return;
+        if (!hint) {
+            hint = document.createElement("p");
+            hint.id = "ucho-end-next-day";
+            hint.className = "calSummary calSummary--ok";
+            endInput.closest(".form-row, div").appendChild(hint);
+        }
+        const nextDay = endIso && endsNextDay();
+        hint.hidden = !nextDay;
+        if (nextDay) {
+            hint.textContent = "Koniec następnego dnia: " + formatPlDate(isoToDate(endIso)) + ", " +
+                normTime(endInput.value) + " (koncert po północy).";
+        }
+    }
+    ["id_start_at_1", "id_end_at_1"].forEach((id) => {
+        document.getElementById(id)?.addEventListener("input", () => syncHiddenDateFields());
+    });
 
     function daySummaryHtml() {
         if (dayMessage) return `<div class="calSummary calSummary--warn">${escapeHtml(dayMessage)}</div>`;

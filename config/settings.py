@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "apps.checkin",
     "apps.reports",
     "apps.auditlog",
+    "apps.seating",
 ]
 
 LOGIN_URL = "/logowanie/"
@@ -133,16 +134,22 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="bilety@example.com")
 # Base URL used in QR codes and e-mail links.
 SITE_BASE_URL = env("SITE_BASE_URL", default="http://localhost:8000")
 
-# Club identity shown in the public header/footer (KUP-04). Address and phone
-# default to "" (hidden in the footer) rather than a fabricated placeholder —
-# fill these in via .env before a real launch.
-CLUB_NAME = env("CLUB_NAME", default="Klub UCHO")
+# Club identity shown in the public header/footer, titles and the terms of sale
+# (KUP-04). Since 2026-10-06 the club's own data: this is how it identifies itself.
+# Phone stays "" (hidden) until given.
+CLUB_NAME = env("CLUB_NAME", default="Podwórko Art / Scena Ucho")
 CLUB_CONTACT_EMAIL = env("CLUB_CONTACT_EMAIL", default=DEFAULT_FROM_EMAIL)
-CLUB_ADDRESS = env("CLUB_ADDRESS", default="")
+CLUB_ADDRESS = env("CLUB_ADDRESS", default="ul. Świętego Piotra 2, 81-347 Gdynia")
 CLUB_PHONE = env("CLUB_PHONE", default="")
+# Seller's identity in the terms of sale (regulamin); legal name = CLUB_NAME if empty.
+CLUB_LEGAL_NAME = env("CLUB_LEGAL_NAME", default="")
+CLUB_NIP = env("CLUB_NIP", default="5862369444")
 
 # Hard venue capacity — no event can be configured above this.
 CLUB_MAX_CAPACITY = env.int("CLUB_MAX_CAPACITY", default=500)
+# VAT on tickets (%), used for net amounts in the event financial report.
+# 8% is the assumed rate for concert tickets — confirm with the club's accountant.
+TICKET_VAT_RATE = env.int("TICKET_VAT_RATE", default=8)
 
 # Stripe (live payments; demo mode works without any of these).
 STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", default="")

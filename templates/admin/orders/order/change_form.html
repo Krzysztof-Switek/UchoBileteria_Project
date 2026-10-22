@@ -1,9 +1,15 @@
 {% extends "admin/ucho_per_event_change_form.html" %}
 
 {% block object-tools-items %}
+<li><a href="{% url 'admin:orders_order_evidence' original.pk %}" class="button" title="E-maile, decyzje i zwroty z datami — do wydruku">Historia i dowody</a></li>
 {% if original.status == "PAID" %}
+{% if original.active_quantity > 1 %}
 <li>
-    <a href="{% url 'admin:orders_order_refund' original.pk %}" class="button">Zwróć zamówienie</a>
+    <a href="{% url 'admin:orders_order_partial_refund' original.pk %}" class="button">Zwróć wybrane bilety</a>
+</li>
+{% endif %}
+<li>
+    <a href="{% url 'admin:orders_order_refund' original.pk %}" class="button">Zwróć {% if original.refunded_quantity %}resztę zamówienia{% else %}zamówienie{% endif %}</a>
 </li>
 {% endif %}
 {{ block.super }}

@@ -14,8 +14,10 @@ class PaymentProvider(ABC):
         """
 
     @abstractmethod
-    def refund(self, order: Order, amount=None) -> str:
+    def refund(self, order: Order, amount=None, order_refund=None) -> str:
         """
         Request a refund; returns the provider's refund reference.
+        `amount` + `order_refund` (an OrderRefund) = partial refund of tickets;
+        without them the whole remaining amount is refunded.
         Confirmation arrives through the webhook pipeline.
         """

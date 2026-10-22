@@ -11,7 +11,7 @@ import calendar
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import Avg, Count, DecimalField, Q, QuerySet, Sum, Value
+from django.db.models import Avg, Count, DecimalField, F, Q, QuerySet, Sum, Value
 from django.db.models.functions import Coalesce, TruncDate, TruncMonth, TruncWeek
 from django.utils import timezone
 
@@ -103,7 +103,7 @@ def period_kpis(*, is_demo: bool, date_from: date | None, date_to: date | None) 
         orders = orders.filter(paid_at__date__lte=date_to)
     order_agg = orders.aggregate(
         count=Count("pk"),
-        tickets=Coalesce(Sum("quantity"), 0),
+        tickets=Coalesce(Sum(F("quantity") - F("refunded_quantity")), 0),
         avg_value=Coalesce(Avg("amount_gross"), ZERO),
     )
     return {
@@ -117,10 +117,12 @@ def period_kpis(*, is_demo: bool, date_from: date | None, date_to: date | None) 
 def _order_money_totals(orders: QuerySet) -> dict:
     """Paid/refunded totals for a queryset of Order rows."""
     return orders.aggregate(
-        paid=Coalesce(Sum("amount_gross", filter=Q(status=OrderStatus.PAID)), ZERO),
-        refunded=Coalesce(
-            Sum("amount_gross", filter=Q(status=OrderStatus.REFUNDED)), ZERO
+        # partial refunds (OrderRefund) keep the order PAID but lower what it holds
+        paid=Coalesce(
+            Sum(F("amount_gross") - F("refunded_amount"), filter=Q(status=OrderStatus.PAID)),
+            ZERO,
         ),
+        refunded=Coalesce(Sum("refunded_amount"), ZERO),
     )
 
 
@@ -348,7 +350,8 @@ def event_sales_curve(event: Event, *, is_demo: bool) -> list[dict]:
         Order.objects.filter(event=event, is_demo=is_demo, status=OrderStatus.PAID)
         .annotate(day=TruncDate("paid_at"))
         .values("day")
-        .annotate(revenue=Sum("amount_gross"), tickets=Sum("quantity"))
+        .annotate(revenue=Sum(F("amount_gross") - F("refunded_amount")),
+                  tickets=Sum(F("quantity") - F("refunded_quantity")))
         .order_by("day")
     )
     cumulative_revenue = Decimal("0")

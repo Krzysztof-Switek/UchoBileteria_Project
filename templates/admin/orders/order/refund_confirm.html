@@ -27,8 +27,8 @@
                 <td>{{ order.short_id }}</td>
                 <td>{{ order.event }}</td>
                 <td>{{ order.buyer_email }}</td>
-                <td>{{ order.quantity }}</td>
-                <td>{{ order.amount_gross }} {{ order.currency }}</td>
+                <td>{{ order.active_quantity }}</td>
+                <td>{{ order.kept_amount }} {{ order.currency }}</td>
             </tr>
         {% endfor %}
         </tbody>

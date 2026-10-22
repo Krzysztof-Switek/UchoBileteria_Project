@@ -6,7 +6,7 @@ Gdzie: {{ event.venue_name }}{% if event.venue_address %}, {{ event.venue_addres
 UWAGA: zamówienie testowe (tryb demo) — opłacone wirtualną walutą.
 {% endif %}
 Kody biletów:
-{% for ticket in tickets %} - {{ ticket.short_code }}
+{% for ticket in tickets %} - {{ ticket.short_code }}{% if ticket.seat %} — {{ ticket.seat.label }}{% endif %}
 {% endfor %}
 Kody QR znajdziesz w załącznikach tej wiadomości.
 Jeśli QR nie zadziała, podaj obsłudze kod biletu.

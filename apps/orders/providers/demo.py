@@ -30,15 +30,19 @@ def verify_signature(body: bytes, signature: str) -> bool:
     return hmac.compare_digest(sign(body), signature)
 
 
-def build_event_body(event_type: str, order: Order, event_id: str | None = None) -> bytes:
+def build_event_body(
+    event_type: str, order: Order, event_id: str | None = None, amount=None, refund_id=None
+) -> bytes:
     payload = {
         "id": event_id or f"demo_evt_{uuid.uuid4().hex}",
         "type": event_type,
         "session_id": order.payment_session_id,
         "order_id": str(order.id),
-        "amount": str(order.amount_gross),
+        "amount": str(amount if amount is not None else order.amount_gross),
         "currency": order.currency,
     }
+    if refund_id is not None:
+        payload["refund_id"] = refund_id
     return json.dumps(payload).encode()
 
 
@@ -75,8 +79,12 @@ class DemoProvider:
         order.refresh_from_db()
         return reverse("orders:demo_checkout", kwargs={"order_id": order.id})
 
-    def refund(self, order: Order, amount=None) -> str:
-        """Demo refund: emit a refund webhook through the standard pipeline."""
-        body = build_event_body("refund.succeeded", order)
+    def refund(self, order: Order, amount=None, order_refund=None) -> str:
+        """Demo refund: emit a refund webhook through the standard pipeline.
+        With `order_refund` it is a partial refund of the selected tickets."""
+        body = build_event_body(
+            "refund.succeeded", order, amount=amount,
+            refund_id=order_refund.pk if order_refund is not None else None,
+        )
         deliver(body, sign(body))
         return json.loads(body)["id"]

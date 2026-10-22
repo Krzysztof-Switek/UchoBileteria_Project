@@ -1,0 +1,12 @@
+{% extends "base_public.html" %}
+
+{% block title %}Zmiana miejsc — zamówienie {{ order.short_id }} — {{ club_name }}{% endblock %}
+{% block main_width %}max-w-6xl{% endblock %}
+
+{% block content %}
+<a href="{% url 'orders:detail' order.id %}" class="link-quiet text-sm">&larr; wróć do zamówienia</a>
+<h1 class="text-2xl font-bold mt-4">Zmień miejsca — {{ event.title }}</h1>
+<p class="text-quiet mt-1">Zamówienie <span class="font-mono">{{ order.short_id }}</span> czeka na płatność. Obecne miejsca
+    są dla Ciebie zarezerwowane do czasu zmiany — nikt ich nie zajmie w międzyczasie.</p>
+{% include "seating/_buy_panel.html" %}
+{% endblock %}

@@ -42,6 +42,17 @@ class Ticket(models.Model):
         "orders.Order", verbose_name="zamówienie", on_delete=models.PROTECT, related_name="tickets",
     )
     buyer_email = models.EmailField(verbose_name="e-mail kupującego", )
+    # Seated events only. A FK, not one-to-one: after a refund the seat is sold
+    # again, and the old (refunded) ticket keeps pointing at it as history.
+    seat = models.ForeignKey(
+        "seating.EventSeat", verbose_name="miejsce", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="tickets",
+    )
+    # what this ticket cost (zone pricing makes tickets of one order differ);
+    # used for partial refunds. Null on tickets issued before 05.10.2026.
+    price_gross = models.DecimalField(
+        "cena biletu", max_digits=8, decimal_places=2, null=True, blank=True
+    )
     short_code = models.CharField("kod biletu", max_length=12, unique=True)
     qr_token_hash = models.CharField(
         verbose_name="skrót tokenu QR",

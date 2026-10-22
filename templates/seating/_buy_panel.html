@@ -1,0 +1,58 @@
+{% load static %}
+{% comment %}
+Buyer's seat map + "Twój wybór" panel. Used by events/detail.html (buy) and
+orders/change_seats.html (swap seats of an unpaid order — `order` is set).
+Numbers reach the JS only through json_script (seat_config), never {{ }}.
+{% endcomment %}
+<link rel="stylesheet" href="{% static 'seating/seatmap.css' %}">
+<div id="mapa" class="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] items-start">
+    <div class="min-w-0">
+        <div id="sm-buy-map"></div>
+        <div class="sm-legend sm-root" id="sm-buy-legend">
+            <span class="sm-legend-free"><i class="lg-free"></i>wolne</span>
+            <span><i class="lg-selected"></i>Twój wybór</span>
+            {% if order %}<span><i class="lg-mine"></i>obecnie w zamówieniu</span>{% endif %}
+            <span><i class="lg-taken"></i>zajęte</span>
+            <span><i class="lg-blocked"></i>niedostępne</span>
+        </div>
+        <p class="text-xs text-muted mt-2">Kółko myszy lub przyciski +/− powiększają plan, przeciągnięcie przesuwa widok,
+            ⟲ obraca plan (scena z lewej / u góry). Stolik z napisem „cały stolik” sprzedawany jest tylko w całości.</p>
+        <details class="mt-3 text-sm">
+            <summary class="cursor-pointer text-quiet">Lista miejsc bez mapy (klawiatura, czytnik ekranu)</summary>
+            <div id="sm-buy-alt" class="mt-2"></div>
+        </details>
+    </div>
+    <aside class="card rounded-xl p-5 lg:sticky lg:top-4">
+        <h2 class="text-lg font-bold">{% if order %}Nowe miejsca{% else %}Twój wybór{% endif %}</h2>
+        {% if order %}
+        <p class="text-sm text-muted mt-1">Teraz: {{ order.seat_labels|join:", " }}. Wybierz {{ order.quantity }} miejsc(a) — cena się nie zmienia.</p>
+        {% endif %}
+        <ul id="sm-buy-list" class="mt-3 space-y-1 text-sm"></ul>
+        <p id="sm-buy-total" class="mt-3 text-quiet"></p>
+        <p id="sm-buy-msg" class="text-sm mt-3 text-muted" role="status" aria-live="polite"></p>
+        <form method="post" action="{% if order %}{% url 'orders:change_seats' order.id %}{% else %}{% url 'orders:purchase' event.slug %}{% endif %}" class="mt-4 space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="seats" id="sm-buy-seats">
+            {% if not order %}
+            <div>
+                <label for="id_buyer_email" class="block text-sm text-quiet mb-1">Twój e-mail (na ten adres wyślemy bilety)</label>
+                <input type="email" name="buyer_email" id="id_buyer_email" required value="{{ prefill_email }}"
+                       class="input-theme w-full px-3 py-2">
+            </div>
+            <label class="flex items-start gap-2 text-sm text-quiet">
+                <input type="checkbox" name="accept_terms" required class="mt-1">
+                <span>Akceptuję <a href="{% url 'regulamin' %}" target="_blank" rel="noopener" class="underline">regulamin sprzedaży biletów</a> (m.in. zasady zwrotów przy odwołaniu lub przeniesieniu wydarzenia).</span>
+            </label>
+            {% endif %}
+            <button type="submit" id="sm-buy-submit" class="btn-primary font-bold rounded-lg px-6 py-3 w-full" disabled>
+                {% if order %}Zmień miejsca{% else %}Kup bilety{% endif %}
+            </button>
+            {% if not order %}
+            <p class="text-xs text-muted">Miejsca rezerwujemy dla Ciebie na 20 minut od przejścia do płatności.</p>
+            {% endif %}
+        </form>
+    </aside>
+</div>
+{{ seat_config|json_script:"sm-buy-config" }}
+<script src="{% static 'seating/seatmap.js' %}"></script>
+<script src="{% static 'seating/seatmap-buy.js' %}"></script>

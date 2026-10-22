@@ -1,0 +1,36 @@
+{% extends "admin/base_site.html" %}
+
+{% block nav-sidebar %}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Strona główna</a>
+    &rsaquo; <a href="{% url 'admin:seating_seatinglayout_changelist' %}">Plany sali</a>
+    &rsaquo; {{ layout.name }} &rsaquo; Wydarzenia
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <p><a href="{% url 'admin:seating_seatinglayout_changelist' %}" class="button">← Wróć do Planów sali</a>
+       <a href="{% url 'admin:seating_layout_editor' layout.pk %}" class="button">Otwórz układ</a></p>
+    {% if rows %}
+    <table class="ucho-layout-events">
+        <thead><tr><th>Data</th><th>Wydarzenie</th><th>Status</th><th>Sprzedane / miejsca</th><th></th></tr></thead>
+        <tbody>
+            {% for row in rows %}
+            <tr{% if row.upcoming %} class="is-upcoming"{% endif %}>
+                <td>{{ row.event.start_at|date:"d.m.y H:i" }}{% if row.upcoming %} <span class="ucho-badge ucho-badge-nearest">nadchodzące</span>{% endif %}</td>
+                <td><a href="{% url 'admin:events_event_change' row.event.pk %}">{{ row.event.title }}</a></td>
+                <td>{{ row.event.get_status_display }}</td>
+                <td>{{ row.event.sold_total }} / {{ row.event.capacity_total }}</td>
+                <td><a href="{% url 'admin:seating_event_map' row.event.pk %}">Plan sali wydarzenia</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Ten układ nie był jeszcze użyty na żadnym wydarzeniu.</p>
+    {% endif %}
+</div>
+{% endblock %}

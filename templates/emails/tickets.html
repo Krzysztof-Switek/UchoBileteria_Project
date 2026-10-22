@@ -16,6 +16,7 @@
     <div style="border: 1px solid #ddd; border-radius: 10px; padding: 16px; margin: 16px 0;">
         <p style="margin: 0 0 8px;">Bilet {{ forloop.counter }} z {{ tickets|length }} —
            kod: <strong style="font-size: 18px; letter-spacing: 1px;">{{ ticket.short_code }}</strong></p>
+        {% if ticket.seat %}<p style="margin: 0 0 8px; font-size: 20px;"><strong>{{ ticket.seat.label }}</strong></p>{% endif %}
         <img src="cid:qr-{{ ticket.id }}" alt="Kod QR biletu {{ ticket.short_code }}"
              width="220" height="220" style="display: block;">
     </div>

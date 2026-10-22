@@ -187,7 +187,7 @@ class TestClubIdentity:
 
     def test_header_shows_club_name_linking_home(self, client):
         content = client.get("/").content.decode()
-        assert "Klub UCHO" in content
+        assert "Podwórko Art / Scena Ucho" in content
         assert content.count('href="/"') >= 1
 
     def test_footer_shows_legal_links_and_contact_email(self, client):
@@ -220,7 +220,7 @@ class TestClubIdentity:
         assert response.status_code == 200
         content = response.content.decode()
         assert "Regulamin sprzedaży biletów" in content
-        assert "Zwroty i odwołane wydarzenia" in content
+        assert "Odwołanie, przeniesienie i zmiany wydarzenia" in content
 
     def test_polityka_prywatnosci_page_renders(self, client):
         response = client.get("/polityka-prywatnosci/")

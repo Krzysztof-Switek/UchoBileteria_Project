@@ -3,7 +3,7 @@ from django.apps import AppConfig
 # UX-05: panel sections ordered by day-to-day workflow (events → orders →
 # tickets → audit trail), not alphabetically. Apps not listed here (e.g.
 # django.contrib.auth, visible only to real superusers) sort after these.
-STAFF_APP_ORDER = ["events", "orders", "tickets", "auditlog", "accounts"]
+STAFF_APP_ORDER = ["events", "seating", "orders", "tickets", "auditlog", "accounts"]
 
 
 class AccountsConfig(AppConfig):
@@ -19,8 +19,8 @@ class AccountsConfig(AppConfig):
         from .ratelimit import handle_successful_login
 
         admin.site.login_form = EmailAdminAuthenticationForm
-        admin.site.site_header = "Bileteria UCHO"
-        admin.site.site_title = "Bileteria UCHO — panel obsługi"
+        admin.site.site_header = "Bileteria Scena Ucho"
+        admin.site.site_title = "Bileteria Scena Ucho — panel obsługi"
         admin.site.index_title = "Panel obsługi"
 
         original_get_app_list = admin.site.get_app_list

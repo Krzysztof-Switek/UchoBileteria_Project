@@ -1,0 +1,130 @@
+{% extends "base_app.html" %}
+
+{% block title %}Raport finansowy{% if event %} — {{ event.title }}{% endif %}{% endblock %}
+
+{% block crumbs %} &rsaquo; <span>Raport sprzedaży</span>{% if event %} &rsaquo; <span>{{ event.title }}</span>{% endif %}{% endblock %}
+
+{% block content %}
+<form method="get" class="flex items-end gap-3 flex-wrap no-print">
+    <label class="text-sm text-quiet">Wydarzenie
+        <select name="wydarzenie" class="input-theme rounded-lg px-3 py-2 block mt-1 min-w-[22rem]" onchange="this.form.submit()">
+            {% for e in events %}
+            <option value="{{ e.pk }}"{% if event and e.pk == event.pk %} selected{% endif %}>{{ e.start_at|date:"d.m.y" }} · {{ e.title }}{% if e.status == "CANCELLED" %} (odwołane){% endif %}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <input type="hidden" name="tryb" value="{% if is_demo %}demo{% else %}live{% endif %}">
+    <div class="flex gap-2 text-sm">
+        <a href="?wydarzenie={{ event.pk }}&tryb=demo" class="px-3 py-2 rounded-lg {% if is_demo %}bg-amber-500 text-black font-bold{% else %}input-theme{% endif %}">DEMO</a>
+        <a href="?wydarzenie={{ event.pk }}&tryb=live" class="px-3 py-2 rounded-lg {% if not is_demo %}bg-emerald-500 text-black font-bold{% else %}input-theme{% endif %}">LIVE</a>
+    </div>
+    {% if event %}
+    <a href="{% url 'reports:event_finance_pdf' event.pk %}?tryb={% if is_demo %}demo{% else %}live{% endif %}"
+       class="btn-primary font-bold rounded-lg px-4 py-2 ml-auto">Pobierz PDF</a>
+    {% endif %}
+</form>
+
+{% if not event %}
+<p class="text-muted mt-6">Nie ma jeszcze żadnych opublikowanych wydarzeń.</p>
+{% else %}
+{% with t=data.totals cur=data.currency %}
+<div class="mt-5">
+    {# same header as the PDF (05.10.2026): report name, event · event date, generation time; DEMO line only in demo #}
+    <div class="text-muted text-base font-semibold">Raport finansowy</div>
+    <h1 class="text-3xl font-bold mt-1">{{ event.title }} · {{ event.start_at|date:"d.m.Y" }}</h1>
+    <p class="text-muted text-sm mt-1">Wygenerowano: {{ data.generated_at|date:"d.m.Y H:i" }}</p>
+    {% if is_demo %}<p class="msg-warning rounded-lg px-3 py-2 mt-2 text-sm">TRYB DEMO — kwoty w walucie wirtualnej, nie są prawdziwymi wpływami.</p>{% endif %}
+</div>
+
+<div class="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="card rounded-xl p-4">
+        <div class="text-muted text-sm">Sprzedane bilety</div>
+        <div class="text-2xl font-bold font-mono">{{ t.sold }} <span class="text-base text-muted">/ {{ t.capacity }}</span></div>
+        <div class="text-xs text-muted">{% if t.sold_pct is not None %}{{ t.sold_pct }}% pojemności{% endif %}</div>
+    </div>
+    <div class="card rounded-xl p-4">
+        <div class="text-muted text-sm">Przychód netto ({{ cur }})</div>
+        <div class="text-2xl font-bold font-mono">{{ t.net|floatformat:2 }}</div>
+    </div>
+    <div class="card rounded-xl p-4">
+        <div class="text-muted text-sm">VAT {{ data.vat_rate }}% ({{ cur }})</div>
+        <div class="text-2xl font-bold font-mono">{{ t.vat|floatformat:2 }}</div>
+    </div>
+    <div class="card rounded-xl p-4">
+        <div class="text-muted text-sm">Przychód brutto ({{ cur }})</div>
+        <div class="text-2xl font-bold font-mono text-success">{{ t.gross|floatformat:2 }}</div>
+        <div class="text-xs text-muted">wpływy {{ t.received|floatformat:2 }} − zwroty {{ t.refunds|floatformat:2 }}</div>
+    </div>
+</div>
+
+<h2 class="mt-8 text-lg font-semibold">Sprzedaż wg pul ({{ cur }})</h2>
+<div class="mt-2 card rounded-xl p-2 overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-left text-xs uppercase tracking-wide text-muted border-b-theme">
+                <th class="py-2 px-2">Pula</th><th class="py-2 px-2 text-right">Cena netto</th>
+                <th class="py-2 px-2 text-right">Cena brutto</th>
+                <th class="py-2 px-2 text-right">Pula (szt.)</th><th class="py-2 px-2 text-right">Sprzedane</th>
+                <th class="py-2 px-2 text-right">Zwrócone</th><th class="py-2 px-2 text-right">Netto</th>
+                <th class="py-2 px-2 text-right">VAT</th><th class="py-2 px-2 text-right">Brutto</th>
+            </tr>
+        </thead>
+        <tbody class="font-mono">
+            {% for p in data.pools %}
+            <tr class="border-b-theme">
+                <td class="py-2 px-2 font-sans font-semibold">{{ p.name }}</td>
+                <td class="py-2 px-2 text-right">{{ p.price_net|floatformat:2 }}</td>
+                <td class="py-2 px-2 text-right">{{ p.price|floatformat:2 }}</td>
+                <td class="py-2 px-2 text-right">{{ p.capacity }}</td>
+                <td class="py-2 px-2 text-right">{{ p.sold }}</td>
+                <td class="py-2 px-2 text-right">{{ p.refunded_tickets }}</td>
+                <td class="py-2 px-2 text-right">{{ p.net|floatformat:2 }}</td>
+                <td class="py-2 px-2 text-right">{{ p.vat|floatformat:2 }}</td>
+                <td class="py-2 px-2 text-right">{{ p.gross|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="9" class="py-3 px-2 text-muted font-sans">Wydarzenie nie ma pul biletów.</td></tr>
+            {% endfor %}
+            <tr class="font-bold">
+                <td class="py-2 px-2 font-sans">Razem</td><td></td><td></td><td></td>
+                <td class="py-2 px-2 text-right">{{ t.sold }}</td>
+                <td class="py-2 px-2 text-right">{{ t.refunded_tickets }}</td>
+                <td class="py-2 px-2 text-right">{{ t.net|floatformat:2 }}</td>
+                <td class="py-2 px-2 text-right">{{ t.vat|floatformat:2 }}</td>
+                <td class="py-2 px-2 text-right">{{ t.gross|floatformat:2 }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+{% if data.zones %}
+<h2 class="mt-8 text-lg font-semibold">Strefy cenowe — miejsca numerowane ({{ cur }})</h2>
+<div class="mt-2 card rounded-xl p-2 overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-left text-xs uppercase tracking-wide text-muted border-b-theme">
+                <th class="py-2 px-2">Strefa</th><th class="py-2 px-2">Nazwa</th>
+                <th class="py-2 px-2 text-right">% ceny</th><th class="py-2 px-2 text-right">Sprzedane</th>
+                <th class="py-2 px-2 text-right">Netto</th><th class="py-2 px-2 text-right">VAT</th>
+                <th class="py-2 px-2 text-right">Brutto</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for z in data.zones %}
+            <tr class="border-b-theme">
+                <td class="py-2 px-2 font-bold">{{ z.code }}</td><td class="py-2 px-2">{{ z.name }}</td>
+                <td class="py-2 px-2 text-right font-mono">{{ z.percent }}%</td>
+                <td class="py-2 px-2 text-right font-mono">{{ z.sold }}</td>
+                <td class="py-2 px-2 text-right font-mono">{{ z.net|floatformat:2 }}</td>
+                <td class="py-2 px-2 text-right font-mono">{{ z.vat|floatformat:2 }}</td>
+                <td class="py-2 px-2 text-right font-mono">{{ z.gross|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endwith %}
+{% endif %}
+{% endblock %}

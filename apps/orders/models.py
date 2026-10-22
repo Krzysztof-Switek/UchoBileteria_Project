@@ -41,6 +41,15 @@ ORDER_TRANSITIONS = {
 }
 
 
+class CancellationStatus(models.TextChoices):
+    """What happens with a paid order of a cancelled event (06.10.2026)."""
+    NONE = "", "—"
+    AWAITING = "AWAITING", "Czeka na decyzję kupującego"
+    MOVED = "MOVED", "Przeniesione na nowy termin"
+    REFUND_REQUESTED = "REFUND_REQUESTED", "Zwrot zlecony"
+    REFUND_FAILED = "REFUND_FAILED", "Zwrot nieudany — do obsługi ręcznej"
+
+
 class Order(models.Model):
     id = models.UUIDField(verbose_name="ID", primary_key=True, default=uuid.uuid4, editable=False)
     event = models.ForeignKey(
@@ -70,11 +79,37 @@ class Order(models.Model):
     )
     # Provider-hosted checkout page (Stripe session URL / internal demo cash desk).
     checkout_url = models.CharField(verbose_name="adres kasy", max_length=500, blank=True)
+    # Seated events: which seats the order took (keys of apps.seating.EventSeat)
+    # and their labels. Kept after expiry/refund too — the seats themselves go
+    # back on sale, this stays as the history ("Stolik 5 · miejsce 3").
+    seat_keys = models.JSONField("miejsca (ID)", default=list, blank=True)
+    seat_labels = models.JSONField("miejsca", default=list, blank=True)
+    seat_prices = models.JSONField("ceny miejsc", default=list, blank=True)  # per seat_keys
+    # Partial refunds (OrderRefund) keep the order PAID; these track what has
+    # already gone back. A full refund sets them to amount_gross / quantity.
+    refunded_amount = models.DecimalField(
+        "zwrócona kwota", max_digits=9, decimal_places=2, default=0
+    )
+    refunded_quantity = models.PositiveSmallIntegerField("zwrócone bilety", default=0)
     is_demo = models.BooleanField("zamówienie demo", editable=False)
     expires_at = models.DateTimeField("wygasa", null=True, blank=True)
     created_at = models.DateTimeField(verbose_name="utworzono", auto_now_add=True)
     paid_at = models.DateTimeField(verbose_name="opłacono", null=True, blank=True)
     refunded_at = models.DateTimeField(verbose_name="zwrócono", null=True, blank=True)
+    # Event cancelled: the buyer's choice and where the order came from if it
+    # was moved to the new date (tickets keep their codes).
+    cancellation_status = models.CharField(
+        "odwołanie wydarzenia", max_length=20, choices=CancellationStatus.choices,
+        default=CancellationStatus.NONE, blank=True,
+    )
+    cancellation_decided_at = models.DateTimeField("decyzja (odwołanie)", null=True, blank=True)
+    moved_from_event = models.ForeignKey(
+        "events.Event", verbose_name="przeniesione z wydarzenia", null=True, blank=True,
+        on_delete=models.PROTECT, related_name="moved_orders",
+    )
+    # Terms of sale accepted at purchase (version = date of the terms text).
+    terms_version = models.CharField("wersja regulaminu", max_length=20, blank=True)
+    terms_accepted_at = models.DateTimeField("akceptacja regulaminu", null=True, blank=True)
 
     class Meta:
         verbose_name = "zamówienie"
@@ -101,6 +136,65 @@ class Order(models.Model):
         """Validate and apply a status change (does not save)."""
         assert_transition("Order", ORDER_TRANSITIONS, self.status, new_status)
         self.status = new_status
+
+    @property
+    def seat_lines(self) -> list[tuple[str, str]]:
+        """[(label, price)] for the order page and e-mails."""
+        prices = list(self.seat_prices) + [""] * len(self.seat_labels)
+        return list(zip(self.seat_labels, prices[: len(self.seat_labels)], strict=True))
+
+    @property
+    def active_quantity(self) -> int:
+        """Tickets still held by the buyer (not refunded)."""
+        return self.quantity - self.refunded_quantity
+
+    @property
+    def kept_amount(self):
+        """Money the club keeps for this order after partial refunds."""
+        return self.amount_gross - self.refunded_amount
+
+
+class RefundStatus(models.TextChoices):
+    REQUESTED = "REQUESTED", "Zlecony"
+    SUCCEEDED = "SUCCEEDED", "Zwrócony"
+    FAILED = "FAILED", "Nieudany"
+
+
+class OrderRefund(models.Model):
+    """Refund of selected tickets of a paid order (partial refund).
+
+    Created when staff requests it; the money movement is confirmed by the
+    provider's refund webhook (payload carries this record's id), which then
+    invalidates the tickets and puts their seats back on sale.
+    """
+
+    order = models.ForeignKey(
+        Order, verbose_name="zamówienie", on_delete=models.PROTECT, related_name="refunds"
+    )
+    ticket_ids = models.JSONField("bilety (ID)", default=list)
+    ticket_codes = models.JSONField("kody biletów", default=list)
+    seat_labels = models.JSONField("miejsca", default=list, blank=True)
+    quantity = models.PositiveSmallIntegerField("liczba biletów")
+    amount = models.DecimalField("kwota", max_digits=9, decimal_places=2)
+    status = models.CharField(
+        "status", max_length=10, choices=RefundStatus.choices, default=RefundStatus.REQUESTED
+    )
+    reason = models.TextField("powód", blank=True)
+    provider_refund_id = models.CharField("ID zwrotu u operatora", max_length=200, blank=True)
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name="zlecił(a)", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="+",
+    )
+    created_at = models.DateTimeField("zlecono", auto_now_add=True)
+    completed_at = models.DateTimeField("zakończono", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "zwrot części biletów"
+        verbose_name_plural = "zwroty części biletów"
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Zwrot {self.quantity} bil. ({self.amount}) — {self.order.short_id}"
 
 
 class PaymentEventStatus(models.TextChoices):

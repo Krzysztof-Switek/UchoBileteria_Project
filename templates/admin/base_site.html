@@ -24,17 +24,8 @@ admin/base_site.html so behaviour is unchanged; only extrastyle is new.
     {% if perms.events.view_event %}
     <a href="{% url 'admin:events_event_changelist' %}">Wydarzenia</a>
     {% endif %}
-    {% if perms.orders.view_order %}
-    <a href="{% url 'admin:orders_order_changelist' %}">Zamówienia</a>
-    {% endif %}
-    {% if perms.tickets.view_ticket %}
-    <a href="{% url 'admin:tickets_ticket_changelist' %}">Bilety</a>
-    {% endif %}
     {% if perms.tickets.checkin_ticket %}
-    <a href="{% url 'checkin:event_select' %}">Odprawa</a>
-    {% endif %}
-    {% if perms.orders.view_order %}
-    <a href="{% url 'admin:orders_by_event' %}">Raporty</a>
+    <a href="{% url 'checkin:event_select' %}">Otwórz bramkę</a>
     {% endif %}
     {% if perms.auditlog.view_auditlog %}
     <a href="{% url 'admin:auditlog_auditlog_changelist' %}">Dziennik</a>
@@ -79,6 +70,19 @@ admin/base_site.html so behaviour is unchanged; only extrastyle is new.
     <a href="{% url 'admin:index' %}" class="ucho-crumb-btn" title="Pulpit">{% include "admin/ucho_icon.html" with name="home" size=16 %}<span>Start</span></a>
     <div class="ucho-crumbbar-path">{{ block.super }}</div>
 </div>
+<script>
+// Django's path is "Home › app › model › object"; our app sections double the
+// model name ("Wydarzenia › Wydarzenia", "Bilety › Bilety") and their app index
+// page isn't used here (tiles replaced it) — drop that crumb and its "›".
+(function () {
+    document.querySelectorAll(".ucho-crumbbar .breadcrumbs a").forEach((a) => {
+        if (!/^\/admin\/[^/]+\/$/.test(a.getAttribute("href") || "")) return;
+        const sep = a.previousSibling;
+        if (sep && sep.nodeType === Node.TEXT_NODE) sep.textContent = sep.textContent.replace("›", "");
+        a.remove();
+    });
+})();
+</script>
 {% include "partials/back_button_script.html" %}
 {% endblock %}
 

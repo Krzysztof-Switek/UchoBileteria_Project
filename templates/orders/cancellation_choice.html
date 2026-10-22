@@ -1,0 +1,43 @@
+{% extends "base_public.html" %}
+
+{% block title %}{% if replacement %}Zmiana terminu{% else %}Odwołane wydarzenie{% endif %} — zamówienie {{ order.short_id }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold">{% if replacement %}Zmiana terminu{% else %}Wydarzenie odwołane{% endif %}</h1>
+<div class="mt-6 card rounded-xl p-6 space-y-2 text-quiet">
+    <div><span class="text-muted">Wydarzenie:</span> <span class="font-semibold">{{ event.title }}</span> — {% if replacement %}dawny termin {{ event.start_at|date:"j E Y, H:i" }}{% else %}{{ event.start_at|date:"j E Y, H:i" }} (odwołane){% endif %}</div>
+    {% if event.cancellation_reason %}<p class="whitespace-pre-line">{{ event.cancellation_reason }}</p>{% endif %}
+    <div><span class="text-muted">Zamówienie:</span> <span class="font-mono">{{ order.short_id }}</span> · {{ order.active_quantity }} bil. · {{ order.kept_amount }} {{ order.currency }}</div>
+</div>
+
+{% if order.cancellation_status == "AWAITING" and replacement %}
+<div class="mt-6 card rounded-xl p-6">
+    <p>Nowy termin: <strong>{{ replacement.start_at|date:"l, j E Y, H:i" }}</strong> ({{ replacement.title }}).</p>
+    <p class="mt-2 text-quiet">Potwierdź, co robimy z Twoimi biletami. Decyzja do <strong>{{ event.decision_deadline|date:"j E Y, H:i" }}</strong> — bez potwierdzenia automatycznie zwrócimy pieniądze, a bilety stracą ważność.</p>
+    <form method="post" class="mt-5 flex flex-wrap gap-3">
+        {% csrf_token %}
+        <button type="submit" name="wybor" value="nowy-termin" class="btn-primary font-bold rounded-lg px-6 py-3">Zachowuję bilety na nowy termin</button>
+        <button type="submit" name="wybor" value="zwrot" class="input-theme font-bold rounded-lg px-6 py-3">Chcę zwrot pieniędzy</button>
+    </form>
+    <p class="mt-3 text-sm text-muted">Bilety na nowy termin mają te same kody{% if order.seat_labels %}; w miarę możliwości dostaniesz te same miejsca{% endif %}. Zwrot trafia na rachunek lub kartę, z której zapłacono.</p>
+</div>
+{% elif order.cancellation_status == "MOVED" %}
+<div class="mt-6 card rounded-xl p-6">
+    <p class="font-semibold">Twoje bilety są ważne na nowy termin: {{ order.event.title }} — {{ order.event.start_at|date:"l, j E Y, H:i" }}.</p>
+    {% if order.seat_labels %}<p class="mt-2">Miejsca: <strong>{{ order.seat_labels|join:", " }}</strong></p>{% endif %}
+    <a href="{% url 'orders:detail' order.pk %}" class="btn-primary mt-4 inline-block font-bold rounded-lg px-6 py-3">Zobacz bilety</a>
+</div>
+{% elif order.cancellation_status == "REFUND_REQUESTED" or order.status == "REFUNDED" %}
+<div class="mt-6 card rounded-xl p-6">
+    <p class="font-semibold">Zwrot pieniędzy został zlecony.</p>
+    <p class="mt-2 text-quiet">Środki wrócą na rachunek lub kartę, z której zapłacono — zwykle w ciągu kilku dni roboczych.</p>
+</div>
+{% elif order.cancellation_status == "REFUND_FAILED" %}
+<div class="mt-6 card rounded-xl p-6">
+    <p class="font-semibold">Zwrot jest w przygotowaniu.</p>
+    <p class="mt-2 text-quiet">Nie udało się go zlecić automatycznie — obsługa klubu skontaktuje się z Tobą e-mailem.</p>
+</div>
+{% else %}
+<div class="mt-6 card rounded-xl p-6"><p class="text-quiet">Dla tego zamówienia nie ma nic do wyboru.</p></div>
+{% endif %}
+{% endblock %}

@@ -1,38 +1,107 @@
 {% extends "base_public.html" %}
 
-{% block title %}Regulamin — {{ club_name }}{% endblock %}
+{% block title %}Regulamin sprzedaży biletów — {{ club.name }}{% endblock %}
 
 {% block content %}
+{% comment %}
+Regulamin sprzedaży biletów (06.10.2026). Każde zamówienie zapisuje zaakceptowaną
+wersję (apps/orders/terms.py: TERMS_VERSION). Zmiana treści = nowy wpis w „Historii
+zmian” na dole + nowa wersja w terms.py. Zanim ruszy sprzedaż LIVE, tekst powinien
+przejrzeć prawnik; dane sprzedawcy: CLUB_LEGAL_NAME, CLUB_NIP, CLUB_ADDRESS,
+CLUB_CONTACT_EMAIL, CLUB_PHONE w .env.
+{% endcomment %}
 <h1 class="text-2xl font-bold">Regulamin sprzedaży biletów</h1>
-<p class="text-muted text-sm mt-1">Szkic do uzupełnienia przez obsługę {{ club_name }} — poniższe sekcje to typowy układ regulaminu sprzedaży biletów, nie gotowa treść prawna.</p>
+<p class="text-muted text-sm mt-1">Wersja z dnia {{ version }}</p>
 
-<div class="mt-6 space-y-6 text-quiet">
+<div class="mt-6 space-y-6 text-quiet leading-relaxed legal-text">
     <section>
-        <h2 class="text-lg font-semibold text-quiet">1. Postanowienia ogólne</h2>
-        <p class="mt-1">[Treść do uzupełnienia — kto jest sprzedawcą, czego dotyczy regulamin.]</p>
+        <h2 class="text-lg font-semibold">§ 1. Sprzedawca i postanowienia ogólne</h2>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+            <li>Regulamin określa zasady sprzedaży biletów na wydarzenia organizowane w {{ club.name }} za pośrednictwem tej strony internetowej (dalej: „Bileteria”).</li>
+            <li>Sprzedawcą biletów jest {{ club.legal_name }}{% if club.nip %}, NIP {{ club.nip }}{% endif %}{% if club.address %}, {{ club.address }}{% endif %} (dalej: „Klub”). Kontakt: {% if club.email %}<a href="mailto:{{ club.email }}" class="underline">{{ club.email }}</a>{% endif %}{% if club.phone %}, tel. {{ club.phone }}{% endif %}.</li>
+            <li>Kupujący to osoba, która składa zamówienie. Akceptacja Regulaminu jest warunkiem złożenia zamówienia; Regulamin w wersji zaakceptowanej przy zakupie obowiązuje dla tego zamówienia.</li>
+            <li>Do zakupu potrzebne są: urządzenie z aktualną przeglądarką internetową i działający adres e-mail. Bilety przesyłamy wyłącznie elektronicznie.</li>
+        </ol>
     </section>
+
     <section>
-        <h2 class="text-lg font-semibold text-quiet">2. Zakup i płatność biletów</h2>
-        <p class="mt-1">[Treść do uzupełnienia — sposób zakupu, formy płatności, moment zawarcia umowy.]</p>
+        <h2 class="text-lg font-semibold">§ 2. Zakup i płatność</h2>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+            <li>Kupujący wybiera wydarzenie i liczbę biletów albo — na wydarzeniach z miejscami numerowanymi — konkretne miejsca lub stoliki na planie sali, podaje adres e-mail i akceptuje Regulamin.</li>
+            <li>Ceny podane są w złotych i zawierają podatek VAT. Na wydarzeniach ze strefami cenowymi cena miejsca zależy od strefy (oznaczonej na planie sali). Liczba biletów w jednym zamówieniu może być ograniczona; niektóre stoliki sprzedawane są tylko w całości — informacja jest przy wydarzeniu i na planie.</li>
+            <li>Po złożeniu zamówienia bilety (i miejsca) są zarezerwowane przez 20 minut. Jeśli płatność nie zostanie w tym czasie zakończona, rezerwacja wygasa, a miejsca wracają do sprzedaży.</li>
+            <li>Płatność obsługuje zewnętrzny operator płatności (obecnie Stripe). Klub nie otrzymuje ani nie przechowuje danych kart płatniczych ani danych logowania do banku.</li>
+            <li>Umowa zostaje zawarta z chwilą potwierdzenia płatności przez operatora. Wtedy wysyłamy bilety na podany adres e-mail; są też dostępne na stronie zamówienia (link w e-mailu).</li>
+            <li>Sprzedaż internetowa na dane wydarzenie kończy się o północy rozpoczynającej dzień wydarzenia.</li>
+        </ol>
     </section>
+
     <section>
-        <h2 class="text-lg font-semibold text-quiet">3. Zwroty i odwołane wydarzenia</h2>
-        <p class="mt-1">[Treść do uzupełnienia — zasady zwrotu przy odwołaniu lub zmianie terminu.]</p>
+        <h2 class="text-lg font-semibold">§ 3. Bilet i wejście na wydarzenie</h2>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+            <li>Bilet ma postać kodu QR i kodu biletu. Każdy bilet uprawnia do jednorazowego wejścia na wskazane wydarzenie (na wydarzeniach z miejscami numerowanymi — na wskazane miejsce).</li>
+            <li>Przy wejściu bilet jest skanowany i oznaczany jako wykorzystany. Wchodzi osoba, która pierwsza okaże ważny bilet — prosimy nie udostępniać kodów osobom trzecim ani nie publikować ich zdjęć.</li>
+            <li>Na terenie Klubu obowiązują regulamin obiektu i polecenia obsługi. Wydarzenia mogą mieć ograniczenia wiekowe podane w opisie wydarzenia.</li>
+        </ol>
     </section>
+
     <section>
-        <h2 class="text-lg font-semibold text-quiet">4. Wejście na wydarzenie</h2>
-        <p class="mt-1">[Treść do uzupełnienia — regulamin obiektu, zasady weryfikacji biletu przy wejściu.]</p>
+        <h2 class="text-lg font-semibold">§ 4. Brak prawa odstąpienia od umowy</h2>
+        <p class="mt-2">Zgodnie z art. 38 ust. 1 pkt 12 ustawy o prawach konsumenta kupującemu nie przysługuje prawo odstąpienia od umowy zawartej na odległość, ponieważ dotyczy ona usług związanych z wydarzeniami rozrywkowymi i kulturalnymi w oznaczonym dniu. Nie wpływa to na prawa kupującego opisane w § 5 i § 6 (odwołanie, przeniesienie lub istotna zmiana wydarzenia). Klub może, ale nie musi, przyjąć zwrot biletu na prośbę kupującego w innych sytuacjach.</p>
     </section>
+
     <section>
-        <h2 class="text-lg font-semibold text-quiet">5. Reklamacje</h2>
-        <p class="mt-1">[Treść do uzupełnienia — tryb i termin składania reklamacji.]</p>
+        <h2 class="text-lg font-semibold">§ 5. Odwołanie, przeniesienie i zmiany wydarzenia</h2>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+            <li><strong>Odwołanie bez nowego terminu.</strong> Każdy kupujący dostaje wiadomość e-mail, a Klub zwraca pełną zapłaconą cenę biletów bez potrzeby składania wniosku.</li>
+            <li><strong>Przeniesienie na nowy termin.</strong> Kupujący dostaje wiadomość e-mail z wyborem: zachowanie biletów na nowy termin (te same kody biletów; na wydarzeniach z miejscami numerowanymi te same miejsca, jeśli są dostępne — w przeciwnym razie miejsca możliwie najbliższe) albo zwrot pełnej ceny. Bez zgody kupującego bilety nie są przenoszone.</li>
+            <li><strong>Czas na decyzję.</strong> Kupujący ma 14 dni od wysłania wiadomości, jednak nie dłużej niż do dnia poprzedzającego nowy termin. Termin nie jest krótszy niż 7 dni, chyba że nowy termin wydarzenia przypada wcześniej. Dokładną datę podajemy w wiadomości i na stronie zamówienia.</li>
+            <li><strong>Brak decyzji = zwrot.</strong> Jeśli kupujący nie dokona wyboru w tym czasie, Klub automatycznie zwraca pieniądze. Zwrócone bilety tracą ważność — także na nowy termin — i nie uprawniają do wejścia.</li>
+            <li><strong>Bilet nigdy nie przepada.</strong> Niezależnie od terminów podanych w wiadomościach kupujący odwołanego lub przeniesionego wydarzenia zawsze może zażądać zwrotu pieniędzy, kontaktując się z Klubem.</li>
+            <li><strong>Istotne zmiany</strong> (np. data, godzina rozpoczęcia, główny wykonawca) ogłaszamy e-mailem do kupujących. W razie istotnej zmiany kupujący, który nie chce lub nie może wziąć udziału w zmienionym wydarzeniu, może zażądać zwrotu ceny biletu. Drobne zmiany organizacyjne (np. godzina otwarcia bramek) publikujemy na stronie wydarzenia.</li>
+            <li><strong>Zmiana miejsca przez obsługę.</strong> Z ważnych przyczyn (bezpieczeństwo, względy techniczne, zmiana układu sali) Klub może przenieść kupującego na inne miejsce w tej samej lub wyższej strefie cenowej, informując o tym e-mailem. Jeśli nowe miejsce nie odpowiada kupującemu, może zażądać zwrotu ceny biletu.</li>
+        </ol>
     </section>
+
     <section>
-        <h2 class="text-lg font-semibold text-quiet">6. Dane kontaktowe</h2>
-        <p class="mt-1">
-            {% if club_contact_email %}{{ club_contact_email }}{% else %}[adres e-mail do uzupełnienia]{% endif %}
-            {% if club_address %} · {{ club_address }}{% endif %}
-        </p>
+        <h2 class="text-lg font-semibold">§ 6. Jak realizujemy zwroty</h2>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+            <li>Zwrot obejmuje pełną zapłaconą cenę biletu (Klub nie pobiera dodatkowych opłat serwisowych). Realizujemy go niezwłocznie, nie później niż w ciągu 14 dni od odwołania wydarzenia, wyboru zwrotu przez kupującego albo upływu terminu wyboru.</li>
+            <li>Pieniądze wracają tą samą metodą, którą zapłacono (na kartę lub rachunek), za pośrednictwem operatora płatności. Kupujący nie musi podawać żadnych danych. Czas zaksięgowania zależy od banku lub wydawcy karty.</li>
+            <li>Jeśli zwrot tą drogą jest niemożliwy (np. karta została zamknięta), skontaktujemy się z kupującym e-mailem i uzgodnimy inny sposób. Dane potrzebne do takiego zwrotu (np. numer rachunku) wykorzystujemy wyłącznie do jego wykonania.</li>
+            <li>Zwrócone bilety tracą ważność. Każdy etap — wysłanie wiadomości (z datą, godziną i treścią), decyzja kupującego, zlecenie zwrotu, potwierdzenie operatora płatności albo błąd — jest rejestrowany w systemie Bileterii. Na tej podstawie Klub może wykazać, kiedy i z jaką treścią poinformował kupującego oraz kiedy zwrócił pieniądze.</li>
+            <li>Kupujący powinien podać poprawny adres e-mail i sprawdzać go (także folder spam), szczególnie przed wydarzeniem — wszystkie informacje o zmianach, odwołaniu i zwrotach wysyłamy na adres podany przy zakupie.</li>
+        </ol>
+    </section>
+
+    <section>
+        <h2 class="text-lg font-semibold">§ 7. Reklamacje</h2>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+            <li>Reklamacje dotyczące zakupu biletów lub wydarzenia można składać e-mailem{% if club.email %} na adres <a href="mailto:{{ club.email }}" class="underline">{{ club.email }}</a>{% endif %}. Prosimy podać numer zamówienia i opis problemu.</li>
+            <li>Odpowiadamy w ciągu 14 dni od otrzymania reklamacji.</li>
+            <li>Konsument może skorzystać z pozasądowych sposobów rozwiązywania sporów, m.in. z pomocy miejskiego lub powiatowego rzecznika konsumentów albo Wojewódzkiego Inspektoratu Inspekcji Handlowej.</li>
+        </ol>
+    </section>
+
+    <section>
+        <h2 class="text-lg font-semibold">§ 8. Dane osobowe</h2>
+        <p class="mt-2">Adres e-mail i dane zamówienia przetwarzamy w celu realizacji umowy (wysyłka biletów, informacje o zmianach i odwołaniu wydarzenia, zwroty, reklamacje). Szczegóły w <a href="{% url 'polityka_prywatnosci' %}" class="underline">Polityce prywatności</a>.</p>
+    </section>
+
+    <section>
+        <h2 class="text-lg font-semibold">§ 9. Postanowienia końcowe</h2>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+            <li>Klub może zmienić Regulamin; zmiana nie dotyczy zamówień złożonych wcześniej — obowiązuje je wersja zaakceptowana przy zakupie.</li>
+            <li>W sprawach nieuregulowanych stosuje się prawo polskie, w szczególności Kodeks cywilny i ustawę o prawach konsumenta. Postanowienia Regulaminu nie ograniczają praw konsumenta wynikających z przepisów prawa.</li>
+        </ol>
+    </section>
+
+    <section>
+        <h2 class="text-lg font-semibold">Historia zmian</h2>
+        <ul class="list-disc pl-5 mt-2 space-y-1 text-sm">
+            <li><strong>2026-10-06b</strong> — § 5: przeniesienie tylko za zgodą kupującego, wprost czas na decyzję (14 dni, nie dłużej niż dzień przed nowym terminem, co najmniej 7 dni), zwrócone bilety nieważne także na nowy termin; § 6: rejestr wiadomości i zwrotów jako dowód, obowiązek podania i sprawdzania adresu e-mail.</li>
+            <li><strong>2026-10-06</strong> — pierwsza wersja: zakup i płatność, wejście, odwołanie i przeniesienie wydarzenia (wybór: nowy termin albo zwrot, zwrot automatyczny bez odpowiedzi), sposób realizacji zwrotów, zmiana miejsca przez obsługę, reklamacje.</li>
+        </ul>
     </section>
 </div>
 {% endblock %}

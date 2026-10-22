@@ -15,7 +15,9 @@ pytestmark = pytest.mark.django_db
 def paid_order(client, quantity=2):
     event = make_event()
     make_pool(event)
-    client.post(f"/kup/{event.slug}/", {"buyer_email": "k@example.com", "quantity": quantity})
+    client.post(f"/kup/{event.slug}/", {
+        "accept_terms": "on", "buyer_email": "k@example.com", "quantity": quantity
+    })
     from apps.orders.models import Order
     order = Order.objects.latest("created_at")
     client.post(f"/kasa-demo/{order.id}/zaplac/")

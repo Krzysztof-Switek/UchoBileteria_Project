@@ -330,6 +330,16 @@ class TestEmergencyListPrint:
         body = response.content.decode()
         assert body.index("aaa@example.com") < body.index("zzz@example.com")
 
+    def test_sort_ignores_case(self, client, django_user_model):
+        staff_user(django_user_model)
+        client.login(username="bramkarz", password="x")
+        event = make_event()
+        pool = make_pool(event)
+        make_ticket(make_order(event, pool, buyer_email="Bob@example.com"))
+        make_ticket(make_order(event, pool, buyer_email="anna@example.com"))
+        body = client.get(f"/wejscie/{event.id}/lista-awaryjna/").content.decode()
+        assert body.index("anna@example.com") < body.index("Bob@example.com")
+
 
 class TestOfflineManifest:
     """OBS-07: the scanner's offline fallback data — short code, e-mail,
@@ -377,5 +387,6 @@ class TestOfflineManifest:
                 "token_hash": hash_token(token),
                 "buyer_email": ticket.buyer_email,
                 "status": TicketStatus.ISSUED,
+                "seat": "",  # tickets without a numbered seat
             }
         ]

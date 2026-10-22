@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="pl">
+<body style="font-family: Arial, sans-serif; color: #111; max-width: 560px; margin: 0 auto;">
+    <h1 style="font-size: 22px;">Zmiana miejsca — {{ event.title }}</h1>
+    <p>Obsługa klubu przeniosła Cię na inne miejsce.</p>
+    <p>Było: <s>{{ old_label }}</s><br>
+       Jest: <strong style="font-size: 18px;">{{ new_label }}</strong></p>
+    <p>Kody biletów i kody QR się nie zmieniły:</p>
+    <ul>
+        {% for ticket in tickets %}
+        <li><strong>{{ ticket.short_code }}</strong>{% if ticket.seat %} — {{ ticket.seat.label }}{% endif %}</li>
+        {% endfor %}
+    </ul>
+    <p>
+        <strong>{{ event.start_at|date:"l, j E Y, H:i" }}</strong><br>
+        {{ event.venue_name }}{% if event.venue_address %}, {{ event.venue_address }}{% endif %}
+    </p>
+    <p style="color: #777; font-size: 12px;">Zamówienie {{ order.short_id }} · {{ order.buyer_email }}</p>
+</body>
+</html>

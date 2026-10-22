@@ -1,0 +1,310 @@
+{% extends "admin/base_site.html" %}
+
+{% block nav-sidebar %}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Strona główna</a>
+    &rsaquo; <a href="{% url 'admin:events_event_changelist' %}">Wydarzenia</a>
+    &rsaquo; <a href="{% url 'admin:events_event_change' event.pk %}">{{ event.title }}</a>
+    &rsaquo; Odwołaj lub przenieś
+</div>
+{% endblock %}
+
+{% block content_title %}<h1>Odwołaj lub przenieś: {{ event.title }} — {{ event.start_at|date:"d.m.Y H:i" }}</h1>{% endblock %}
+
+{% block content %}
+{% comment %}
+Cancel / postpone screen (06.10.2026): 1) money and tickets at stake,
+2) refund OR new date — picked in the calendar: click an empty day (a copy of
+this event is created on that date) or an existing event; buyers then confirm
+the new date or take a refund (no answer by the deadline = automatic refund),
+3) the e-mail text, pre-filled and editable (unchanged = the automatic text);
+a postponement sends a "Zmiana terminu" e-mail, never "odwołane".
+{% endcomment %}
+<div id="content-main" class="ucho-cancel-page">
+    {% if error %}<p class="errornote">{{ error }}</p>{% endif %}
+
+    <div class="ucho-cancel-summary">
+        {% if summary.tickets %}
+        <div><span>Do zwrotu (przy odwołaniu)</span><strong>{{ summary.amount }} zł</strong></div>
+        <div><span>Bilety</span><strong>{{ summary.tickets }}</strong></div>
+        {% else %}
+        <div><span>Sprzedane bilety</span><strong>0</strong></div>
+        {% endif %}
+        {% if summary.unpaid_orders %}<p class="help">Nieopłacone rezerwacje ({{ summary.unpaid_orders }}) zostaną anulowane.</p>{% endif %}
+    </div>
+
+    <form method="post" class="ucho-cancel-form" id="cancel-form">
+        {% csrf_token %}
+        {% if summary.tickets %}
+        <section class="ucho-cancel-step">
+            <h2>1. Co z biletami?</h2>
+            <div class="ucho-cancel-modes">
+                <label class="ucho-mode-card">
+                    <input type="radio" name="mode" value="zwrot" {% if posted.mode != "nowy-termin" %}checked{% endif %}>
+                    <strong>Odwołanie — zwrot pieniędzy</strong>
+                    <span>Wydarzenie się nie odbędzie. Każdy kupujący dostaje e-mail „Wydarzenie odwołane” i zwrot od razu.</span>
+                </label>
+                <label class="ucho-mode-card">
+                    <input type="radio" name="mode" value="nowy-termin" {% if posted.mode == "nowy-termin" %}checked{% endif %}>
+                    <strong>Zmiana terminu</strong>
+                    <span>Wydarzenie odbędzie się później. Kupujący dostaje e-mail „Zmiana terminu” i potwierdza: zachowuje bilety albo zwrot. Brak potwierdzenia w terminie = zwrot automatyczny.</span>
+                </label>
+            </div>
+
+            <div id="new-date-panel" hidden>
+                <p class="help"><strong>Kliknij dzień</strong> nowego terminu — utworzymy to samo wydarzenie w nowej dacie (opis, pule i plan sali skopiowane). Jeśli nowy termin jest już w kalendarzu jako wydarzenie, kliknij <strong>to wydarzenie</strong>.</p>
+                <div class="ucho-cancel-cal">
+                    <div class="ucho-cancel-cal-head">
+                        <button type="button" class="button" data-cal="prev">‹ poprzedni</button>
+                        <strong id="cal-title"></strong>
+                        <button type="button" class="button" data-cal="next">następny ›</button>
+                    </div>
+                    <div class="ucho-cancel-cal-grid" id="cal-grid"></div>
+                    <p class="ucho-cancel-cal-legend"><i class="is-pick"></i> istniejące wydarzenie — można wybrać <i class="is-current"></i> to wydarzenie <i class="is-other"></i> inne <i class="is-day"></i> wybrany dzień</p>
+                </div>
+                <input type="hidden" name="replacement" id="replacement" value="{{ posted.replacement }}">
+                <input type="hidden" name="new_date" id="new-date" value="{{ posted.new_date }}">
+                <div id="chosen" class="ucho-cancel-chosen" hidden>
+                    <p>Nowy termin: <strong id="chosen-title"></strong></p>
+                    <label id="time-row" hidden>Godzina rozpoczęcia
+                        <input type="time" name="new_time" id="new-time" value="{% if posted.new_time %}{{ posted.new_time }}{% else %}{{ event_time }}{% endif %}">
+                    </label>
+                    <label>Kupujący potwierdzają do (włącznie)
+                        <input type="date" name="deadline" id="deadline" value="{{ posted.deadline }}">
+                    </label>
+                    <p class="help">Regulamin § 5: 14 dni od wysłania wiadomości, nie dłużej niż do dnia przed nowym terminem i nie krócej niż {{ min_days }} dni (chyba że nowy termin jest wcześniej). Po tym dniu system sam zleca zwrot tym, którzy nie potwierdzili, i zapisuje to w historii zamówienia.</p>
+                </div>
+            </div>
+        </section>
+        {% else %}
+        <input type="hidden" name="mode" value="zwrot">
+        {% endif %}
+
+        <section class="ucho-cancel-step">
+            <h2>{% if summary.tickets %}2{% else %}1{% endif %}. Wiadomość do kupujących</h2>
+            {% if summary.tickets %}
+            <p class="help">Ten tekst możesz zmienić albo zostawić — jeśli nic nie zmienisz, pójdzie taki, jak jest.</p>
+            {% else %}
+            <p class="help">Nikt nie kupił biletów — wiadomość zostanie tylko zapisana przy wydarzeniu.</p>
+            {% endif %}
+            <textarea name="reason" id="reason" rows="7" maxlength="4000">{% if posted.reason %}{{ posted.reason }}{% else %}{{ refund_message }}{% endif %}</textarea>
+            <button type="button" class="button" id="reset-text">Przywróć tekst domyślny</button>
+            {% if example_order %}
+            {% comment %}What the buyer gets: the text above + the part the system adds to every
+            e-mail with that buyer's own amount and tickets (example: the first order).{% endcomment %}
+            <div class="ucho-mail-preview">
+                <div class="ucho-mail-preview-head">Podgląd e-maila — tak zobaczy go kupujący (przykład: {{ example_order.buyer_email }})</div>
+                <div class="ucho-mail-subject" id="preview-subject">Temat: Wydarzenie odwołane: {{ event.title }}</div>
+                <div class="ucho-mail-text" id="preview-text"></div>
+                <div class="ucho-mail-auto">
+                    <div class="ucho-mail-auto-label">Tę część system dodaje sam — każdemu kupującemu z jego kwotą i biletami (nie da się jej przypadkiem usunąć):</div>
+                    <div id="preview-refund">
+                        <p><strong>Zwrot: {{ example_order.kept_amount }} {{ example_order.currency }}</strong> za {{ example_order.active_quantity }} bil. — na kartę lub rachunek, z którego zapłacono. Osobny e-mail potwierdzi wykonanie zwrotu. Bilety tracą ważność.</p>
+                    </div>
+                    <div id="preview-move" hidden>
+                        <p><strong>Nowy termin: <span class="pv-new-date">…</span></strong></p>
+                        <p>Twoje bilety ({{ example_order.active_quantity }} szt.) mogą zachować ważność na nowy termin — te same kody. Jeśli nowy termin Ci nie odpowiada, możesz zamiast tego otrzymać zwrot <strong>{{ example_order.kept_amount }} {{ example_order.currency }}</strong>.</p>
+                        <p><span class="ucho-mail-button">Potwierdź: nowy termin albo zwrot</span></p>
+                        <p>Na decyzję masz czas do <strong class="pv-deadline">…</strong>. Bez Twojego potwierdzenia bilety nie przechodzą na nowy termin: po tej dacie automatycznie zwrócimy pieniądze, a bilety stracą ważność.</p>
+                    </div>
+                    <p>Bilety z tego zamówienia: {% for t in example_order.tickets.all|slice:":6" %}{{ t.short_code }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if example_order.tickets.count > 6 %}…{% endif %}</p>
+                </div>
+            </div>
+            {% endif %}
+        </section>
+
+        <section class="ucho-cancel-step">
+            <label class="ucho-check"><input type="checkbox" name="confirm" value="1"> <span id="confirm-text">Rozumiem — odwołania nie da się cofnąć{% if summary.tickets %}, kupujący dostaną e-maile i zwroty{% endif %}.</span></label>
+            <div class="ucho-confirm-actions">
+                <button type="submit" class="button default ucho-danger-btn" id="submit-btn">Odwołaj wydarzenie</button>
+                <a href="{% url 'admin:events_event_change' event.pk %}" class="button" role="button">Anuluj</a>
+            </div>
+        </section>
+    </form>
+</div>
+{{ calendar|json_script:"cal-data" }}
+{{ refund_message|json_script:"refund-message" }}
+{{ move_message|json_script:"move-message" }}
+{{ event_when|json_script:"event-when" }}
+{{ event.title|json_script:"event-title" }}
+<script>
+(function () {
+    const events = JSON.parse(document.getElementById("cal-data").textContent);
+    const refundMessage = JSON.parse(document.getElementById("refund-message").textContent);
+    const moveMessage = JSON.parse(document.getElementById("move-message").textContent);
+    const eventWhen = JSON.parse(document.getElementById("event-when").textContent);
+    const form = document.getElementById("cancel-form");
+    const panel = document.getElementById("new-date-panel");
+    const reason = document.getElementById("reason");
+    const hidden = document.getElementById("replacement");
+    const newDate = document.getElementById("new-date");
+    const newTime = document.getElementById("new-time");
+    const deadline = document.getElementById("deadline");
+    const chosen = document.getElementById("chosen");
+    const byId = Object.fromEntries(events.map((e) => [String(e.id), e]));
+    const MONTHS = ["styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec", "lipiec",
+                    "sierpień", "wrzesień", "październik", "listopad", "grudzień"];
+    const DAY = 86400000;
+    let edited = {{ posted.reason|yesno:"true,false" }};
+    let lastDefault = reason.value;
+    reason.addEventListener("input", () => { edited = reason.value !== lastDefault; preview(); });
+    function preview() {
+        const text = document.getElementById("preview-text");
+        if (!text) return;
+        const move = mode() === "nowy-termin";
+        text.textContent = reason.value;
+        document.getElementById("preview-subject").textContent = "Temat: " +
+            (move ? "Zmiana terminu: " : "Wydarzenie odwołane: ") +
+            JSON.parse(document.getElementById("event-title").textContent);
+        document.getElementById("preview-refund").hidden = move;
+        document.getElementById("preview-move").hidden = !move;
+        const e = byId[hidden.value];
+        const when = e ? plDate(e.date) + ", godz. " + e.time
+            : (newDate.value ? plDate(newDate.value) + ", godz. " + (newTime.value || "20:00") : "… (wybierz w kalendarzu)");
+        document.querySelectorAll(".pv-new-date").forEach((n) => { n.textContent = when; });
+        document.querySelectorAll(".pv-deadline").forEach((n) => {
+            n.textContent = deadline.value ? plDate(deadline.value) + ", godz. 23:59" : "…";
+        });
+    }
+
+    const pad = (n) => String(n).padStart(2, "0");
+    const iso = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    const plDate = (s) => s.split("-").reverse().join(".");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    function setDefault(text) {
+        if (!edited) reason.value = text;
+        lastDefault = text;
+        preview();
+    }
+    function mode() {
+        const r = form.querySelector('input[name="mode"]:checked');
+        return r ? r.value : "zwrot";
+    }
+    function currentDefault() {
+        if (mode() !== "nowy-termin") return refundMessage;
+        const e = byId[hidden.value];
+        if (e) return e.message;
+        if (newDate.value) {
+            return moveMessage.replace("{STARY}", eventWhen)
+                .replace("{NOWY}", plDate(newDate.value) + ", godz. " + (newTime.value || "20:00"));
+        }
+        return moveMessage.replace("{STARY}", eventWhen).replace("{NOWY}", "…");
+    }
+    document.getElementById("reset-text").addEventListener("click", () => {
+        edited = false;
+        setDefault(currentDefault());
+    });
+
+    // deadline: 14 days, at most the day before the new date, at least 7 days
+    function defaultDeadline(dateStr) {
+        const target = new Date(dateStr + "T12:00");
+        const latest = new Date(target.getTime() - DAY);
+        const fourteen = new Date(today.getTime() + 14 * DAY);
+        return iso(latest < fourteen ? latest : fourteen);
+    }
+
+    // month calendar (Monday first)
+    const firstPick = events.find((e) => e.selectable);
+    let view = firstPick ? new Date(firstPick.date + "T12:00") : new Date();
+    view = new Date(view.getFullYear(), view.getMonth(), 1);
+    const grid = document.getElementById("cal-grid");
+    function render() {
+        document.getElementById("cal-title").textContent = MONTHS[view.getMonth()] + " " + view.getFullYear();
+        grid.innerHTML = "";
+        ["pn", "wt", "śr", "cz", "pt", "sb", "nd"].forEach((d) => {
+            const h = document.createElement("div");
+            h.className = "cal-dow";
+            h.textContent = d;
+            grid.appendChild(h);
+        });
+        const start = (view.getDay() + 6) % 7;
+        const days = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
+        for (let i = 0; i < start; i++) grid.appendChild(document.createElement("div"));
+        for (let day = 1; day <= days; day++) {
+            const d = new Date(view.getFullYear(), view.getMonth(), day);
+            const date = iso(d);
+            const cell = document.createElement("div");
+            const pickable = d.getTime() > today.getTime(); // from tomorrow on
+            cell.className = "cal-day" + (date === iso(today) ? " is-today" : "") +
+                (pickable ? " is-pickable" : " is-past") + (date === newDate.value && !hidden.value ? " is-chosen-day" : "");
+            cell.innerHTML = "<span class=\"cal-num\">" + day + "</span>";
+            if (pickable) {
+                cell.title = "Nowy termin: " + plDate(date);
+                cell.addEventListener("click", () => chooseDay(date));
+            }
+            events.filter((e) => e.date === date).forEach((e) => {
+                const chip = document.createElement(e.selectable ? "button" : "span");
+                if (e.selectable) chip.type = "button";
+                chip.className = "cal-chip " + (e.current ? "is-current" : e.selectable ? "is-pick" : "is-other") +
+                    (String(e.id) === hidden.value ? " is-chosen" : "");
+                chip.textContent = e.time + " " + e.title;
+                chip.title = e.title + " — " + plDate(e.date) + " " + e.time + " · " + e.status +
+                    (e.selectable ? " · wolnych miejsc: " + e.free : "");
+                if (e.selectable) {
+                    chip.addEventListener("click", (ev) => {
+                        ev.stopPropagation();
+                        chooseEvent(e);
+                    });
+                }
+                cell.appendChild(chip);
+            });
+            grid.appendChild(cell);
+        }
+    }
+    function showChosen(text, withTime, deadlineValue) {
+        document.getElementById("chosen-title").textContent = text;
+        document.getElementById("time-row").hidden = !withTime;
+        chosen.hidden = false;
+        if (!deadline.dataset.touched) deadline.value = deadlineValue;
+        deadline.max = deadlineValue < iso(new Date(today.getTime() + 7 * DAY)) ? deadlineValue : "";
+    }
+    function chooseEvent(e) {
+        hidden.value = e.id;
+        newDate.value = "";
+        showChosen(e.title + " — " + plDate(e.date) + " " + e.time +
+            (e.seated ? " · miejsca numerowane" : "") + " · wolnych miejsc: " + e.free +
+            " (istniejące wydarzenie)", false, e.deadline);
+        setDefault(currentDefault());
+        render();
+    }
+    function chooseDay(date) {
+        hidden.value = "";
+        newDate.value = date;
+        showChosen(plDate(date) + " — utworzymy nowe wydarzenie (kopia opisu, pul i planu sali)",
+            true, defaultDeadline(date));
+        setDefault(currentDefault());
+        render();
+    }
+    newTime.addEventListener("input", () => setDefault(currentDefault()));
+    deadline.addEventListener("input", () => { deadline.dataset.touched = "1"; preview(); });
+    form.querySelectorAll("[data-cal]").forEach((b) => b.addEventListener("click", () => {
+        view = new Date(view.getFullYear(), view.getMonth() + (b.dataset.cal === "next" ? 1 : -1), 1);
+        render();
+    }));
+    function sync() {
+        const move = mode() === "nowy-termin";
+        if (panel) panel.hidden = !move;
+        const fr = document.getElementById("facts-refund"), fm = document.getElementById("facts-move");
+        if (fr) fr.hidden = move;
+        if (fm) fm.hidden = !move;
+        document.getElementById("submit-btn").textContent = move ? "Zmień termin i powiadom kupujących" : "Odwołaj wydarzenie";
+        document.getElementById("submit-btn").classList.toggle("ucho-danger-btn", !move);
+        document.getElementById("confirm-text").textContent = move
+            ? "Rozumiem — kupujący dostaną e-mail o zmianie terminu z prośbą o potwierdzenie; bez potwierdzenia dostaną zwrot."
+            : "Rozumiem — odwołania nie da się cofnąć, kupujący dostaną e-maile i zwroty.";
+        setDefault(currentDefault());
+    }
+    form.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", sync));
+    if (panel) {
+        render();
+        if (hidden.value && byId[hidden.value]) chooseEvent(byId[hidden.value]);
+        else if (newDate.value) chooseDay(newDate.value);
+        sync();
+    }
+})();
+</script>
+{% endblock %}

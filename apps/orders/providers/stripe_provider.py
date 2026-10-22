@@ -34,16 +34,7 @@ class StripeProvider:
         stripe = _stripe()
         session = stripe.checkout.Session.create(
             mode="payment",
-            line_items=[
-                {
-                    "price_data": {
-                        "currency": order.currency.lower(),
-                        "unit_amount": int(order.pool.price_gross * 100),
-                        "product_data": {"name": f"Bilet: {order.event.title}"},
-                    },
-                    "quantity": order.quantity,
-                }
-            ],
+            line_items=_line_items(order),
             customer_email=order.buyer_email,
             metadata={"order_id": str(order.id)},
             success_url=f"{settings.SITE_BASE_URL}/zamowienie/{order.id}/",
@@ -59,13 +50,41 @@ class StripeProvider:
         order.refresh_from_db()
         return order.checkout_url
 
-    def refund(self, order: Order, amount=None) -> str:
+    def refund(self, order: Order, amount=None, order_refund=None) -> str:
         if not order.provider_order_id:
             raise ValueError("Brak identyfikatora płatności Stripe dla tego zamówienia.")
         stripe = _stripe()
-        refund = stripe.Refund.create(payment_intent=order.provider_order_id)
+        kwargs = {"payment_intent": order.provider_order_id}
+        if order_refund is not None:
+            # partial: only these tickets; without `amount` Stripe refunds the rest
+            kwargs["amount"] = int(round(order_refund.amount * 100))
+            kwargs["metadata"] = {"order_refund_id": str(order_refund.pk)}
+        refund = stripe.Refund.create(**kwargs)
         # The REFUNDED status lands asynchronously via the charge.refunded webhook.
         return refund["id"]
+
+
+def _line_items(order: Order) -> list[dict]:
+    """One Stripe line per ticket price: price zones make seats of one order
+    cost differently (the sum always equals order.amount_gross)."""
+    if order.seat_prices:
+        counts: dict[Decimal, int] = {}
+        for price in order.seat_prices:
+            counts[Decimal(price)] = counts.get(Decimal(price), 0) + 1
+        lines = sorted(counts.items(), reverse=True)
+    else:
+        lines = [(order.pool.price_gross, order.quantity)]
+    return [
+        {
+            "price_data": {
+                "currency": order.currency.lower(),
+                "unit_amount": int(round(price * 100)),
+                "product_data": {"name": f"Bilet: {order.event.title}"},
+            },
+            "quantity": quantity,
+        }
+        for price, quantity in lines
+    ]
 
 
 def handle_stripe_event(event: dict):
@@ -100,14 +119,24 @@ def handle_stripe_event(event: dict):
         order = Order.objects.filter(
             provider_order_id=obj.get("payment_intent") or "__none__"
         ).first()
+        # amount_refunded is cumulative on the charge — book only the new part,
+        # and match it to a pending partial refund of the same amount if any.
+        total = Decimal(obj["amount_refunded"]) / 100 if obj.get("amount_refunded") else None
+        delta = total - order.refunded_amount if (order and total is not None) else total
         payload = {
             "id": event["id"],
             "type": "refund.succeeded",
             "order_id": str(order.id) if order else None,
-            "amount": (
-                Decimal(obj["amount_refunded"]) / 100 if obj.get("amount_refunded") else None
-            ),
+            "amount": delta,
         }
+        if order and delta is not None:
+            from apps.orders.models import OrderRefund, RefundStatus
+
+            pending = OrderRefund.objects.filter(
+                order=order, status=RefundStatus.REQUESTED, amount=delta
+            ).order_by("created_at").first()
+            if pending:
+                payload["refund_id"] = pending.pk
     else:
         # Recorded for audit, processed as IGNORED.
         payload = {"id": event["id"], "type": event_type, "order_id": None, "amount": None}

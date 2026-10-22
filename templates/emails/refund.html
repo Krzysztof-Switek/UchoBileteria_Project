@@ -3,7 +3,8 @@
 <body style="font-family: Arial, sans-serif; color: #111; max-width: 560px; margin: 0 auto;">
     <h1 style="font-size: 22px;">Zwrot za bilety — {{ event.title }}</h1>
     <p>Twoje zamówienie <strong>{{ order.short_id }}</strong> zostało zwrócone.</p>
-    <p>Kwota zwrotu: <strong>{{ order.amount_gross }} {{ order.currency }}</strong></p>
+    <p>Kwota zwrotu: <strong>{{ refund_amount|default:order.amount_gross }} {{ order.currency }}</strong></p>
+    {% if order.seat_labels %}<p>Miejsca: {{ order.seat_labels|join:", " }}</p>{% endif %}
     {% if order.is_demo %}
     <p style="background:#fef3c7; padding:8px 12px; border-radius:6px;">
         Zamówienie testowe (tryb demo) — zwrot wirtualnej waluty.

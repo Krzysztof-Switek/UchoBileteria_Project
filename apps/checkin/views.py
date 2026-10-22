@@ -4,7 +4,7 @@ from functools import wraps
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -12,7 +12,7 @@ from apps.events.models import Event, EventStatus
 from apps.tickets.models import Ticket, TicketStatus
 
 from . import services
-from .services import ScanResult
+from .services import GATE_FALLBACK_HOURS, ScanResult
 
 # Every entrance-control view requires the dedicated check-in permission
 # (DOOR_STAFF group); 403 instead of a login-redirect loop for users without it.
@@ -99,13 +99,23 @@ def scan(request, event_id):
     except Exception:  # noqa: BLE001 - scanner must always answer
         result, ticket = ScanResult.SERVER_ERROR, None
 
+    message = ScanResult.MESSAGES[result]
+    if ticket is not None and ticket.status == TicketStatus.REFUNDED:
+        # e.g. a buyer of a cancelled date who missed the e-mails: say so and
+        # show the proof (refund date, when the e-mail went out)
+        from apps.orders.cancellation import refund_proof_line
+
+        result = ScanResult.REFUNDED
+        message = f"{ScanResult.MESSAGES[result]} {refund_proof_line(ticket)}".strip()
+
     return JsonResponse(
         {
             "result": result,
             "ok": result == ScanResult.VALID_CHECKED_IN,
-            "message": ScanResult.MESSAGES[result],
+            "message": message,
             "ticket_code": ticket.short_code if ticket else "",
             "buyer_email": ticket.buyer_email if ticket else "",
+            "seat": ticket.seat.label if ticket and ticket.seat_id else "",
         }
     )
 
@@ -204,6 +214,32 @@ def offline_manifest(request, event_id):
     return JsonResponse({"tickets": services.offline_manifest_tickets(event)})
 
 
+def _today_event(events):
+    """The event to open by default: running now / today, else the nearest upcoming,
+    else the most recent one."""
+    now = timezone.now()
+    today = timezone.localdate()
+    events = list(events)
+    for event in events:
+        end = event.end_at or event.start_at + timedelta(hours=GATE_FALLBACK_HOURS)
+        if timezone.localtime(event.start_at).date() == today or event.start_at <= now <= end:
+            return event
+    upcoming = [e for e in events if e.start_at >= now]
+    if upcoming:
+        return min(upcoming, key=lambda e: e.start_at)
+    return max(events, key=lambda e: e.start_at) if events else None
+
+
+@login_required
+@can_scan
+def emergency_list_today(request):
+    """'Lista awaryjna' tile: straight to today's event list (switchable there)."""
+    event = _today_event(_scannable_events())
+    if event is None:
+        return redirect("checkin:event_select")
+    return redirect("checkin:emergency_list_print", event_id=event.pk)
+
+
 @login_required
 @can_scan
 def emergency_list_print(request, event_id):
@@ -215,7 +251,12 @@ def emergency_list_print(request, event_id):
     return render(
         request,
         "checkin/emergency_list_print.html",
-        {"event": event, "tickets": tickets},
+        {
+            "event": event,
+            "tickets": tickets,
+            "generated_at": timezone.localtime(),
+            "other_events": list(_scannable_events()),
+        },
     )
 
 

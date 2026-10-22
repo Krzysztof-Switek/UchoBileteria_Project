@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Bileteria UCHO{% endblock %}</title>
+    <title>{% block title %}Bileteria Scena Ucho{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'dist/tailwind.css' %}">
     {% include "partials/theme_toggle_script.html" %}
 </head>
@@ -29,7 +29,7 @@
             </div>
         </div>
     </header>
-    <main class="max-w-3xl mx-auto px-4 py-8">
+    <main class="{% block main_width %}max-w-3xl{% endblock %} mx-auto px-4 py-8">
         {% if messages %}
         <div class="mb-6 space-y-2">
             {% for message in messages %}

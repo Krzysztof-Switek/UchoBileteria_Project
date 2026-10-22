@@ -1,20 +1,23 @@
 import json
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.events.models import Event, EventStatus
 
 from . import services
-from .forms import PurchaseForm
+from .forms import PurchaseForm, SeatPurchaseForm
 from .models import Order, OrderStatus, PaymentProviderKind
 from .payments import SignatureError
 from .providers import demo as demo_provider
 from .providers import get_provider
 from .ratelimit import is_rate_limited, resend_is_cooling_down
+from .terms import TERMS_VERSION
 
 
 @require_POST
@@ -25,9 +28,15 @@ def purchase(request, slug):
         messages.error(request, "Zbyt wiele prób zakupu. Spróbuj ponownie za kilka minut.")
         return redirect("events:detail", slug=event.slug)
 
+    if event.is_seated:
+        return _purchase_seats(request, event)
+
     form = PurchaseForm(request.POST, max_quantity=event.max_tickets_per_order)
     if not form.is_valid():
-        messages.error(request, "Sprawdź poprawność adresu e-mail i liczby biletów.")
+        if "accept_terms" in form.errors:
+            messages.error(request, form.errors["accept_terms"][0])
+        else:
+            messages.error(request, "Sprawdź poprawność adresu e-mail i liczby biletów.")
         return redirect("events:detail", slug=event.slug)
 
     try:
@@ -35,6 +44,7 @@ def purchase(request, slug):
             event,
             buyer_email=form.cleaned_data["buyer_email"],
             quantity=form.cleaned_data["quantity"],
+            terms_version=TERMS_VERSION,
         )
     except services.PurchaseError as exc:
         messages.error(request, str(exc))
@@ -44,12 +54,116 @@ def purchase(request, slug):
     return redirect(checkout_url)
 
 
+def _back_to_map(event, seats=(), email=""):
+    """Event page with the buyer's selection restored (minus lost seats)."""
+    url = reverse("events:detail", args=[event.slug])
+    query = {}
+    if seats:
+        query["wybrane"] = ",".join(seats)
+    if email:
+        query["email"] = email
+    return redirect(url + ("?" + urlencode(query) if query else "") + "#mapa")
+
+
+def _purchase_seats(request, event):
+    form = SeatPurchaseForm(request.POST)
+    if not form.is_valid():
+        if "accept_terms" in form.errors:
+            messages.error(request, form.errors["accept_terms"][0])
+        else:
+            messages.error(request, "Podaj poprawny e-mail i wybierz miejsca na mapie.")
+        seats = [k for k in request.POST.get("seats", "").split(",") if k.strip()]
+        return _back_to_map(event, seats, request.POST.get("buyer_email", ""))
+    email = form.cleaned_data["buyer_email"]
+    try:
+        order = services.create_order(event, buyer_email=email,
+                                      seat_keys=form.cleaned_data["seats"],
+                                      terms_version=TERMS_VERSION)
+    except services.SeatConflictError as exc:
+        messages.error(request, str(exc))
+        return _back_to_map(event, exc.still_free, email)
+    except services.PurchaseError as exc:
+        messages.error(request, str(exc))
+        return _back_to_map(event, form.cleaned_data["seats"], email)
+    checkout_url = get_provider(order).start_checkout(order)
+    return redirect(checkout_url)
+
+
+def change_seats(request, order_id):
+    """Buyer swaps the seats of an unpaid order (same number) before paying."""
+    order = get_object_or_404(Order, id=order_id)
+    event = order.event
+    pending = order.status in (OrderStatus.CREATED, OrderStatus.PAYMENT_PENDING)
+    if not event.is_seated or not order.seat_keys or not pending:
+        messages.error(request, "W tym zamówieniu nie można zmienić miejsc.")
+        return redirect("orders:detail", order_id=order.id)
+    if request.method == "POST":
+        keys = [k.strip() for k in request.POST.get("seats", "").split(",") if k.strip()]
+        try:
+            services.change_pending_order_seats(order, keys)
+        except services.PurchaseError as exc:
+            messages.error(request, str(exc))
+            return redirect("orders:change_seats", order_id=order.id)
+        messages.success(request, "Zmieniono miejsca: " + ", ".join(order.seat_labels) + ".")
+        return redirect("orders:detail", order_id=order.id)
+
+    from apps.seating.services import seat_map_payload, zone_prices
+
+    return render(request, "orders/change_seats.html", {
+        "order": order,
+        "event": event,
+        "seat_config": {
+            **seat_map_payload(event),
+            "mine": order.seat_keys,
+            "price": str(order.pool.price_gross),
+            "currency": order.currency,
+            "states_url": reverse("events:seat_states", args=[event.slug])
+            + f"?zamowienie={order.id}",
+            "limit_count": order.quantity,
+            "zone_prices": zone_prices(event, order.pool.price_gross),
+        },
+    })
+
+
 def order_detail(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     checkout_url = None
     if order.status in (OrderStatus.CREATED, OrderStatus.PAYMENT_PENDING):
         checkout_url = get_provider(order).start_checkout(order)
     return render(request, "orders/detail.html", {"order": order, "checkout_url": checkout_url})
+
+
+def cancellation_choice(request, order_id):
+    """Event cancelled with a new date: the buyer keeps the tickets for the new
+    date or takes the refund (link from the e-mail; the order UUID is the key)."""
+    from django.core.exceptions import ValidationError
+
+    from . import cancellation
+    from .models import CancellationStatus
+
+    order = get_object_or_404(Order.objects.select_related("event"), id=order_id)
+    event = order.moved_from_event or order.event
+    if request.method == "POST" and order.cancellation_status == CancellationStatus.AWAITING:
+        choice = request.POST.get("wybor")
+        try:
+            if choice == "nowy-termin":
+                cancellation.move_to_replacement(order)
+                messages.success(request, "Bilety są ważne na nowy termin — wysłaliśmy je "
+                                          "ponownie e-mailem.")
+            elif choice == "zwrot":
+                if cancellation.choose_refund(order):
+                    messages.success(request, "Zlecono zwrot pieniędzy na rachunek lub kartę, "
+                                              "z której zapłacono.")
+                else:
+                    messages.warning(request, "Nie udało się automatycznie zlecić zwrotu — "
+                                              "obsługa klubu skontaktuje się z Tobą e-mailem.")
+        except ValidationError as exc:
+            messages.error(request, " ".join(exc.messages))
+        return redirect("orders:cancellation_choice", order_id=order.pk)
+    order.refresh_from_db()
+    return render(request, "orders/cancellation_choice.html", {
+        "order": order, "event": event, "replacement": event.replacement_event,
+    })
 
 
 @require_POST

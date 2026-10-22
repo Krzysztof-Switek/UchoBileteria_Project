@@ -119,7 +119,17 @@ def publish_event(event: Event, actor=None) -> Event:
             "Bramki muszą się otworzyć przed startem koncertu (lub w tym samym momencie)."
         )
     if event.end_at is not None and event.end_at <= event.start_at:
-        raise ValidationError("Koniec wydarzenia musi być po jego rozpoczęciu.")
+        fmt = "%d.%m.%Y %H:%M"
+        raise ValidationError(
+            f"Koniec wydarzenia ({timezone.localtime(event.end_at):{fmt}}) musi być po "
+            f"starcie koncertu ({timezone.localtime(event.start_at):{fmt}}) — popraw "
+            "„Koniec” w kroku „Termin wydarzenia”."
+        )
+    if event.is_seated and not event.seats.filter(status="AVAILABLE").exists():
+        raise ValidationError(
+            "Wydarzenie z miejscami numerowanymi musi mieć przypięty plan sali z wolnymi "
+            "miejscami (przycisk „Plan sali”)."
+        )
 
     event.status = EventStatus.PUBLISHED
     event.updated_by = actor
@@ -158,3 +168,48 @@ def set_pool_manual_status(pool: TicketPool, manual_status: str, actor=None) -> 
     pool.save(update_fields=["manual_status", "updated_at"])
     log_action("pool.manual_status_set", pool, actor=actor, metadata={"status": manual_status})
     return pool
+
+
+def copy_event_for_new_date(event: Event, new_start, actor=None) -> Event:
+    """Postponement (06.10.2026): the same show on a new date, made by clicking
+    an empty day in the cancel screen's calendar. Copies the description,
+    times (shifted by the same amount), pools (nothing sold) and the seat plan;
+    published when the original was, so buyers can keep their tickets there."""
+    from django.utils.text import slugify
+
+    from .models import online_sales_cutoff
+
+    shift = new_start - event.start_at
+    base = slugify(f"{event.slug}-{timezone.localtime(new_start):%Y-%m-%d}")[:45]
+    slug, n = base, 2
+    while Event.objects.filter(slug=slug).exists():
+        slug, n = f"{base}-{n}", n + 1
+    now = timezone.now()
+    copy = Event.objects.create(
+        title=event.title, slug=slug, description=event.description,
+        venue_name=event.venue_name, venue_address=event.venue_address,
+        gates_open_at=event.gates_open_at + shift if event.gates_open_at else None,
+        start_at=new_start,
+        end_at=event.end_at + shift if event.end_at else None,
+        sales_start_at=now, sales_end_at=online_sales_cutoff(new_start),
+        capacity_total=max(sum(p.capacity for p in event.pools.all()), 1),
+        status=EventStatus.DRAFT, max_tickets_per_order=event.max_tickets_per_order,
+        created_by=actor, updated_by=actor,
+    )
+    for pool in event.pools.order_by("pk"):
+        TicketPool.objects.create(
+            event=copy, name=pool.name, price_gross=pool.price_gross, currency=pool.currency,
+            capacity=pool.capacity, on_sellout=pool.on_sellout, sales_start_at=now,
+            sales_end_at=online_sales_cutoff(new_start),
+        )
+    seat_map = getattr(event, "seat_map", None)
+    if seat_map is not None and seat_map.source_layout_id:
+        from apps.seating.services import attach_layout
+
+        attach_layout(copy, seat_map.source_layout, actor=actor)
+    log_action("event.copied_for_new_date", copy, actor=actor,
+               metadata={"source_id": event.pk, "start": new_start.isoformat()})
+    if event.status == EventStatus.PUBLISHED:
+        publish_event(copy, actor=actor)
+    copy.refresh_from_db()
+    return copy

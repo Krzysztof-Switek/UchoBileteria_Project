@@ -21,6 +21,7 @@
                 {% endif %}
             </td>
             <td class="ucho-dash-events-badge">{{ row.badge }}</td>
+            <td class="ucho-dash-events-edit"><a href="{% url 'admin:events_event_change' row.event.pk %}" class="button" role="button">Edytuj</a></td>
         </tr>
         {% endfor %}
     </table>

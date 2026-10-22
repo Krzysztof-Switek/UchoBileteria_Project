@@ -1,0 +1,15 @@
+Zmiany — {{ event.title }}
+
+Organizator wprowadził zmiany w wydarzeniu, na które masz bilety:
+{% for c in changes %} - {{ c.label }}: było {{ c.old }}, jest {{ c.new }}
+{% endfor %}{% if note %}
+{{ note }}
+{% endif %}
+Aktualnie:
+Kiedy: {{ event.start_at|date:"l, j E Y, H:i" }}{% if event.gates_open_at %} (wejście od {{ event.gates_open_at|date:"H:i" }}){% endif %}
+Gdzie: {{ event.venue_name }}{% if event.venue_address %}, {{ event.venue_address }}{% endif %}
+
+Twoje bilety pozostają ważne (kody i QR bez zmian):
+{% for ticket in tickets %} - {{ ticket.short_code }}{% if ticket.seat %} — {{ ticket.seat.label }}{% endif %}
+{% endfor %}
+Zamówienie {{ order.short_id }} · {{ order.buyer_email }}

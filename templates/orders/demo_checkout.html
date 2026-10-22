@@ -1,6 +1,6 @@
 {% extends "base_public.html" %}
 
-{% block title %}Kasa demo — Klub UCHO{% endblock %}
+{% block title %}Kasa demo — {{ club_name }}{% endblock %}
 
 {% block content %}
 <div class="max-w-md mx-auto">
@@ -14,6 +14,7 @@
         <dl class="mt-4 space-y-1 text-quiet">
             <div><dt class="inline text-muted">Wydarzenie:</dt> <dd class="inline">{{ order.event.title }}</dd></div>
             <div><dt class="inline text-muted">Bilety:</dt> <dd class="inline">{{ order.quantity }} × {{ order.pool.name }}</dd></div>
+            {% if order.seat_labels %}<div><dt class="inline text-muted">Miejsca:</dt> <dd class="inline">{% for label, price in order.seat_lines %}{{ label }}{% if price %} ({{ price }} {{ order.currency }}){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</dd></div>{% endif %}
             <div class="text-2xl font-bold mt-2">{{ order.amount_gross }} {{ order.currency }}</div>
         </dl>
         <p class="text-muted text-sm mt-2">Saldo portfela demo: 1 000 000,00 DEMO</p>

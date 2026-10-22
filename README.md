@@ -71,7 +71,8 @@ ruff check .
 - `expire_orders` — wygasza nieopłacone zamówienia (20 min) i zwalnia miejsca,
 - `send_emails` — wysyła kolejkę e-maili (5 prób),
 - `sync_calendar` — synchronizuje Google Calendar (nieblokująco),
-- `snapshot_emergency_lists` — CSV listy awaryjnej 2 h przed imprezą.
+- `snapshot_emergency_lists` — CSV listy awaryjnej 2 h przed imprezą,
+- `process_cancellations` — odwołane wydarzenie z nowym terminem: zwrot automatyczny dla kupujących, którzy nie wybrali do terminu decyzji.
 
 ## Produkcja
 

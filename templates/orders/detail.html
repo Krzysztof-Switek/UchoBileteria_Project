@@ -1,14 +1,26 @@
 {% extends "base_public.html" %}
 
-{% block title %}Zamówienie {{ order.short_id }} — Klub UCHO{% endblock %}
+{% block title %}Zamówienie {{ order.short_id }} — {{ club_name }}{% endblock %}
 
 {% block content %}
 <h1 class="text-2xl font-bold">Zamówienie <span class="font-mono">{{ order.short_id }}</span></h1>
+{% if order.cancellation_status == "AWAITING" %}
+<div class="mt-4 msg-warning rounded-lg px-4 py-3">
+    Zmiana terminu wydarzenia — potwierdź, czy zachowujesz bilety.
+    <a href="{% url 'orders:cancellation_choice' order.pk %}" class="font-bold underline">Potwierdź: nowy termin albo zwrot</a>
+</div>
+{% endif %}
 
 <div class="mt-6 card rounded-xl p-6 space-y-2 text-quiet">
     <div><span class="text-muted">Wydarzenie:</span> {{ order.event.title }}</div>
     <div><span class="text-muted">Bilety:</span> {{ order.quantity }} × {{ order.pool.name }}</div>
+    {% if order.seat_labels %}
+    <div><span class="text-muted">Miejsca:</span> <span class="font-semibold">{% for label, price in order.seat_lines %}{{ label }}{% if price %} ({{ price }} {{ order.currency }}){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</span></div>
+    {% endif %}
     <div><span class="text-muted">Kwota:</span> <span class="font-bold">{{ order.amount_gross }} {{ order.currency }}</span></div>
+    {% if order.refunded_quantity and order.status == "PAID" %}
+    <div><span class="text-muted">Zwrócono:</span> {{ order.refunded_quantity }} bilet(y) — {{ order.refunded_amount }} {{ order.currency }}</div>
+    {% endif %}
     <div><span class="text-muted">E-mail:</span> {{ order.buyer_email }}</div>
     <div><span class="text-muted">Status:</span> <span class="font-semibold">{{ order.get_status_display }}</span></div>
 </div>
@@ -23,6 +35,10 @@
        class="btn-primary mt-4 inline-block font-bold rounded-lg px-6 py-3">
         Przejdź do płatności
     </a>
+    {% endif %}
+    {% if order.seat_keys %}
+    <a href="{% url 'orders:change_seats' order.id %}"
+       class="input-theme mt-4 ml-2 inline-block rounded-lg px-5 py-3">Zmień miejsca</a>
     {% endif %}
 </div>
 <div id="pending-expired-notice" class="hidden mt-6 text-center">
@@ -58,6 +74,8 @@
         <div class="text-sm text-zinc-500 mt-1">{{ order.event.start_at|date:"j E Y, H:i" }}</div>
         <div class="text-sm text-zinc-500">{{ order.event.venue_name }}</div>
         <div class="text-xs text-zinc-400 mt-1 uppercase tracking-wide">{{ ticket.pool.name }}</div>
+        {% if ticket.seat %}<div class="text-xl font-bold mt-2">{{ ticket.seat.label }}</div>{% endif %}
+        {% if ticket.price_gross %}<div class="text-xs text-zinc-500">{% if ticket.seat.category %}strefa {{ ticket.seat.category }} · {% endif %}{{ ticket.price_gross }} {{ order.currency }}</div>{% endif %}
         <img src="{{ MEDIA_URL }}qr/{{ ticket.id }}.png" alt="QR {{ ticket.short_code }}"
              class="mx-auto mt-3 w-48 h-48">
         <div class="font-mono text-lg font-bold tracking-widest mt-2">{{ ticket.short_code }}</div>
@@ -69,7 +87,7 @@
 {% endwith %}
 {% elif order.status == "EXPIRED" %}
 <div class="mt-6 text-center">
-    <p class="text-warning font-semibold">Zamówienie wygasło. Wróć na stronę wydarzenia i spróbuj ponownie.</p>
+    <p class="text-warning font-semibold">Zamówienie wygasło{% if order.seat_labels %} — miejsca wróciły do sprzedaży{% endif %}. Wróć na stronę wydarzenia i spróbuj ponownie.</p>
     <a href="{% url 'events:detail' order.event.slug %}"
        class="btn-primary inline-block mt-3 font-bold rounded-lg px-6 py-3">Wróć do wydarzenia</a>
 </div>

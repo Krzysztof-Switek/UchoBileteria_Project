@@ -167,7 +167,7 @@ async function handleOfflineScan(decodedText) {
         showResult({
             ok: false,
             message: OFFLINE_STATUS_MESSAGES[ticket.status] || "Bilet nieważny (offline).",
-            ticket_code: ticket.short_code, buyer_email: ticket.buyer_email,
+            ticket_code: ticket.short_code, buyer_email: ticket.buyer_email, seat: ticket.seat || "",
         });
         return;
     }
@@ -178,7 +178,7 @@ async function handleOfflineScan(decodedText) {
     showResult({
         ok: true,
         message: "Bilet ważny — wpuść! (offline, wyślę po powrocie łącza)",
-        ticket_code: ticket.short_code, buyer_email: ticket.buyer_email,
+        ticket_code: ticket.short_code, buyer_email: ticket.buyer_email, seat: ticket.seat || "",
     });
 }
 
@@ -245,6 +245,7 @@ function showResult(data) {
     resultBox.classList.add(data.ok ? "bg-emerald-600" : "bg-red-700");
     resultSymbol.textContent = data.ok ? "✓" : "✗";
     resultMessage.innerHTML = data.message +
+        (data.seat ? `<div class="text-3xl font-extrabold mt-2">${data.seat}</div>` : "") +
         (data.ticket_code ? `<div class="text-base font-normal mt-2">${data.ticket_code} · ${data.buyer_email}</div>` : "");
     if (navigator.vibrate) navigator.vibrate(data.ok ? 100 : [80, 60, 80]);
     beep(data.ok);

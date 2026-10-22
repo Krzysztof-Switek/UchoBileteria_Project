@@ -22,6 +22,7 @@ urlpatterns = [
         views.emergency_list,
         name="emergency_list",
     ),
+    path("wejscie/lista-awaryjna/", views.emergency_list_today, name="emergency_list_today"),
     path(
         "wejscie/<int:event_id>/lista-awaryjna/",
         views.emergency_list_print,
